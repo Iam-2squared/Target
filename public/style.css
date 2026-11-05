@@ -53,7 +53,7 @@ body:is([data-view=setup], [data-view=quiz], [data-view=result]) .app-shell { pa
 .primary-button { background: var(--ink); color: #fff; }
 .secondary-button { border: 1px solid var(--line); background: var(--card); margin-top: 12px; }
 .wide { width: 100%; }
-body[data-view=memorize] .app-shell { display: flex; flex-direction: column; height: 100dvh; min-height: 0; padding-top: max(10px, env(safe-area-inset-top)); padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+body[data-view=memorize] .app-shell { display: flex; flex-direction: column; width: 100%; max-width: none; height: 100dvh; min-height: 0; padding-top: max(10px, env(safe-area-inset-top)); padding-bottom: max(10px, env(safe-area-inset-bottom)); padding-left: max(8px, env(safe-area-inset-left)); padding-right: max(8px, env(safe-area-inset-right)); }
 body[data-view=memorize] main { display: flex; flex: 1; min-height: 0; }
 #memorizeView { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; }
 #memorizeView .view-toolbar { flex: 0 0 40px; margin-bottom: 6px; }
@@ -61,11 +61,12 @@ body[data-view=memorize] main { display: flex; flex: 1; min-height: 0; }
 #memorizeTitle { font-size: 21px; }
 .memory-sheet { position: relative; display: flex; flex-direction: column; flex: 1; min-height: 0; cursor: pointer; }
 .memory-measure { position: absolute; inset-inline: 0; top: 0; height: 0; overflow: hidden; visibility: hidden; pointer-events: none; }
-.memory-row { display: grid; grid-template-columns: 24px minmax(0, 1fr); align-content: center; align-items: center; flex: 1 0 auto; gap: 9px; padding: 8px 0; }
-.memory-copy { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 10px; min-width: 0; }
-.word-number { color: #657585; font-size: 11px; font-variant-numeric: tabular-nums; }
-.memory-word, .memory-meaning { display: grid; align-content: center; min-width: 0; margin: 0; padding: 12px 10px; border-radius: 8px; overflow-wrap: anywhere; }
-.memory-word { color: #234f78; background: #edf3fa; font-size: clamp(22px, 3dvh, 25px); font-weight: 650; line-height: 1.35; }
+.memory-row { flex: 0 0 auto; min-width: 0; padding: 5px 0; }
+.memory-copy { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 8px; min-width: 0; }
+.word-number { position: absolute; top: 6px; left: 10px; color: #52677b; font-size: 10px; font-weight: 400; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.memory-word, .memory-meaning { display: grid; align-content: center; min-width: 0; margin: 0; padding: 10px; border-radius: 8px; overflow-wrap: anywhere; }
+.memory-word { position: relative; padding-top: 23px; color: #234f78; background: #edf3fa; font-size: clamp(22px, 3dvh, 25px); font-weight: 650; line-height: 1.35; }
+.memory-english { min-width: 0; }
 .memory-meaning { color: #58462e; background: #f7f1e5; font-size: clamp(17px, 2.25dvh, 19px); font-weight: 500; line-height: 1.5; }
 .meanings-hidden .memory-meaning { visibility: hidden; }
 .page-navigation { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; }
@@ -151,12 +152,9 @@ dialog::backdrop { background: #1c273a55; }
   .brand strong { font-size: 25px; }
   .book-copy strong { font-size: 18px; }
   .book-card { padding: 17px; min-height: 69px; }
-  .memory-row { grid-template-columns: 22px minmax(0,1fr); gap: 7px; }
-  .memory-copy { gap: 8px; }
   .memory-word, .memory-meaning { padding-left: 8px; padding-right: 8px; }
 }
 @media (max-height: 650px) {
-  .memory-row { padding: 6px 0; }
   .memory-word { font-size: 22px; }
   .memory-meaning { font-size: 17px; }
   .question-card { min-height: 88px; padding: 14px 0; }

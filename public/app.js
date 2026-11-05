@@ -6,7 +6,6 @@
     target1000: {title:'英熟語Target 1000',kind:'英熟語',total:1000}
   };
   const views = ['home','memorize','setup','quiz','result','ranking'];
-  const MEMORY_PAGE_SIZE=5;
   const datasets = new Map(), datasetPromises = new Map();
   let selectedBook='target1900', activeView='home', member=null, lifetimeCorrect=0;
   let sessionKnown=false, sessionEpoch=0, sessionTicket=0, rankingTicket=0;
@@ -117,9 +116,9 @@
     catch(error){if(ticket!==memoryTicket)return;setError('memorizeError',error.message);$('memorySheet').replaceChildren();$('memoryNext').disabled=false;$('memoryNext').textContent='再読み込み';}
   }
   function memoryRow(row) {
-    const line=element('div','memory-row'),copy=element('div','memory-copy');
-    line.append(element('span','word-number',row.number));
-    copy.append(element('div','memory-word',row.english),element('div','memory-meaning',row.japanese));
+    const line=element('div','memory-row'),copy=element('div','memory-copy'),word=element('div','memory-word');
+    word.append(element('span','word-number',row.number),element('span','memory-english',row.english));
+    copy.append(word,element('div','memory-meaning',row.japanese));
     line.append(copy);return line;
   }
   function planMemoryPages(rows) {
@@ -136,7 +135,7 @@
     const capacity=Math.max(1,height-5),pages=[];
     let start=0,used=0,count=0;
     for(let index=0;index<heights.length;index++){
-      if(count&&(count===MEMORY_PAGE_SIZE||used+heights[index]>capacity)){
+      if(count&&used+heights[index]>capacity){
         pages.push({start,end:index});start=index;used=0;count=0;
       }
       used+=heights[index];count++;
