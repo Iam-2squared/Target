@@ -8,7 +8,8 @@
   const views = ['home','memorize','setup','quiz','result','ranking'];
   const datasets = new Map(), datasetPromises = new Map();
   let selectedBook='target1900', activeView='home', member=null, lifetimeCorrect=0;
-  let sessionKnown=false, sessionEpoch=0, sessionTicket=0, rankingTicket=0;
+  let sessionKnown=false, sessionEpoch=0, sessionTicket=0;
+  const rankingTickets={homeRanking:0,ranking:0};
   let memoryPage=0, memoryBook='target1900', meaningsHidden=false, memoryTicket=0;
   let memoryPages=[], memoryLayoutKey='', memoryLayoutFrame=0;
   let quiz=null, startRetry=null, starting=false, loginPending=false, logoutPending=false;
@@ -42,7 +43,7 @@
     if(scroll)window.scrollTo({top:0,behavior:'instant'});
     document.title=view==='home'?'Target':({memorize:'暗記',setup:'テスト',quiz:'テスト',result:'テスト結果',ranking:'ランキング'}[view]+' | Target');
   }
-  function home() {memoryTicket++;show('home');renderIdentity();}
+  function home() {memoryTicket++;show('home');renderIdentity();void loadRanking('homeRanking');}
   function goHome() {if(activeView==='quiz'&&quiz&&!quiz.finished){openQuit();return;}home();}
   function appError(message,code='',status=0) {const error=new Error(message);error.code=code;error.status=status;return error;}
   async function api(path,body) {
@@ -287,16 +288,18 @@
     $('quitDescription').textContent=quiz.recorded?'回答済みの正解数は記録されています。':'ゲスト練習の途中経過は保存されません。';$('quitDialog').showModal();
   }
   async function openRanking() {show('ranking');await loadRanking();}
-  async function loadRanking() {
-    const ticket=++rankingTicket;setError('rankingError');$('rankingStatus').textContent='読み込み中…';$('rankingRefresh').disabled=true;$('rankingList').replaceChildren();
+  async function loadRanking(target='ranking') {
+    const preview=target==='homeRanking',ticket=++rankingTickets[target];
+    setError(target+'Error');$(target+'Status').textContent='読み込み中…';$(target+'List').replaceChildren();
+    if(!preview)$('rankingRefresh').disabled=true;
     try {
-      const data=await api('/ranking');if(ticket!==rankingTicket)return;
+      const data=await api('/ranking');if(ticket!==rankingTickets[target])return;
       if(!Array.isArray(data.ranking)||data.ranking.length>1000||data.ranking.some(row=>!row||!Number.isSafeInteger(row.rank)||row.rank<1||typeof row.name!=='string'||row.name.length>20||!Number.isSafeInteger(row.correctCount)||row.correctCount<0))throw appError('ランキングの内容を確認できませんでした。');
       const fragment=document.createDocumentFragment();
-      for(const row of data.ranking){const item=element('li','ranking-row'),score=element('span','ranking-score',row.correctCount.toLocaleString('ja-JP'));score.append(element('small','', '問'));item.append(element('span','ranking-place',row.rank),element('span','ranking-name',row.name.trim()||'名前未設定'),score);fragment.append(item);}
-      $('rankingList').replaceChildren(fragment);$('rankingStatus').textContent=data.ranking.length?'':'まだテストの記録はありません。';
-    } catch(error) {if(ticket===rankingTicket){$('rankingStatus').textContent='';setError('rankingError',error.message);}}
-    finally {if(ticket===rankingTicket)$('rankingRefresh').disabled=false;}
+      for(const row of (preview?data.ranking.slice(0,10):data.ranking)){const item=element('li','ranking-row'),score=element('span','ranking-score',row.correctCount.toLocaleString('ja-JP'));score.append(element('small','', '問'));item.append(element('span','ranking-place',row.rank),element('span','ranking-name',row.name.trim()||'名前未設定'),score);fragment.append(item);}
+      $(target+'List').replaceChildren(fragment);$(target+'Status').textContent=data.ranking.length?'':'まだテストの記録はありません。';
+    } catch(error) {if(ticket===rankingTickets[target]){$(target+'Status').textContent='';setError(target+'Error',error.message);}}
+    finally {if(!preview&&ticket===rankingTickets[target])$('rankingRefresh').disabled=false;}
   }
   function setPinVisible(visible) {$('accountPin').type=visible?'text':'password';$('pinVisibility').textContent=visible?'隠す':'表示';$('pinVisibility').setAttribute('aria-pressed',String(visible));$('pinVisibility').setAttribute('aria-label',visible?'PINを隠す':'PINを表示');}
   function openSettings() {setError('settingsError');$('settingsStatus').textContent='';renderIdentity();$('settingsDialog').showModal();}
@@ -330,10 +333,10 @@
   $('testForm').addEventListener('submit',startTest);$('quizNext').addEventListener('click',nextQuestion);$('answerRetry').addEventListener('click',()=>{if(quiz?.pendingAnswer)void answer(quiz.pendingAnswer.choiceId,{retry:true});});
   $('quizQuit').addEventListener('click',openQuit);$('quitCancel').addEventListener('click',()=>$('quitDialog').close());$('quitConfirm').addEventListener('click',()=>{$('quitDialog').close();quiz=null;home();});
   $('testAgain').addEventListener('click',()=>{if(quiz)selectedBook=quiz.settings.book;selectBook(selectedBook);openSetup();});
-  $('rankingOpen').addEventListener('click',openRanking);$('resultRanking').addEventListener('click',openRanking);$('rankingRefresh').addEventListener('click',loadRanking);
+  $('rankingOpen').addEventListener('click',openRanking);$('resultRanking').addEventListener('click',openRanking);$('rankingRefresh').addEventListener('click',()=>loadRanking());
   $('settingsOpen').addEventListener('click',openSettings);$('settingsClose').addEventListener('click',()=>$('settingsDialog').close());$('loginForm').addEventListener('submit',login);$('logoutButton').addEventListener('click',logout);$('pinVisibility').addEventListener('click',()=>setPinVisible($('accountPin').type==='password'));
   $('sourcesOpen').addEventListener('click',event=>{event.preventDefault();$('sourcesDialog').showModal();});$('sourcesClose').addEventListener('click',()=>$('sourcesDialog').close());
   $('settingsDialog').addEventListener('close',()=>{if(!loginPending){$('accountPin').value='';setPinVisible(false);}});
   document.addEventListener('keydown',event=>{if(activeView!=='memorize'||document.querySelector('dialog[open]')||['INPUT','SELECT','TEXTAREA','BUTTON'].includes(document.activeElement?.tagName))return;if(event.key==='ArrowRight'){event.preventDefault();memoryNext({fromSheet:true});}if(event.key==='ArrowLeft'&&memoryPage>0){event.preventDefault();memoryPage--;renderMemory();window.scrollTo({top:0,behavior:'instant'});}});
-  renderIdentity();void refreshSession();
+  home();void refreshSession();
 })();

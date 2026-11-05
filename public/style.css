@@ -122,6 +122,8 @@ progress::-moz-progress-bar { background: #819fb9; }
 .ranking-name { flex: 1; min-width: 0; font-size: 14px; overflow-wrap: anywhere; }
 .ranking-score { color: var(--ink); font-size: 18px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .ranking-score small { font-size: 10px; margin-left: 4px; color: var(--muted); }
+.home-ranking-list .ranking-row { padding: 11px 0; gap: 12px; }
+.ranking-status:not(:empty) { padding: 12px 0; }
 #rankingStatus { padding: 8px 0; }
 #rankingError { margin-bottom: 16px; }
 dialog { width: calc(100% - 30px); max-width: 430px; max-height: calc(100dvh - 30px); margin: auto; padding: 0; border: 1px solid var(--line); border-radius: 12px; color: var(--body); background: var(--card); overscroll-behavior: contain; }
