@@ -10,8 +10,9 @@
   let selectedBook='target1900', activeView='home', member=null, lifetimeCorrect=0;
   let sessionKnown=false, sessionEpoch=0, sessionTicket=0;
   const rankingTickets={homeRanking:0,ranking:0};
+  const sectionRanges={target1900:{from:1,to:1},target1000:{from:1,to:1}};
   let memoryPage=0, memoryBook='target1900', meaningsHidden=false, memoryTicket=0;
-  let memoryPages=[], memoryLayoutKey='', memoryLayoutFrame=0;
+  let memoryPages=[], memoryLayoutKey='', memoryLayoutFrame=0,memorySelectionKey='',memoryRange={from:1,to:100};
   let quiz=null, startRetry=null, starting=false, loginPending=false, logoutPending=false;
   let toastTimer;
 
@@ -43,7 +44,7 @@
     if(scroll)window.scrollTo({top:0,behavior:'instant'});
     document.title=view==='home'?'Target':({memorize:'暗記',setup:'テスト',quiz:'テスト',result:'テスト結果',ranking:'ランキング'}[view]+' | Target');
   }
-  function home() {memoryTicket++;show('home');renderIdentity();void loadRanking('homeRanking');}
+  function home() {memoryTicket++;show('home');renderIdentity();renderSectionControls();void loadRanking('homeRanking');}
   function goHome() {if(activeView==='quiz'&&quiz&&!quiz.finished){openQuit();return;}home();}
   function appError(message,code='',status=0) {const error=new Error(message);error.code=code;error.status=status;return error;}
   async function api(path,body) {
@@ -105,11 +106,28 @@
   function selectBook(book) {
     if(!Object.hasOwn(books,book))return;selectedBook=book;
     for(const button of document.querySelectorAll('[data-book]'))button.setAttribute('aria-pressed',String(button.dataset.book===book));
-    startRetry=null;
+    startRetry=null;renderSectionControls();
+  }
+  function selectedWordRange(book=selectedBook){
+    const range=sectionRanges[book];return {from:(range.from-1)*100+1,to:Math.min(range.to*100,books[book].total)};
+  }
+  function renderSectionControls(){
+    const total=Math.ceil(books[selectedBook].total/100),range=sectionRanges[selectedBook];
+    for(const [id,part] of [['homeSectionFrom','from'],['homeSectionTo','to'],['rangeFrom','from'],['rangeTo','to']]){
+      const select=$(id);
+      if(select.options.length!==total){const fragment=document.createDocumentFragment();for(let number=1;number<=total;number++){const option=element('option','', 'Section '+number);option.value=String(number);fragment.append(option);}select.replaceChildren(fragment);}
+      select.value=String(range[part]);
+    }
+  }
+  function changeSection(part,value){
+    const section=Number(value),total=Math.ceil(books[selectedBook].total/100);if(!Number.isInteger(section)||section<1||section>total)return;
+    const range=sectionRanges[selectedBook];range[part]=section;
+    if(range.from>range.to)range[part==='from'?'to':'from']=section;
+    startRetry=null;renderSectionControls();
   }
   async function openMemory() {
-    const book=selectedBook,ticket=++memoryTicket;
-    if(memoryBook!==book){memoryPage=0;memoryPages=[];memoryLayoutKey='';}memoryBook=book;
+    const book=selectedBook,ticket=++memoryTicket,range=selectedWordRange(book),key=book+':'+range.from+':'+range.to;
+    if(memorySelectionKey!==key){memoryPage=0;memoryPages=[];memoryLayoutKey='';}memoryBook=book;memoryRange=range;memorySelectionKey=key;
     $('memorySheet').replaceChildren(element('p','memory-loading','読み込み中…'));
     $('memorizeBook').textContent=books[book].title;setError('memorizeError');show('memorize');
     $('memoryNext').disabled=true;$('memoryPrevious').disabled=true;
@@ -125,7 +143,7 @@
   function planMemoryPages(rows) {
     const sheet=$('memorySheet'),width=sheet.clientWidth,height=sheet.clientHeight;
     if(!width||!height)return false;
-    const key=memoryBook+':'+width+':'+height;
+    const key=memorySelectionKey+':'+width+':'+height;
     if(key===memoryLayoutKey&&memoryPages.length)return true;
     const anchor=memoryPages[memoryPage]?.start??0,wasLast=memoryPages.length>0&&memoryPage===memoryPages.length-1;
     const measure=element('div','memory-measure'),fragment=document.createDocumentFragment();
@@ -147,14 +165,14 @@
     return true;
   }
   function renderMemory() {
-    const rows=datasets.get(memoryBook);if(!rows)return;
+    const all=datasets.get(memoryBook);if(!all)return;const rows=all.slice(memoryRange.from-1,memoryRange.to);
     if(!planMemoryPages(rows))return;
     const pageCount=memoryPages.length;memoryPage=Math.max(0,Math.min(memoryPage,pageCount-1));
     const {start,end}=memoryPages[memoryPage],fragment=document.createDocumentFragment();
     for(const row of rows.slice(start,end))fragment.append(memoryRow(row));
     $('memorySheet').replaceChildren(fragment);$('memorySheet').classList.toggle('meanings-hidden',meaningsHidden);
-    $('memorySheet').setAttribute('aria-label',books[memoryBook].kind+' '+(start+1)+'〜'+end);
-    $('memorizeRange').textContent=(start+1)+'–'+end;
+    $('memorySheet').setAttribute('aria-label',books[memoryBook].kind+' '+rows[start].number+'〜'+rows[end-1].number);
+    $('memorizeRange').textContent=rows[start].number+'–'+rows[end-1].number;
     $('memoryPrevious').disabled=memoryPage===0;$('memoryNext').disabled=false;
     $('memoryNext').textContent=memoryPage===pageCount-1?'終了':'次へ';
     $('memoryNext').setAttribute('aria-label',memoryPage===pageCount-1?'暗記を終了':'次のページ');
@@ -176,8 +194,7 @@
   document.fonts?.ready.then(()=>{memoryLayoutKey='';queueMemoryLayout();});
   function openSetup() {
     $('setupBook').textContent=books[selectedBook].title;
-    $('rangeFrom').max=String(books[selectedBook].total);$('rangeTo').max=String(books[selectedBook].total);
-    $('rangeFrom').value='1';$('rangeTo').value=String(books[selectedBook].total);
+    renderSectionControls();void dataset(selectedBook).catch(()=>{});
     setError('setupError');startRetry=null;renderIdentity();show('setup');
   }
   function questionShape(question) {
@@ -201,26 +218,29 @@
   }
   async function startTest(event) {
     event.preventDefault();if(starting)return;setError('setupError');
-    const from=Number($('rangeFrom').value),to=Number($('rangeTo').value),count=Number($('questionCount').value),direction=document.querySelector('input[name=direction]:checked')?.value;
-    if(!Number.isSafeInteger(from)||!Number.isSafeInteger(to)||from<1||to<from||to>books[selectedBook].total||![10,20].includes(count)||!['english','japanese'].includes(direction)){setError('setupError','出題範囲と問題数を確認してください。');return;}
+    const {from,to}=selectedWordRange(),count=Number($('questionCount').value),direction=document.querySelector('input[name=direction]:checked')?.value;
+    if(!Number.isSafeInteger(from)||!Number.isSafeInteger(to)||from<1||to<from||to>books[selectedBook].total||![10,50,100].includes(count)||!['english','japanese'].includes(direction)){setError('setupError','出題範囲と問題数を確認してください。');return;}
     const settings={book:selectedBook,direction,count,from,to},key=JSON.stringify(settings),epoch=sessionEpoch;
     if(!startRetry||startRetry.key!==key)startRetry={key,requestId:uuid()};
+    const attempt=startRetry,currentSetup=()=>epoch===sessionEpoch&&activeView==='setup'&&startRetry===attempt;
     starting=true;$('testStart').disabled=true;renderIdentity();
     try {
       let created;
       if(member){
-        const data=await api('/quiz/start',{...settings,requestId:startRetry.requestId});
-        if(epoch!==sessionEpoch)return;
+        void dataset(settings.book).catch(()=>{});
+        const data=await api('/quiz/start',{...settings,requestId:attempt.requestId});
+        if(!currentSetup())return;
         if(typeof data.quizId!=='string'||!data.quizId||!Number.isSafeInteger(data.total)||data.total<1||data.total>count||data.answeredCount!==0||data.correctCount!==0)throw appError('テストの準備結果を確認できませんでした。');
         created={recorded:true,id:data.quizId,total:data.total,answeredCount:0,correctCount:0,question:questionShape(data.question)};
       }else{
         const questions=guestQuestions(await dataset(settings.book),settings);
-        if(epoch!==sessionEpoch)return;
+        if(!currentSetup())return;
         created={recorded:false,id:uuid(),total:questions.length,answeredCount:0,correctCount:0,question:questions[0],questions};
       }
-      quiz={...created,settings,pending:false,pendingAnswer:null,feedback:null,finished:false,sessionEpoch:epoch};startRetry=null;
+      quiz={...created,settings,pending:false,pendingAnswer:null,feedback:null,localFeedback:null,selectedChoiceId:null,finished:false,sessionEpoch:epoch};startRetry=null;
       show('quiz');renderQuestion();
     } catch(error) {
+      if(!currentSetup())return;
       if(error.status===401){member=null;lifetimeCorrect=0;sessionKnown=true;sessionEpoch++;renderIdentity();}
       setError('setupError',error.message);
     } finally {starting=false;$('testStart').disabled=false;renderIdentity();}
@@ -233,10 +253,29 @@
     $('questionNumber').textContent='No. '+question.number;
     $('questionInstruction').textContent=quiz.settings.direction==='english'?'英語を選んでください':'訳を選んでください';
     $('questionPrompt').textContent=question.prompt;$('questionPrompt').closest('.question-card').classList.toggle('english-prompt',quiz.settings.direction==='japanese');
-    question.choices.forEach((choice,index)=>{const button=element('button','choice-button');button.type='button';button.dataset.choiceId=choice.id;button.append(element('span','choice-letter',String.fromCharCode(65+index)),element('span','choice-text',choice.text));button.addEventListener('click',()=>answer(choice.id));fragment.append(button);});
-    $('questionChoices').replaceChildren(fragment);$('answerFeedback').hidden=true;$('quizNext').hidden=true;$('answerRetry').hidden=true;setError('quizError');
-    quiz.feedback=null;quiz.pendingAnswer=null;
+    question.choices.forEach((choice,index)=>{const button=element('button','choice-button');button.type='button';button.dataset.choiceId=choice.id;button.setAttribute('aria-pressed','false');button.append(element('span','choice-letter',String.fromCharCode(65+index)),element('span','choice-text',choice.text));button.addEventListener('click',()=>selectChoice(choice.id));fragment.append(button);});
+    $('questionChoices').replaceChildren(fragment);$('answerFeedback').hidden=true;$('quizNext').hidden=true;$('quizNext').disabled=false;$('answerRetry').hidden=true;setError('quizError');
+    $('quizSubmit').hidden=false;$('quizSubmit').disabled=true;$('quizSubmit').textContent='回答';
+    quiz.feedback=null;quiz.localFeedback=null;quiz.pendingAnswer=null;quiz.selectedChoiceId=null;
     requestAnimationFrame(()=>{if(activeView==='quiz')$('questionPrompt').focus({preventScroll:true});});
+  }
+  function selectChoice(choiceId){
+    if(!quiz||quiz.pending||quiz.pendingAnswer||quiz.feedback||quiz.sessionEpoch!==sessionEpoch)return;
+    if(!quiz.question.choices.some(choice=>choice.id===choiceId))return;
+    quiz.selectedChoiceId=choiceId;
+    for(const button of $('questionChoices').querySelectorAll('button')){const selected=button.dataset.choiceId===choiceId;button.classList.toggle('selected',selected);button.setAttribute('aria-pressed',String(selected));}
+    $('quizSubmit').disabled=false;
+  }
+  function materialFeedback(current,choiceId){
+    const row=datasets.get(current.settings.book)?.[current.question.number-1];if(!row)return null;
+    const promptField=current.settings.direction==='english'?'japanese':'english',answerField=current.settings.direction==='english'?'english':'japanese';
+    if(current.question.prompt!==row[promptField])return null;
+    const matches=current.question.choices.filter(choice=>choice.text===row[answerField]);if(matches.length!==1)return null;
+    return {correct:matches[0].id===choiceId,correctChoiceId:matches[0].id,correctText:matches[0].text};
+  }
+  function renderAnswerFeedback(result){
+    for(const button of $('questionChoices').querySelectorAll('button')){button.disabled=true;button.classList.toggle('is-correct',button.dataset.choiceId===result.correctChoiceId);button.classList.toggle('is-wrong',!result.correct&&button.dataset.choiceId===quiz.pendingAnswer?.choiceId);}
+    $('feedbackTitle').textContent=result.correct?'正解':'不正解';$('feedbackAnswer').textContent=result.correct?'':'正解：'+result.correctText;$('answerFeedback').classList.toggle('is-wrong',!result.correct);$('answerFeedback').hidden=false;
   }
   function showAnswerResult(result) {
     if(!quiz)return;
@@ -245,19 +284,25 @@
     if(typeof result.correct!=='boolean'||typeof result.correctChoiceId!=='string'||!correctChoice||typeof result.correctText!=='string'||result.correctText!==correctChoice.text||result.correct!==(quiz.pendingAnswer?.choiceId===result.correctChoiceId)||!Number.isSafeInteger(result.answeredCount)||result.answeredCount!==quiz.answeredCount+1||!Number.isSafeInteger(result.correctCount)||result.correctCount!==quiz.correctCount+(result.correct?1:0)||result.total!==quiz.total||result.finished!==(result.answeredCount===quiz.total))throw appError('回答結果を確認できませんでした。同じ回答を再送してください。');
     if(!result.finished)questionShape(result.nextQuestion);
     quiz.feedback=result;quiz.answeredCount=result.answeredCount;quiz.correctCount=result.correctCount;quiz.finished=result.finished;
-    for(const button of $('questionChoices').querySelectorAll('button')){button.disabled=true;button.classList.toggle('is-correct',button.dataset.choiceId===result.correctChoiceId);button.classList.toggle('is-wrong',!result.correct&&button.dataset.choiceId===quiz.pendingAnswer?.choiceId);}
-    $('feedbackTitle').textContent=result.correct?'正解':'不正解';$('feedbackAnswer').textContent=result.correct?'':'正解：'+result.correctText;$('answerFeedback').classList.toggle('is-wrong',!result.correct);$('answerFeedback').hidden=false;
+    renderAnswerFeedback(result);
     $('quizCorrect').textContent=quiz.correctCount+'問 正解';$('quizProgress').value=quiz.answeredCount;
-    $('quizNext').replaceChildren(document.createTextNode(result.finished?'結果を見る':'次の問題'));$('quizNext').hidden=false;$('answerRetry').hidden=true;
+    $('quizMode').textContent=quiz.recorded?'ランキングに記録':'ゲスト';$('quizSubmit').hidden=true;
+    $('quizNext').replaceChildren(document.createTextNode(result.finished?'結果を見る':'次の問題'));$('quizNext').hidden=false;$('quizNext').disabled=false;$('answerRetry').hidden=true;
     setError('quizError');
   }
   async function answer(choiceId,{retry=false}={}) {
-    const current=quiz;if(!current||current.pending||current.feedback)return;
+    const current=quiz;if(!current||current.pending||current.feedback||current.sessionEpoch!==sessionEpoch)return;
     if(current.pendingAnswer&&!retry)return;
     if(!current.question.choices.some(choice=>choice.id===choiceId))return;
     if(!current.pendingAnswer)current.pendingAnswer={quizId:current.id,questionId:current.question.id,choiceId,requestId:uuid()};
     current.pending=true;$('answerRetry').disabled=true;setError('quizError');
+    $('quizSubmit').disabled=true;$('quizSubmit').textContent='確認中…';
     for(const button of $('questionChoices').querySelectorAll('button')){button.disabled=true;button.classList.toggle('selected',button.dataset.choiceId===choiceId);}
+    if(current.recorded){
+      current.localFeedback=materialFeedback(current,choiceId);
+      if(current.localFeedback){renderAnswerFeedback(current.localFeedback);$('quizSubmit').hidden=true;$('quizNext').hidden=false;$('quizNext').disabled=true;$('quizNext').textContent='記録中…';}
+      $('quizMode').textContent='記録中…';
+    }
     try {
       let result;
       if(current.recorded){result=await api('/quiz/answer',current.pendingAnswer);}
@@ -265,15 +310,16 @@
         const correct=choiceId===current.question.correctChoiceId,answered=current.answeredCount+1;
         result={correct,correctChoiceId:current.question.correctChoiceId,correctText:current.question.correctText,answeredCount:answered,correctCount:current.correctCount+(correct?1:0),total:current.total,finished:answered===current.total,nextQuestion:current.questions[answered]||null};
       }
-      if(quiz!==current)return;showAnswerResult(result);
+      if(quiz!==current||current.sessionEpoch!==sessionEpoch)return;showAnswerResult(result);
     } catch(error) {
-      if(quiz!==current)return;
+      if(quiz!==current||current.sessionEpoch!==sessionEpoch)return;
       if(error.status===401){member=null;lifetimeCorrect=0;sessionKnown=true;sessionEpoch++;renderIdentity();}
-      setError('quizError',error.message+' 回答は保持しています。');$('answerRetry').hidden=false;
-    } finally {current.pending=false;$('answerRetry').disabled=false;}
+      $('quizMode').textContent=current.recorded?'記録未確認':'ゲスト';$('quizSubmit').hidden=true;$('quizNext').hidden=true;
+      setError('quizError',error.message+' 回答は保持しています。');$('answerRetry').hidden=error.status===401;
+    } finally {current.pending=false;if(quiz===current)$('answerRetry').disabled=false;}
   }
   function nextQuestion() {
-    if(!quiz?.feedback)return;
+    if(!quiz?.feedback||quiz.pending||quiz.sessionEpoch!==sessionEpoch)return;
     if(quiz.finished){showResult();return;}
     quiz.question=quiz.feedback.nextQuestion;renderQuestion();window.scrollTo({top:0,behavior:'instant'});
   }
@@ -285,7 +331,7 @@
   }
   function openQuit() {
     if(!quiz||quiz.finished){home();return;}
-    $('quitDescription').textContent=quiz.recorded?'回答済みの正解数は記録されています。':'ゲスト練習の途中経過は保存されません。';$('quitDialog').showModal();
+    $('quitDescription').textContent=quiz.recorded?(quiz.pendingAnswer&&!quiz.feedback?'回答の記録を確認できていません。':'回答済みの正解数は記録されています。'):'ゲスト練習の途中経過は保存されません。';$('quitDialog').showModal();
   }
   async function openRanking() {show('ranking');await loadRanking();}
   async function loadRanking(target='ranking') {
@@ -324,13 +370,16 @@
   }
 
   for(const button of document.querySelectorAll('[data-book]'))button.addEventListener('click',()=>selectBook(button.dataset.book));
+  for(const [id,part] of [['homeSectionFrom','from'],['homeSectionTo','to'],['rangeFrom','from'],['rangeTo','to']])$(id).addEventListener('change',()=>changeSection(part,$(id).value));
+  $('questionCount').addEventListener('change',()=>{startRetry=null;});
+  for(const input of document.querySelectorAll('input[name=direction]'))input.addEventListener('change',()=>{startRetry=null;});
   for(const button of document.querySelectorAll('[data-home]'))button.addEventListener('click',goHome);
   $('brandHome').addEventListener('click',goHome);$('memorizeOpen').addEventListener('click',openMemory);$('testOpen').addEventListener('click',openSetup);
   $('memoryNext').addEventListener('click',()=>memoryNext());$('memoryPrevious').addEventListener('click',()=>{if(memoryPage>0){memoryPage--;renderMemory();window.scrollTo({top:0,behavior:'instant'});}});
   $('memoryPage').addEventListener('change',()=>{memoryPage=Number($('memoryPage').value);renderMemory();window.scrollTo({top:0,behavior:'instant'});});
   $('meaningsToggle').addEventListener('click',()=>{meaningsHidden=!meaningsHidden;renderMemory();});
   $('memorySheet').addEventListener('click',()=>{if(window.getSelection()?.toString())return;memoryNext({fromSheet:true});});
-  $('testForm').addEventListener('submit',startTest);$('quizNext').addEventListener('click',nextQuestion);$('answerRetry').addEventListener('click',()=>{if(quiz?.pendingAnswer)void answer(quiz.pendingAnswer.choiceId,{retry:true});});
+  $('testForm').addEventListener('submit',startTest);$('quizSubmit').addEventListener('click',()=>{if(quiz?.selectedChoiceId)void answer(quiz.selectedChoiceId);});$('quizNext').addEventListener('click',nextQuestion);$('answerRetry').addEventListener('click',()=>{if(quiz?.pendingAnswer)void answer(quiz.pendingAnswer.choiceId,{retry:true});});
   $('quizQuit').addEventListener('click',openQuit);$('quitCancel').addEventListener('click',()=>$('quitDialog').close());$('quitConfirm').addEventListener('click',()=>{$('quitDialog').close();quiz=null;home();});
   $('testAgain').addEventListener('click',()=>{if(quiz)selectedBook=quiz.settings.book;selectBook(selectedBook);openSetup();});
   $('rankingOpen').addEventListener('click',openRanking);$('resultRanking').addEventListener('click',openRanking);$('rankingRefresh').addEventListener('click',()=>loadRanking());

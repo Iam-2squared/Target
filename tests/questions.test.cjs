@@ -33,6 +33,33 @@ test('A narrow range remains inclusive and never duplicates its final numbered e
   }
 });
 
+test('Fifty and one hundred questions stay inside a selected section range in both books and directions',()=>{
+  for(const book of ['target1900','target1000'])for(const direction of ['english','japanese'])for(const count of [50,100]){
+    const rows=loadBook(book);
+    for(const [from,to] of [[rows.length-99,rows.length],[1,500]]){
+      const questions=generateQuestions(input({book,direction,count,from,to}));
+      assert.equal(questions.length,count);
+      assert.equal(new Set(questions.map(q=>q.number)).size,count);
+      for(const question of questions){
+        assert(question.number>=from&&question.number<=to);
+        const entry=rows[question.number-1],answerField=direction==='english'?'english':'japanese';
+        assert.equal(question.prompt,entry[direction==='english'?'japanese':'english']);
+        assert.equal(question.correctText,entry[answerField]);
+        assert.equal(new Set(question.choices.map(choice=>normalized(choice.text))).size,4);
+        assert.deepEqual(question.choices.filter(choice=>choice.id===question.correctChoiceId).map(choice=>choice.text),[entry[answerField]]);
+      }
+      if(count===100&&to-from===99)assert.deepEqual(questions.map(q=>q.number).sort((a,b)=>a-b),Array.from({length:100},(_,index)=>from+index));
+    }
+  }
+});
+
+test('A hundred-question request preserves a smaller eligible range instead of repeating entries',()=>{
+  for(const book of ['target1900','target1000']){
+    const questions=generateQuestions(input({book,count:100,from:97,to:100}));
+    assert.deepEqual(questions.map(question=>question.number).sort((a,b)=>a-b),[97,98,99,100]);
+  }
+});
+
 test('Duplicate Japanese translations cannot create multiple valid English choices',()=>{
   const rows=loadBook('target1000'),groups=new Map();
   for(const row of rows){const key=normalized(row.japanese);groups.set(key,[...(groups.get(key)||[]),row]);}
@@ -45,7 +72,7 @@ test('Duplicate Japanese translations cannot create multiple valid English choic
 });
 
 test('Unsupported modes, forged score fields and invalid material ranges are rejected',()=>{
-  for(const override of [{book:'other'},{direction:'other'},{count:50},{count:0},{from:0},{to:1901},{from:5,to:4},{from:'1'},{requestId:'bad'},{correctCount:9000},{ownerId:crypto.randomUUID()}]){
+  for(const override of [{book:'other'},{direction:'other'},{count:0},{count:101},{count:30},{count:'100'},{from:0},{to:1901},{from:5,to:4},{from:'1'},{requestId:'bad'},{correctCount:9000},{ownerId:crypto.randomUUID()}]){
     assert.throws(()=>generateQuestions(input(override)),error=>error.status===400&&error.code==='INVALID_QUIZ');
   }
 });

@@ -37,7 +37,7 @@ function validateQuizInput(body) {
   if (!body || typeof body !== 'object' || Array.isArray(body) ||
       Object.keys(body).some(key => !['book', 'direction', 'count', 'from', 'to', 'requestId'].includes(key)) ||
       !Object.hasOwn(BOOKS, body.book) || !['english', 'japanese'].includes(body.direction) ||
-      ![10, 20].includes(body.count) || !Number.isInteger(body.from) || !Number.isInteger(body.to) ||
+      ![10, 20, 50, 100].includes(body.count) || !Number.isInteger(body.from) || !Number.isInteger(body.to) ||
       body.from < 1 || body.to < body.from || body.to > BOOKS[body.book].size ||
       typeof body.requestId !== 'string' || !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(body.requestId)) {
     throw new HttpError(400, 'テストの教材・範囲・出題数を確認してください。', 'INVALID_QUIZ');

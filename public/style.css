@@ -36,6 +36,7 @@ strong { font-weight: 600; }
 .book-card[aria-pressed=true] { border-color: var(--ink); background: #f3f5f6; }
 .book-copy strong { font-size: 20px; color: var(--ink); }
 .study-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 22px; }
+.home-sections { margin-top: 22px; }
 .action-card { min-height: 54px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); font-size: 17px; font-weight: 600; }
 .ranking-link { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; margin-top: 26px; padding: 19px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); text-align: left; }
 .ranking-link strong { font-size: 15px; }
@@ -82,8 +83,8 @@ legend { font-size: 13px; font-weight: 550; padding: 0; margin-bottom: 10px; }
 .direction-options input { width: 17px; height: 17px; margin: 0; accent-color: var(--ink); }
 .range-fields { display: grid; grid-template-columns: minmax(0,1fr) 15px minmax(0,1fr); gap: 12px; align-items: center; }
 .range-fields label { display: grid; gap: 7px; min-width: 0; font-size: 11px; color: var(--muted); }
-.range-fields>span { padding-top: 24px; color: var(--muted); }
-.range-fields input, .count-field select, .dialog-body input { width: 100%; min-width: 0; max-width: 100%; min-height: 46px; border: 1px solid #dfe3e6; border-radius: 8px; background: var(--card); padding: 10px 12px; color: var(--body); font-size: 16px; }
+.range-fields>span { color: var(--muted); text-align: center; }
+.range-fields input, .range-fields select, .count-field select, .dialog-body input { width: 100%; min-width: 0; max-width: 100%; min-height: 46px; border: 1px solid #dfe3e6; border-radius: 8px; background: var(--card); padding: 10px 12px; color: var(--body); font-size: 16px; }
 .count-field { display: grid; gap: 10px; font-size: 13px; }
 .mode-note { color: var(--muted); font-size: 11px; }
 .error-message { color: var(--error); font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
@@ -98,11 +99,11 @@ progress::-moz-progress-bar { background: #819fb9; }
 .question-card h1 { font-size: 24px; line-height: 1.5; overflow-wrap: anywhere; font-weight: 600; outline: 0; }
 .question-card.english-prompt h1 { font-size: 28px; }
 .choices { display: grid; gap: 9px; }
-.choice-button { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 12px 14px; border: 1px solid #dfe4e7; border-radius: 8px; background: var(--card); text-align: left; line-height: 1.55; }
-.choice-letter { flex: 0 0 17px; color: #929ba3; font-size: 11px; }
-.choice-text { min-width: 0; font-size: 14px; overflow-wrap: anywhere; }
+.choice-button { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 68px; padding: 13px 14px; border: 2px solid #dfe4e7; border-radius: 9px; background: var(--card); text-align: left; line-height: 1.5; }
+.choice-letter { flex: 0 0 20px; color: #667b8f; font-size: 15px; font-weight: 650; }
+.choice-text { min-width: 0; font-size: 22px; font-weight: 700; color: #243c54; overflow-wrap: anywhere; }
 .choice-button:disabled { opacity: 1; }
-.choice-button.selected { border-color: #7897b5; background: #edf3f8; }
+.choice-button.selected { border-color: #567fa7; background: #e9f1fa; }
 .choice-button.is-correct { border-color: #9bbda7; background: #edf5ef; }
 .choice-button.is-wrong { border-color: #d8aaa3; background: #fcf0ec; }
 .answer-feedback { display: grid; gap: 3px; padding: 14px 0; color: #4b735e; font-size: 12px; }
@@ -111,6 +112,9 @@ progress::-moz-progress-bar { background: #819fb9; }
 .answer-feedback span { overflow-wrap: anywhere; }
 #quizError { margin-top: 12px; }
 #quizNext { margin-top: 8px; }
+.quiz-actions { position: sticky; bottom: 0; z-index: 1; margin-top: 12px; padding: 8px 0 max(8px, env(safe-area-inset-bottom)); background: var(--paper); }
+.quiz-actions #quizNext { margin-top: 0; }
+.quiz-actions .primary-button { min-height: 50px; font-size: 17px; font-weight: 650; }
 #answerRetry { display: block; margin: 4px auto; }
 .result-panel { text-align: center; padding: 35px 0; }
 .result-score { display: flex; align-items: baseline; justify-content: center; gap: 10px; color: var(--ink); margin: 25px 0 10px; }

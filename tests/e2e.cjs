@@ -23,7 +23,7 @@ const pinA=pin(),pinB=pin(),pinNew=pin(),pinWrong=pin(),pinRate=pin(),pinSpecial
 const redact=value=>{let text=String(value);for(const value of secretSet)text=text.split(value).join('[credential]');return text;};
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const processes=new Map(),serverLogs=new Map(),results=[],runtimeErrors=[];
-let checks=0,browser,Admin,KgsA,KgsB,A,B,Guest,memberA,memberB;
+let checks=0,browser,Admin,KgsA,KgsB,A,B,Guest,memberA,memberB,materialFeedbackMs=null,guestHundredPreparationMs=null;
 const reportDir=path.join(root,'test-results');
 function ok(value,label){checks++;assert(value,label);}
 function eq(value,expected,label){checks++;assert.deepEqual(value,expected,label);}
@@ -65,10 +65,10 @@ async function start(kind){
   throw Error('Synthetic '+kind+' server was not ready');
 }
 async function stop(kind){const child=processes.get(kind);if(child&&child.exitCode===null){child.kill('SIGTERM');await Promise.race([once(child,'close'),sleep(3000)]);if(child.exitCode===null)child.kill('SIGKILL');}processes.delete(kind);}
-async function register(context,number,name,accountPin){const result=await kgs(context,'/api/login',{code,attendanceNumber:number,accountPin,register:true});await kgs(context,'/api/profile',{name});return result.member;}
+async function register(context,number,name,accountPin,loginCode=code){const result=await kgs(context,'/api/login',{code:loginCode,attendanceNumber:number,accountPin,register:true});await kgs(context,'/api/profile',{name});return result.member;}
 function book(name){return require(path.join(root,'data',name+'.json'));}
 function correctChoice(question,bookName,direction){const entry=book(bookName)[question.number-1];eq(question.prompt,entry[direction==='english'?'japanese':'english'],'Question uses its actual numbered material');eq(question.choices.length,4);eq(new Set(question.choices.map(c=>c.id)).size,4);eq(new Set(question.choices.map(c=>c.text.normalize('NFKC').trim().toLowerCase())).size,4,'Every displayed choice is unique');const choice=question.choices.find(c=>c.text===entry[direction==='english'?'english':'japanese']);ok(choice,'One option contains the authoritative answer');return choice;}
-async function begin(context,bookName='target1900',direction='english',from=1,to=20){return target(context,'/api/quiz/start',{book:bookName,direction,count:10,from,to,requestId:uuid()});}
+async function begin(context,bookName='target1900',direction='english',from=1,to=20,count=10){return target(context,'/api/quiz/start',{book:bookName,direction,count,from,to,requestId:uuid()});}
 async function submit(context,quiz,question,choice,requestId=uuid()){return target(context,'/api/quiz/answer',{quizId:quiz.quizId,questionId:question.id,choiceId:choice.id,requestId});}
 async function layout(page,width,label){await page.setViewportSize({width,height:900});ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),label+' has no horizontal overflow at '+width);await page.screenshot({path:path.join(reportDir,label+'-'+width+'.png'),fullPage:true});}
 async function openPage(context){const page=await context.newPage();page.on('pageerror',error=>runtimeErrors.push(error.message));await page.goto(targetBase,{waitUntil:'networkidle'});return page;}
@@ -138,7 +138,7 @@ async function openPage(context){const page=await context.newPage();page.on('pag
   await scenario('Both memorization books fill the available screen and preserve final-page boundaries on phones',async()=>{
     const page=await openPage(Guest);
     for(const [bookName,total] of [['target1900',1900],['target1000',1000]]){
-      await page.locator('[data-book="'+bookName+'"]').click();await page.locator('#memorizeOpen').click();await page.locator('#memorySheet .memory-row').first().waitFor();
+      await page.locator('[data-book="'+bookName+'"]').click();await page.locator('#homeSectionFrom').selectOption('1');await page.locator('#homeSectionTo').selectOption(String(total/100));await page.locator('#memorizeOpen').click();await page.locator('#memorySheet .memory-row').first().waitFor();
       const initialCount=await page.locator('#memorySheet .memory-row').count();ok(initialCount>=1&&initialCount<=total,'The page contains complete entries within the book');
       ok((await page.locator('#memorySheet').innerText()).includes(book(bookName)[0].english),'Page begins with the first source entry');
       const previousLast=Number(await page.locator('#memorySheet .word-number').last().innerText());
@@ -152,12 +152,45 @@ async function openPage(context){const page=await context.newPage();page.on('pag
     await page.close();
   });
 
+  await scenario('Section ranges keep original numbers and fit every requested phone width',async()=>{
+    const page=await openPage(Guest);
+    for(const [bookName,section,last] of [['target1900',19,1900],['target1000',10,1000]]){
+      await page.locator('[data-book="'+bookName+'"]').click();
+      eq(await page.locator('#homeSectionFrom option').count(),section);eq(await page.locator('#homeSectionTo option').count(),section);
+      await page.locator('#homeSectionFrom').selectOption(String(section));await page.locator('#homeSectionTo').selectOption(String(section));
+      await page.locator('#memorizeOpen').click();await page.locator('#memorySheet .memory-row').first().waitFor();
+      eq(Number(await page.locator('#memorySheet .word-number').first().innerText()),last-99,'A section starts at its original source number');
+      for(const [width,height] of [[320,568],[375,667],[390,844],[430,932],[1280,900]]){
+        await page.setViewportSize({width,height});await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+        const count=await page.locator('#memoryPage option').count();await page.locator('#memoryPage').selectOption({value:String(count-1)});
+        eq(Number(await page.locator('#memorySheet .word-number').last().innerText()),last,'The last page ends at selected section: '+bookName+' '+width+'x'+height+' expectedpages='+count+' actualpages='+(await page.locator('#memoryPage option').count())+' selected='+(await page.locator('#memoryPage').inputValue())+' range='+(await page.locator('#memorizeRange').innerText()));
+        const numbers=(await page.locator('#memorySheet .word-number').allTextContents()).map(Number);ok(numbers.every(number=>number>=last-99&&number<=last),'No adjacent-section entries are rendered');
+        ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1&&document.documentElement.scrollHeight<=innerHeight+1),'Complete words and controls fit without horizontal or vertical scrolling');
+      }
+      await page.locator('#memorizeView [data-home]').click();
+      await page.locator('#homeSectionFrom').selectOption('1');await page.locator('#homeSectionTo').selectOption('5');
+      await page.locator('#memorizeOpen').click();await page.locator('#memorySheet .memory-row').first().waitFor();eq(Number(await page.locator('#memorySheet .word-number').first().innerText()),1);
+      await page.locator('#memoryPage').selectOption({value:String(await page.locator('#memoryPage option').count()-1)});eq(Number(await page.locator('#memorySheet .word-number').last().innerText()),500);
+      await page.locator('#memorizeView [data-home]').click();
+    }
+    await page.close();
+  });
+
   await scenario('Guest four-choice practice works in both directions without submitting a shared score',async()=>{
     const page=await openPage(Guest),scored=[];page.on('request',r=>{if(new URL(r.url()).pathname.startsWith('/api/quiz/'))scored.push(r.url());});
-    for(const direction of ['english','japanese']){
-      await page.locator('[data-book="target1000"]').click();await page.locator('#testOpen').click();await page.locator('input[name="direction"][value="'+direction+'"]').check();await page.locator('#rangeFrom').fill('1');await page.locator('#rangeTo').fill('10');await page.locator('#testStart').click();
-      for(let i=0;i<10;i++){await page.locator('#questionChoices button').first().waitFor();eq(await page.locator('#questionChoices button').count(),4);eq(new Set(await page.locator('#questionChoices button').allTextContents()).size,4);await page.locator('#questionChoices button').first().click();await page.locator('#answerFeedback').waitFor({state:'visible'});await page.locator('#quizNext').click();}
-      await page.locator('#resultView').waitFor({state:'visible'});ok((await page.locator('#resultMode').innerText()).includes('ゲスト'),'Guest results clearly identify their scope');await page.locator('#resultView [data-home]').click();
+    for(const [direction,count] of [['english',10],['japanese',10],['english',100],['japanese',50]]){
+      await page.locator('[data-book="target1000"]').click();await page.locator('#testOpen').click();await page.locator('input[name="direction"][value="'+direction+'"]').check();await page.locator('#rangeFrom').selectOption('1');await page.locator('#rangeTo').selectOption('1');await page.locator('#questionCount').selectOption(String(count));
+      eq(await page.locator('#questionCount option').allTextContents(),['10問','50問','100問']);
+      if(count===100)await page.evaluate(()=>{document.getElementById('testStart').addEventListener('click',()=>{const began=performance.now(),observer=new MutationObserver(()=>{if(!document.getElementById('quizView').hidden){window.__guestPrepareMs=performance.now()-began;observer.disconnect();}});observer.observe(document.getElementById('quizView'),{attributes:true,attributeFilter:['hidden']});},{capture:true,once:true});});
+      await page.locator('#testStart').click();eq(await page.locator('#questionPosition').innerText(),'1 / '+count+'問');
+      if(count===100){guestHundredPreparationMs=await page.evaluate(()=>window.__guestPrepareMs);ok(Number.isFinite(guestHundredPreparationMs),'The real guest100 preparation duration is measured');}
+      for(let i=0;i<count;i++){
+        await page.locator('#questionChoices button').first().waitFor();eq(await page.locator('#questionChoices button').count(),4);eq(new Set(await page.locator('#questionChoices button').allTextContents()).size,4);
+        await page.locator('#questionChoices button').first().click();ok(!await page.locator('#answerFeedback').isVisible(),'Selecting alone does not grade a guest answer');
+        eq(await page.locator('#questionChoices button').first().getAttribute('aria-pressed'),'true');
+        await page.locator('#quizSubmit').click();await page.locator('#answerFeedback').waitFor({state:'visible'});await page.locator('#quizNext').click();
+      }
+      await page.locator('#resultView').waitFor({state:'visible'});eq(await page.locator('#resultTotal').innerText(),'/ '+count+'問');ok((await page.locator('#resultMode').innerText()).includes('ゲスト'),'Guest results clearly identify their scope');await page.locator('#resultView [data-home]').click();
     }
     eq(scored,[],'Intentional guest practice never fabricates cloud scores');eq((await target(Guest,'/api/ranking')).ranking,[]);await page.close();
   });
@@ -203,10 +236,10 @@ async function openPage(context){const page=await context.newPage();page.on('pag
     const correct=book('target1900')[number-1].english,choices=await page.locator('#questionChoices .choice-text').allTextContents(),wrong=choices.findIndex(text=>text!==correct);
     const before=Number((await targetDb.query('SELECT count(*)::int AS n FROM target_private.answers')).rows[0].n),requests=[];
     let failNext=true;await page.route('**/api/quiz/answer',async route=>{requests.push(JSON.parse(route.request().postData()));if(failNext){failNext=false;await route.abort('failed');}else await route.continue();});
-    const prompt=await page.locator('#questionPrompt').innerText();await page.locator('#questionChoices button').nth(wrong).click();await page.locator('#answerRetry').waitFor({state:'visible'});
+    const prompt=await page.locator('#questionPrompt').innerText();await page.locator('#questionChoices button').nth(wrong).click();eq(requests.length,0,'Selecting never sends an answer');await page.locator('#quizSubmit').click();await page.locator('#answerRetry').waitFor({state:'visible'});
     eq(await page.locator('#questionPrompt').innerText(),prompt,'A failed transmission cannot advance the question');
     eq(Number((await targetDb.query('SELECT count(*)::int AS n FROM target_private.answers')).rows[0].n),before,'The aborted request has not awarded a score');
-    await page.locator('#answerRetry').click();await page.locator('#answerFeedback').waitFor({state:'visible'});eq(await page.locator('#feedbackTitle').innerText(),'不正解');eq(requests.length,2);eq(requests[0],requests[1],'Retry reuses the exact answer and request ID');
+    await page.locator('#answerRetry').click();await page.waitForFunction(()=>!document.getElementById('quizNext').disabled);eq(await page.locator('#feedbackTitle').innerText(),'不正解');eq(requests.length,2);eq(requests[0],requests[1],'Retry reuses the exact answer and request ID');
     eq(Number((await targetDb.query('SELECT count(*)::int AS n FROM target_private.answers')).rows[0].n),before+1);eq((await target(A,'/api/session')).correctCount,10);await page.close();
   });
 
@@ -223,6 +256,71 @@ async function openPage(context){const page=await context.newPage();page.on('pag
     const page=await openPage(A);for(const width of [320,375,390,430,1280])await layout(page,width,'home');await page.locator('#rankingOpen').click();await page.locator('#rankingList').waitFor();for(const width of [320,375,390,430,1280])await layout(page,width,'ranking');await page.locator('#brandHome').click();await page.locator('#testOpen').click();await page.locator('#testStart').click();await page.locator('#questionChoices button').first().waitFor();for(const width of [320,375,390,430,1280])await layout(page,width,'quiz');await page.close();
   });
 
+  await scenario('One hundred server-graded questions stay unique and inside the chosen sections',async()=>{
+    for(const [number,name,bookName,direction,from,to] of [[3,'百問確認C','target1900','english',1,100],[5,'百問確認D','target1000','japanese',901,1000]]){
+      const classContext=await makeContext(),context=await makeContext(),accountPin=pin();
+      await register(classContext,number,name,accountPin,codeChanged);await target(context,'/api/login',{attendanceNumber:number,accountPin});
+      for(const cookie of await context.cookies(targetBase))remember(cookie.value);
+      const quiz=await begin(context,bookName,direction,from,to,100);eq(quiz.total,100);eq(quiz.correctCount,0);
+      const seen=new Set();let result={nextQuestion:quiz.question};
+      for(let index=0;index<100;index++){
+        const question=result.nextQuestion;ok(question.number>=from&&question.number<=to,'Every question stays within selected sections');ok(!seen.has(question.number),'Question numbers never repeat');seen.add(question.number);
+        result=await submit(context,quiz,question,correctChoice(question,bookName,direction));eq(result.answeredCount,index+1);eq(result.correctCount,index+1);
+      }
+      eq(seen.size,100);eq(result.finished,true);eq(result.nextQuestion,null);eq((await target(context,'/api/session')).correctCount,100);
+      const fifty=await begin(context,bookName,direction,1,500,50);eq(fifty.total,50);
+      const stored=(await targetDb.query('SELECT questions FROM target_private.quizzes WHERE id=$1',[fifty.quizId])).rows[0].questions;
+      eq(stored.length,50);eq(new Set(stored.map(question=>question.number)).size,50);ok(stored.every(question=>question.number>=1&&question.number<=500),'A multi-section range is retained on the server');
+      eq((await begin(context,bookName,direction,1,100,20)).total,20,'An old client can continue starting its supported legacy20 test');
+      await target(context,'/api/quiz/start',{book:bookName,direction,count:101,from:1,to:500,requestId:uuid()},400);
+      await classContext.close();await context.close();
+    }
+  });
+
+  await scenario('Selection waits for Answer and material feedback is immediate while the server confirms the score',async()=>{
+    const classContext=await makeContext(),context=await makeContext(),accountPin=pin();
+    await register(classContext,6,'回答操作確認E',accountPin,codeChanged);await target(context,'/api/login',{attendanceNumber:6,accountPin});
+    for(const cookie of await context.cookies(targetBase))remember(cookie.value);
+    const page=await openPage(context),starts=[],answers=[];
+    page.on('request',request=>{const route=new URL(request.url()).pathname;if(route==='/api/quiz/start')starts.push(JSON.parse(request.postData()));if(route==='/api/quiz/answer')answers.push(JSON.parse(request.postData()));});
+    await page.locator('#homeSectionFrom').selectOption('1');await page.locator('#homeSectionTo').selectOption('5');await page.locator('#testOpen').click();
+    eq(await page.locator('#rangeFrom').inputValue(),'1');eq(await page.locator('#rangeTo').inputValue(),'5');await page.locator('#questionCount').selectOption('100');await page.locator('#testStart').click();await page.locator('#questionChoices button').first().waitFor();
+    eq(starts.length,1);eq({book:starts[0].book,count:starts[0].count,from:starts[0].from,to:starts[0].to},{book:'target1900',count:100,from:1,to:500});
+    ok(await page.locator('#quizSubmit').isDisabled(),'Answer cannot submit an empty selection');
+    const questionNumber=Number((await page.locator('#questionNumber').innerText()).match(/No\. (\d+)/)[1]),correctText=book('target1900')[questionNumber-1].english;
+    const texts=await page.locator('#questionChoices .choice-text').allTextContents(),correct=texts.indexOf(correctText),wrong=texts.findIndex(text=>text!==correctText);ok(correct>=0&&wrong>=0);
+    await page.locator('#questionChoices button').nth(wrong).click();eq(answers.length,0);ok(!await page.locator('#answerFeedback').isVisible());
+    await page.locator('#questionChoices button').nth(correct).click();eq(await page.locator('#questionChoices button').nth(correct).getAttribute('aria-pressed'),'true');eq(await page.locator('#questionChoices button').nth(wrong).getAttribute('aria-pressed'),'false');eq(answers.length,0);
+    for(const [width,height] of [[320,568],[375,667],[390,844],[430,932],[1280,900]]){
+      await page.setViewportSize({width,height});ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+      const fonts=await page.locator('#questionChoices .choice-text').evaluateAll(nodes=>nodes.map(node=>({size:parseFloat(getComputedStyle(node).fontSize),weight:parseInt(getComputedStyle(node).fontWeight,10)})));ok(fonts.every(font=>font.size>=20&&font.weight>=650),'All answer text is large and bold');
+      await page.locator('#quizSubmit').scrollIntoViewIfNeeded();ok(await page.locator('#quizSubmit').isVisible(),'Answer remains reachable on phones');
+    }
+    await page.setViewportSize({width:390,height:844});
+    let release,serverAccepted;const gate=new Promise(resolve=>{release=resolve;}),accepted=new Promise(resolve=>{serverAccepted=resolve;});
+    await page.route('**/api/quiz/answer',async route=>{const response=await route.fetch();serverAccepted();await gate;await route.fulfill({response});});
+    await page.evaluate(()=>{window.__hintMs=null;const start=()=>{const began=performance.now(),observer=new MutationObserver(()=>{if(!document.getElementById('answerFeedback').hidden){window.__hintMs=performance.now()-began;observer.disconnect();}});observer.observe(document.getElementById('answerFeedback'),{attributes:true,attributeFilter:['hidden']});};document.getElementById('quizSubmit').addEventListener('click',start,{capture:true,once:true});});
+    try{
+      await page.locator('#quizSubmit').click();await page.locator('#answerFeedback').waitFor({state:'visible',timeout:1500});
+      eq(await page.locator('#feedbackTitle').innerText(),'正解');const hint=await page.evaluate(()=>window.__hintMs);materialFeedbackMs=hint;ok(Number.isFinite(hint)&&hint<200,'Material-backed feedback is shown before the held HTTP response');
+      await accepted;eq(await page.locator('#quizCorrect').innerText(),'0問 正解','The confirmed score does not change before server acknowledgement');ok(await page.locator('#quizNext').isDisabled(),'Next waits for an accepted authoritative result');ok((await page.locator('#quizMode').innerText()).includes('記録中'));
+      await page.evaluate(()=>{document.getElementById('quizSubmit').click();document.getElementById('quizSubmit').click();});eq(answers.length,1,'Repeated clicks cannot send another answer');
+    }finally{release();}
+    await page.waitForFunction(()=>!document.getElementById('quizNext').disabled);eq(await page.locator('#quizCorrect').innerText(),'1問 正解');eq((await target(context,'/api/session')).correctCount,1);
+    await page.unroute('**/api/quiz/answer');await page.locator('#quizNext').click();ok(!await page.locator('#answerFeedback').isVisible());ok(await page.locator('#quizSubmit').isDisabled());
+    await page.close();await context.close();await classContext.close();
+  });
+
+  await scenario('Home still shows only the leading ten ranks and its ranking button opens every participant',async()=>{
+    const fixtures=Array.from({length:11},(_,index)=>({id:uuid(),name:'順位確認'+(index+1),score:20+index}));
+    try{
+      for(const fixture of fixtures)await targetDb.query('INSERT INTO target_private.profiles(member_id,name,correct_count,answered_count) VALUES($1,$2,$3,$3)',[fixture.id,fixture.name,fixture.score]);
+      const expected=(await target(Guest,'/api/ranking')).ranking,page=await openPage(Guest);await page.waitForFunction(()=>document.getElementById('homeRankingStatus').textContent!=='読み込み中…');
+      eq(await page.locator('#homeRankingList > li').count(),10);eq(await page.locator('#homeRankingList .ranking-name').allTextContents(),expected.slice(0,10).map(row=>row.name));
+      await page.locator('#rankingOpen').click();await page.waitForFunction(()=>!document.getElementById('rankingRefresh').disabled);eq(await page.locator('#rankingList > li').count(),expected.length);await page.close();
+    }finally{await targetDb.query('DELETE FROM target_private.profiles WHERE member_id=ANY($1::uuid[])',[fixtures.map(fixture=>fixture.id)]);}
+  });
+
   await scenario('Target logout and production asset boundaries keep class credentials private',async()=>{
     await kgs(KgsA,'/api/login',{code:codeChanged,attendanceNumber:1,accountPin:pinNew});await target(A,'/api/logout',{});eq((await target(A,'/api/session')).member,null);eq((await classSession(KgsA)).member.id,memberA.id);
     for(const filename of ['index.html','app.js','style.css']){const content=await fs.readFile(path.join(root,'dist',filename),'utf8');for(const secret of [integrationSecret,rpcSecret,cookieSecret,process.env.KGS_ADMIN_SECRET,process.env.KGS_SESSION_SECRET])ok(!content.includes(secret),'Production browser files contain no server secret');}
@@ -230,5 +328,5 @@ async function openPage(context){const page=await context.newPage();page.on('pag
     for(const logs of serverLogs.values())for(const secret of secretSet)ok(!logs.includes(secret),'Runtime logs contain no credential');
   });
 }catch(error){failure=error;console.error('E2E ERROR '+redact(error.stack));if(!results.some(r=>r.status==='failed'))results.push({name:'Setup',status:'failed',error:redact(error.message).split('\n')[0]});}
-finally{await browser?.close().catch(()=>{});for(const key of [...processes.keys()])await stop(key);await kgsDb.end();await targetDb.end();const report={generatedAt:new Date().toISOString(),environment:'fresh loopback PostgreSQL databases, actual KGS and Target HTTP servers, independent Chromium contexts',cloudVerified:false,physicalSafariVerified:false,externalPushRequests:0,passed:results.filter(r=>r.status==='passed').length,failed:results.filter(r=>r.status==='failed').length,checks,results};await fs.mkdir(reportDir,{recursive:true});await fs.writeFile(path.join(reportDir,'e2e-results.json'),JSON.stringify(report,null,2)+'\n');console.log(`${report.passed} Target scenarios passed; ${report.failed} failed; ${checks} assertions.`);if(failure)process.exitCode=1;}
+finally{await browser?.close().catch(()=>{});for(const key of [...processes.keys()])await stop(key);await kgsDb.end();await targetDb.end();const report={generatedAt:new Date().toISOString(),environment:'fresh loopback PostgreSQL databases, actual KGS and Target HTTP servers, independent Chromium contexts',cloudVerified:false,physicalSafariVerified:false,externalPushRequests:0,performance:{materialFeedbackMs,guestHundredPreparationMs,actualHttpResponseHeld:true},passed:results.filter(r=>r.status==='passed').length,failed:results.filter(r=>r.status==='failed').length,checks,results};await fs.mkdir(reportDir,{recursive:true});await fs.writeFile(path.join(reportDir,'e2e-results.json'),JSON.stringify(report,null,2)+'\n');console.log(`${report.passed} Target scenarios passed; ${report.failed} failed; ${checks} assertions.`);if(failure)process.exitCode=1;}
 })();
