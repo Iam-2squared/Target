@@ -237,7 +237,7 @@
         if(!currentSetup())return;
         created={recorded:false,id:uuid(),total:questions.length,answeredCount:0,correctCount:0,question:questions[0],questions};
       }
-      quiz={...created,settings,pending:false,pendingAnswer:null,feedback:null,localFeedback:null,selectedChoiceId:null,finished:false,sessionEpoch:epoch};startRetry=null;
+      quiz={...created,settings,pending:false,pendingAnswer:null,feedback:null,localFeedback:null,finished:false,sessionEpoch:epoch};startRetry=null;
       show('quiz');renderQuestion();
     } catch(error) {
       if(!currentSetup())return;
@@ -255,16 +255,14 @@
     $('questionPrompt').textContent=question.prompt;$('questionPrompt').closest('.question-card').classList.toggle('english-prompt',quiz.settings.direction==='japanese');
     question.choices.forEach((choice,index)=>{const button=element('button','choice-button');button.type='button';button.dataset.choiceId=choice.id;button.setAttribute('aria-pressed','false');button.append(element('span','choice-letter',String.fromCharCode(65+index)),element('span','choice-text',choice.text));button.addEventListener('click',()=>selectChoice(choice.id));fragment.append(button);});
     $('questionChoices').replaceChildren(fragment);$('answerFeedback').hidden=true;$('quizNext').hidden=true;$('quizNext').disabled=false;$('answerRetry').hidden=true;setError('quizError');
-    $('quizSubmit').hidden=false;$('quizSubmit').disabled=true;$('quizSubmit').textContent='回答';
-    quiz.feedback=null;quiz.localFeedback=null;quiz.pendingAnswer=null;quiz.selectedChoiceId=null;
+    quiz.feedback=null;quiz.localFeedback=null;quiz.pendingAnswer=null;
     requestAnimationFrame(()=>{if(activeView==='quiz')$('questionPrompt').focus({preventScroll:true});});
   }
   function selectChoice(choiceId){
     if(!quiz||quiz.pending||quiz.pendingAnswer||quiz.feedback||quiz.sessionEpoch!==sessionEpoch)return;
     if(!quiz.question.choices.some(choice=>choice.id===choiceId))return;
-    quiz.selectedChoiceId=choiceId;
     for(const button of $('questionChoices').querySelectorAll('button')){const selected=button.dataset.choiceId===choiceId;button.classList.toggle('selected',selected);button.setAttribute('aria-pressed',String(selected));}
-    $('quizSubmit').disabled=false;
+    void answer(choiceId);
   }
   function materialFeedback(current,choiceId){
     const row=datasets.get(current.settings.book)?.[current.question.number-1];if(!row)return null;
@@ -286,7 +284,7 @@
     quiz.feedback=result;quiz.answeredCount=result.answeredCount;quiz.correctCount=result.correctCount;quiz.finished=result.finished;
     renderAnswerFeedback(result);
     $('quizCorrect').textContent=quiz.correctCount+'問 正解';$('quizProgress').value=quiz.answeredCount;
-    $('quizMode').textContent=quiz.recorded?'ランキングに記録':'ゲスト';$('quizSubmit').hidden=true;
+    $('quizMode').textContent=quiz.recorded?'ランキングに記録':'ゲスト';
     $('quizNext').replaceChildren(document.createTextNode(result.finished?'結果を見る':'次の問題'));$('quizNext').hidden=false;$('quizNext').disabled=false;$('answerRetry').hidden=true;
     setError('quizError');
   }
@@ -296,11 +294,10 @@
     if(!current.question.choices.some(choice=>choice.id===choiceId))return;
     if(!current.pendingAnswer)current.pendingAnswer={quizId:current.id,questionId:current.question.id,choiceId,requestId:uuid()};
     current.pending=true;$('answerRetry').disabled=true;setError('quizError');
-    $('quizSubmit').disabled=true;$('quizSubmit').textContent='確認中…';
     for(const button of $('questionChoices').querySelectorAll('button')){button.disabled=true;button.classList.toggle('selected',button.dataset.choiceId===choiceId);}
     if(current.recorded){
       current.localFeedback=materialFeedback(current,choiceId);
-      if(current.localFeedback){renderAnswerFeedback(current.localFeedback);$('quizSubmit').hidden=true;$('quizNext').hidden=false;$('quizNext').disabled=true;$('quizNext').textContent='記録中…';}
+      if(current.localFeedback){renderAnswerFeedback(current.localFeedback);$('quizNext').hidden=false;$('quizNext').disabled=true;$('quizNext').textContent='記録中…';}
       $('quizMode').textContent='記録中…';
     }
     try {
@@ -314,7 +311,7 @@
     } catch(error) {
       if(quiz!==current||current.sessionEpoch!==sessionEpoch)return;
       if(error.status===401){member=null;lifetimeCorrect=0;sessionKnown=true;sessionEpoch++;renderIdentity();}
-      $('quizMode').textContent=current.recorded?'記録未確認':'ゲスト';$('quizSubmit').hidden=true;$('quizNext').hidden=true;
+      $('quizMode').textContent=current.recorded?'記録未確認':'ゲスト';$('quizNext').hidden=true;
       setError('quizError',error.message+' 回答は保持しています。');$('answerRetry').hidden=error.status===401;
     } finally {current.pending=false;if(quiz===current)$('answerRetry').disabled=false;}
   }
@@ -379,7 +376,7 @@
   $('memoryPage').addEventListener('change',()=>{memoryPage=Number($('memoryPage').value);renderMemory();window.scrollTo({top:0,behavior:'instant'});});
   $('meaningsToggle').addEventListener('click',()=>{meaningsHidden=!meaningsHidden;renderMemory();});
   $('memorySheet').addEventListener('click',()=>{if(window.getSelection()?.toString())return;memoryNext({fromSheet:true});});
-  $('testForm').addEventListener('submit',startTest);$('quizSubmit').addEventListener('click',()=>{if(quiz?.selectedChoiceId)void answer(quiz.selectedChoiceId);});$('quizNext').addEventListener('click',nextQuestion);$('answerRetry').addEventListener('click',()=>{if(quiz?.pendingAnswer)void answer(quiz.pendingAnswer.choiceId,{retry:true});});
+  $('testForm').addEventListener('submit',startTest);$('quizNext').addEventListener('click',nextQuestion);$('answerRetry').addEventListener('click',()=>{if(quiz?.pendingAnswer)void answer(quiz.pendingAnswer.choiceId,{retry:true});});
   $('quizQuit').addEventListener('click',openQuit);$('quitCancel').addEventListener('click',()=>$('quitDialog').close());$('quitConfirm').addEventListener('click',()=>{$('quitDialog').close();quiz=null;home();});
   $('testAgain').addEventListener('click',()=>{if(quiz)selectedBook=quiz.settings.book;selectBook(selectedBook);openSetup();});
   $('rankingOpen').addEventListener('click',openRanking);$('resultRanking').addEventListener('click',openRanking);$('rankingRefresh').addEventListener('click',()=>loadRanking());

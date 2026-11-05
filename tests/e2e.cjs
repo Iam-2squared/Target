@@ -186,9 +186,9 @@ async function openPage(context){const page=await context.newPage();page.on('pag
       if(count===100){guestHundredPreparationMs=await page.evaluate(()=>window.__guestPrepareMs);ok(Number.isFinite(guestHundredPreparationMs),'The real guest100 preparation duration is measured');}
       for(let i=0;i<count;i++){
         await page.locator('#questionChoices button').first().waitFor();eq(await page.locator('#questionChoices button').count(),4);eq(new Set(await page.locator('#questionChoices button').allTextContents()).size,4);
-        await page.locator('#questionChoices button').first().click();ok(!await page.locator('#answerFeedback').isVisible(),'Selecting alone does not grade a guest answer');
+        await page.locator('#questionChoices button').first().click();await page.locator('#answerFeedback').waitFor({state:'visible'});
         eq(await page.locator('#questionChoices button').first().getAttribute('aria-pressed'),'true');
-        await page.locator('#quizSubmit').click();await page.locator('#answerFeedback').waitFor({state:'visible'});await page.locator('#quizNext').click();
+        eq(await page.locator('#quizSubmit').count(),0,'Guest practice needs no separate Answer button');await page.locator('#quizNext').click();
       }
       await page.locator('#resultView').waitFor({state:'visible'});eq(await page.locator('#resultTotal').innerText(),'/ '+count+'問');ok((await page.locator('#resultMode').innerText()).includes('ゲスト'),'Guest results clearly identify their scope');await page.locator('#resultView [data-home]').click();
     }
@@ -236,7 +236,7 @@ async function openPage(context){const page=await context.newPage();page.on('pag
     const correct=book('target1900')[number-1].english,choices=await page.locator('#questionChoices .choice-text').allTextContents(),wrong=choices.findIndex(text=>text!==correct);
     const before=Number((await targetDb.query('SELECT count(*)::int AS n FROM target_private.answers')).rows[0].n),requests=[];
     let failNext=true;await page.route('**/api/quiz/answer',async route=>{requests.push(JSON.parse(route.request().postData()));if(failNext){failNext=false;await route.abort('failed');}else await route.continue();});
-    const prompt=await page.locator('#questionPrompt').innerText();await page.locator('#questionChoices button').nth(wrong).click();eq(requests.length,0,'Selecting never sends an answer');await page.locator('#quizSubmit').click();await page.locator('#answerRetry').waitFor({state:'visible'});
+    const prompt=await page.locator('#questionPrompt').innerText();await page.locator('#questionChoices button').nth(wrong).click();await page.locator('#answerRetry').waitFor({state:'visible'});eq(requests.length,1,'One choice tap sends exactly one answer');
     eq(await page.locator('#questionPrompt').innerText(),prompt,'A failed transmission cannot advance the question');
     eq(Number((await targetDb.query('SELECT count(*)::int AS n FROM target_private.answers')).rows[0].n),before,'The aborted request has not awarded a score');
     await page.locator('#answerRetry').click();await page.waitForFunction(()=>!document.getElementById('quizNext').disabled);eq(await page.locator('#feedbackTitle').innerText(),'不正解');eq(requests.length,2);eq(requests[0],requests[1],'Retry reuses the exact answer and request ID');
@@ -277,7 +277,7 @@ async function openPage(context){const page=await context.newPage();page.on('pag
     }
   });
 
-  await scenario('Selection waits for Answer and material feedback is immediate while the server confirms the score',async()=>{
+  await scenario('One choice tap gives immediate material feedback while the server confirms the score',async()=>{
     const classContext=await makeContext(),context=await makeContext(),accountPin=pin();
     await register(classContext,6,'回答操作確認E',accountPin,codeChanged);await target(context,'/api/login',{attendanceNumber:6,accountPin});
     for(const cookie of await context.cookies(targetBase))remember(cookie.value);
@@ -286,28 +286,28 @@ async function openPage(context){const page=await context.newPage();page.on('pag
     await page.locator('#homeSectionFrom').selectOption('1');await page.locator('#homeSectionTo').selectOption('5');await page.locator('#testOpen').click();
     eq(await page.locator('#rangeFrom').inputValue(),'1');eq(await page.locator('#rangeTo').inputValue(),'5');await page.locator('#questionCount').selectOption('100');await page.locator('#testStart').click();await page.locator('#questionChoices button').first().waitFor();
     eq(starts.length,1);eq({book:starts[0].book,count:starts[0].count,from:starts[0].from,to:starts[0].to},{book:'target1900',count:100,from:1,to:500});
-    ok(await page.locator('#quizSubmit').isDisabled(),'Answer cannot submit an empty selection');
+    eq(await page.locator('#quizSubmit').count(),0,'A choice tap is the only answer submission control');eq(answers.length,0,'An unanswered question has sent no answer');
     const questionNumber=Number((await page.locator('#questionNumber').innerText()).match(/No\. (\d+)/)[1]),correctText=book('target1900')[questionNumber-1].english;
     const texts=await page.locator('#questionChoices .choice-text').allTextContents(),correct=texts.indexOf(correctText),wrong=texts.findIndex(text=>text!==correctText);ok(correct>=0&&wrong>=0);
-    await page.locator('#questionChoices button').nth(wrong).click();eq(answers.length,0);ok(!await page.locator('#answerFeedback').isVisible());
-    await page.locator('#questionChoices button').nth(correct).click();eq(await page.locator('#questionChoices button').nth(correct).getAttribute('aria-pressed'),'true');eq(await page.locator('#questionChoices button').nth(wrong).getAttribute('aria-pressed'),'false');eq(answers.length,0);
     for(const [width,height] of [[320,568],[375,667],[390,844],[430,932],[1280,900]]){
       await page.setViewportSize({width,height});ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
       const fonts=await page.locator('#questionChoices .choice-text').evaluateAll(nodes=>nodes.map(node=>({size:parseFloat(getComputedStyle(node).fontSize),weight:parseInt(getComputedStyle(node).fontWeight,10)})));ok(fonts.every(font=>font.size>=20&&font.weight>=650),'All answer text is large and bold');
-      await page.locator('#quizSubmit').scrollIntoViewIfNeeded();ok(await page.locator('#quizSubmit').isVisible(),'Answer remains reachable on phones');
+      await page.locator('#questionChoices button').last().scrollIntoViewIfNeeded();ok(await page.locator('#questionChoices button').last().isVisible(),'Every choice remains reachable on phones');
     }
     await page.setViewportSize({width:390,height:844});
     let release,serverAccepted;const gate=new Promise(resolve=>{release=resolve;}),accepted=new Promise(resolve=>{serverAccepted=resolve;});
     await page.route('**/api/quiz/answer',async route=>{const response=await route.fetch();serverAccepted();await gate;await route.fulfill({response});});
-    await page.evaluate(()=>{window.__hintMs=null;const start=()=>{const began=performance.now(),observer=new MutationObserver(()=>{if(!document.getElementById('answerFeedback').hidden){window.__hintMs=performance.now()-began;observer.disconnect();}});observer.observe(document.getElementById('answerFeedback'),{attributes:true,attributeFilter:['hidden']});};document.getElementById('quizSubmit').addEventListener('click',start,{capture:true,once:true});});
+    await page.evaluate(()=>{window.__hintMs=null;const start=()=>{const began=performance.now(),observer=new MutationObserver(()=>{if(!document.getElementById('answerFeedback').hidden){window.__hintMs=performance.now()-began;observer.disconnect();}});observer.observe(document.getElementById('answerFeedback'),{attributes:true,attributeFilter:['hidden']});};document.getElementById('questionChoices').addEventListener('click',start,{capture:true,once:true});});
     try{
-      await page.locator('#quizSubmit').click();await page.locator('#answerFeedback').waitFor({state:'visible',timeout:1500});
-      eq(await page.locator('#feedbackTitle').innerText(),'正解');const hint=await page.evaluate(()=>window.__hintMs);materialFeedbackMs=hint;ok(Number.isFinite(hint)&&hint<200,'Material-backed feedback is shown before the held HTTP response');
+      await page.locator('#questionChoices button').nth(correct).click();await page.locator('#answerFeedback').waitFor({state:'visible',timeout:1500});
+      eq(await page.locator('#feedbackTitle').innerText(),'正解');eq(await page.locator('#questionChoices button').nth(correct).getAttribute('aria-pressed'),'true');eq(await page.locator('#questionChoices button').nth(wrong).getAttribute('aria-pressed'),'false');
+      const hint=await page.evaluate(()=>window.__hintMs);materialFeedbackMs=hint;ok(Number.isFinite(hint)&&hint<200,'One choice tap shows material-backed feedback before the held HTTP response');
       await accepted;eq(await page.locator('#quizCorrect').innerText(),'0問 正解','The confirmed score does not change before server acknowledgement');ok(await page.locator('#quizNext').isDisabled(),'Next waits for an accepted authoritative result');ok((await page.locator('#quizMode').innerText()).includes('記録中'));
-      await page.evaluate(()=>{document.getElementById('quizSubmit').click();document.getElementById('quizSubmit').click();});eq(answers.length,1,'Repeated clicks cannot send another answer');
+      await page.locator('#questionChoices button').evaluateAll(buttons=>{for(const button of buttons)button.dispatchEvent(new MouseEvent('click',{bubbles:true}));buttons[0].dispatchEvent(new MouseEvent('click',{bubbles:true}));});eq(answers.length,1,'Repeated or other choice taps cannot send another answer while confirmation is pending');
+      eq(await page.locator('#questionChoices button').nth(correct).getAttribute('aria-pressed'),'true','Repeated taps cannot replace the submitted selection');
     }finally{release();}
     await page.waitForFunction(()=>!document.getElementById('quizNext').disabled);eq(await page.locator('#quizCorrect').innerText(),'1問 正解');eq((await target(context,'/api/session')).correctCount,1);
-    await page.unroute('**/api/quiz/answer');await page.locator('#quizNext').click();ok(!await page.locator('#answerFeedback').isVisible());ok(await page.locator('#quizSubmit').isDisabled());
+    await page.unroute('**/api/quiz/answer');await page.locator('#quizNext').click();ok(!await page.locator('#answerFeedback').isVisible());eq(await page.locator('#questionChoices button[aria-pressed="true"]').count(),0,'The next question clears the old selection');eq(await page.locator('#questionChoices button:enabled').count(),4,'The next question is immediately ready for one tap');
     await page.close();await context.close();await classContext.close();
   });
 
