@@ -1,0 +1,6002 @@
+[
+  {
+    "id": "i1000-0001",
+    "number": 1,
+    "english": "a piece of ～",
+    "japanese": "１つの～"
+  },
+  {
+    "id": "i1000-0002",
+    "number": 2,
+    "english": "a couple of ～",
+    "japanese": "２つの～、２，３の～"
+  },
+  {
+    "id": "i1000-0003",
+    "number": 3,
+    "english": "a number of ～",
+    "japanese": "いくつもの～、かなり多くの～"
+  },
+  {
+    "id": "i1000-0004",
+    "number": 4,
+    "english": "dozens of ～",
+    "japanese": "数十もの～、何ダースもの～"
+  },
+  {
+    "id": "i1000-0005",
+    "number": 5,
+    "english": "plenty of ～",
+    "japanese": "たくさんの～"
+  },
+  {
+    "id": "i1000-0006",
+    "number": 6,
+    "english": "a great/good deal (of ～)",
+    "japanese": "たくさん（の～）"
+  },
+  {
+    "id": "i1000-0007",
+    "number": 7,
+    "english": "at home",
+    "japanese": "①在宅して、家庭で ②くつろいで ③精通して"
+  },
+  {
+    "id": "i1000-0008",
+    "number": 8,
+    "english": "in time",
+    "japanese": "①間に合って ②やがて、そのうちに"
+  },
+  {
+    "id": "i1000-0009",
+    "number": 9,
+    "english": "in fashion",
+    "japanese": "流行して"
+  },
+  {
+    "id": "i1000-0010",
+    "number": 10,
+    "english": "on time",
+    "japanese": "時間通りに［で］"
+  },
+  {
+    "id": "i1000-0011",
+    "number": 11,
+    "english": "on duty",
+    "japanese": "当番で、勤務時間中で"
+  },
+  {
+    "id": "i1000-0012",
+    "number": 12,
+    "english": "on schedule",
+    "japanese": "予定通りで、定時に"
+  },
+  {
+    "id": "i1000-0013",
+    "number": 13,
+    "english": "up to date",
+    "japanese": "最新（式）の"
+  },
+  {
+    "id": "i1000-0014",
+    "number": 14,
+    "english": "be aware of ～",
+    "japanese": "～を知っている、～に気づいている"
+  },
+  {
+    "id": "i1000-0015",
+    "number": 15,
+    "english": "be made of ～",
+    "japanese": "～でできている"
+  },
+  {
+    "id": "i1000-0016",
+    "number": 16,
+    "english": "be capable of ～",
+    "japanese": "～ができる、～の可能性がある"
+  },
+  {
+    "id": "i1000-0017",
+    "number": 17,
+    "english": "be afraid of ～",
+    "japanese": "～を恐れる［怖がる］、～を心配している"
+  },
+  {
+    "id": "i1000-0018",
+    "number": 18,
+    "english": "be sure of/about ～",
+    "japanese": "～を確信している"
+  },
+  {
+    "id": "i1000-0019",
+    "number": 19,
+    "english": "be composed of ～",
+    "japanese": "～から構成されている"
+  },
+  {
+    "id": "i1000-0020",
+    "number": 20,
+    "english": "be based on/upon ～",
+    "japanese": "～に基づいている"
+  },
+  {
+    "id": "i1000-0021",
+    "number": 21,
+    "english": "be different from ～",
+    "japanese": "～とは違っている"
+  },
+  {
+    "id": "i1000-0022",
+    "number": 22,
+    "english": "be absent from ～",
+    "japanese": "～を欠席する"
+  },
+  {
+    "id": "i1000-0023",
+    "number": 23,
+    "english": "be engaged in ～",
+    "japanese": "～に従事している、忙しく～をしている"
+  },
+  {
+    "id": "i1000-0024",
+    "number": 24,
+    "english": "be responsible for ～",
+    "japanese": "～に責任がある"
+  },
+  {
+    "id": "i1000-0025",
+    "number": 25,
+    "english": "be married (to ～)",
+    "japanese": "（～と）結婚している"
+  },
+  {
+    "id": "i1000-0026",
+    "number": 26,
+    "english": "be satisfied with ～",
+    "japanese": "～に満足している"
+  },
+  {
+    "id": "i1000-0027",
+    "number": 27,
+    "english": "be curious about ～",
+    "japanese": "～を知りたがる、～に好奇心の強い"
+  },
+  {
+    "id": "i1000-0028",
+    "number": 28,
+    "english": "be well off",
+    "japanese": "裕福である"
+  },
+  {
+    "id": "i1000-0029",
+    "number": 29,
+    "english": "be likely to do",
+    "japanese": "…しそうである"
+  },
+  {
+    "id": "i1000-0030",
+    "number": 30,
+    "english": "be willing to do",
+    "japanese": "…してもかまわない"
+  },
+  {
+    "id": "i1000-0031",
+    "number": 31,
+    "english": "be about to do",
+    "japanese": "今にも…しようとしている"
+  },
+  {
+    "id": "i1000-0032",
+    "number": 32,
+    "english": "lead to ～",
+    "japanese": "～（という結果）を引き起こす、～へと通じる"
+  },
+  {
+    "id": "i1000-0033",
+    "number": 33,
+    "english": "refer to ～",
+    "japanese": "①～に言及する ②～を参照する、～に問い合わせる"
+  },
+  {
+    "id": "i1000-0034",
+    "number": 34,
+    "english": "contribute to ～",
+    "japanese": "～の一因となる、～に貢献する、～に寄付［寄稿］する"
+  },
+  {
+    "id": "i1000-0035",
+    "number": 35,
+    "english": "amount to ～",
+    "japanese": "総計～になる"
+  },
+  {
+    "id": "i1000-0036",
+    "number": 36,
+    "english": "depend on/upon ～",
+    "japanese": "～に頼る、～しだいである"
+  },
+  {
+    "id": "i1000-0037",
+    "number": 37,
+    "english": "focus on ～",
+    "japanese": "～に集中する、～に焦点を合わせる"
+  },
+  {
+    "id": "i1000-0038",
+    "number": 38,
+    "english": "rely on/upon ～",
+    "japanese": "～に頼る"
+  },
+  {
+    "id": "i1000-0039",
+    "number": 39,
+    "english": "get on (～)",
+    "japanese": "①（公共の乗り物など）に乗る ②仲良くやっていく、（なんとか）やっていく"
+  },
+  {
+    "id": "i1000-0040",
+    "number": 40,
+    "english": "insist on/upon ～",
+    "japanese": "～を主張する"
+  },
+  {
+    "id": "i1000-0041",
+    "number": 41,
+    "english": "concentrate on ～",
+    "japanese": "～に集中する"
+  },
+  {
+    "id": "i1000-0042",
+    "number": 42,
+    "english": "look for ～",
+    "japanese": "～を探す［捜す］"
+  },
+  {
+    "id": "i1000-0043",
+    "number": 43,
+    "english": "search for ～",
+    "japanese": "～を探す［捜す］"
+  },
+  {
+    "id": "i1000-0044",
+    "number": 44,
+    "english": "prepare for ～",
+    "japanese": "～の準備をする、～に備える"
+  },
+  {
+    "id": "i1000-0045",
+    "number": 45,
+    "english": "think of ～",
+    "japanese": "①～をしようかなと思う、～のことを考える ②～を思いつく ③～を思い出す"
+  },
+  {
+    "id": "i1000-0046",
+    "number": 46,
+    "english": "consist of ～",
+    "japanese": "～から成り立っている"
+  },
+  {
+    "id": "i1000-0047",
+    "number": 47,
+    "english": "complain about/of ～",
+    "japanese": "（苦痛など）を訴える、～について不平を言う"
+  },
+  {
+    "id": "i1000-0048",
+    "number": 48,
+    "english": "die of/from ～",
+    "japanese": "～で死ぬ"
+  },
+  {
+    "id": "i1000-0049",
+    "number": 49,
+    "english": "suffer from ～",
+    "japanese": "（病気など）で苦しむ［悩む］"
+  },
+  {
+    "id": "i1000-0050",
+    "number": 50,
+    "english": "result from ～",
+    "japanese": "～から起こる"
+  },
+  {
+    "id": "i1000-0051",
+    "number": 51,
+    "english": "graduate from ～",
+    "japanese": "～を卒業する"
+  },
+  {
+    "id": "i1000-0052",
+    "number": 52,
+    "english": "differ from ～",
+    "japanese": "～と異なる"
+  },
+  {
+    "id": "i1000-0053",
+    "number": 53,
+    "english": "recover from ～",
+    "japanese": "～から立ち直る［回復する］"
+  },
+  {
+    "id": "i1000-0054",
+    "number": 54,
+    "english": "hear from ～",
+    "japanese": "～から便り［電話・伝言］がある"
+  },
+  {
+    "id": "i1000-0055",
+    "number": 55,
+    "english": "believe in ～",
+    "japanese": "～の価値［存在］を信じる、～を信用する"
+  },
+  {
+    "id": "i1000-0056",
+    "number": 56,
+    "english": "succeed in ～",
+    "japanese": "～に成功する"
+  },
+  {
+    "id": "i1000-0057",
+    "number": 57,
+    "english": "major in ～",
+    "japanese": "（大学生が）～を専攻する"
+  },
+  {
+    "id": "i1000-0058",
+    "number": 58,
+    "english": "abound in/with ～",
+    "japanese": "（場所が）～に富む"
+  },
+  {
+    "id": "i1000-0059",
+    "number": 59,
+    "english": "care about ～",
+    "japanese": "～に気にかける、～に関心を持つ"
+  },
+  {
+    "id": "i1000-0060",
+    "number": 60,
+    "english": "bring about ～",
+    "japanese": "～を引き起こす"
+  },
+  {
+    "id": "i1000-0061",
+    "number": 61,
+    "english": "deal with ～",
+    "japanese": "～を扱う,処理する"
+  },
+  {
+    "id": "i1000-0062",
+    "number": 62,
+    "english": "go through ～",
+    "japanese": "①～を通過する ②（苦しみなど）を経験する"
+  },
+  {
+    "id": "i1000-0063",
+    "number": 63,
+    "english": "give up ～",
+    "japanese": "～をあきらめる、～捨てる［やめる］"
+  },
+  {
+    "id": "i1000-0064",
+    "number": 64,
+    "english": "grow up",
+    "japanese": "大人になる、（事態などが）生じる"
+  },
+  {
+    "id": "i1000-0065",
+    "number": 65,
+    "english": "pick up ～",
+    "japanese": "～を（車などに）乗せる、～拾う"
+  },
+  {
+    "id": "i1000-0066",
+    "number": 66,
+    "english": "set up ～",
+    "japanese": "～を立てる［建てる］、～を創設する［始める］"
+  },
+  {
+    "id": "i1000-0067",
+    "number": 67,
+    "english": "wake up (～)",
+    "japanese": "目が覚める、（人）の目を覚まさせる"
+  },
+  {
+    "id": "i1000-0068",
+    "number": 68,
+    "english": "brush up (on) ～",
+    "japanese": "（語学など）をやり直して磨きをかける"
+  },
+  {
+    "id": "i1000-0069",
+    "number": 69,
+    "english": "find out ～",
+    "japanese": "（調査などの結果）を見つけ出す、（真相）を知る"
+  },
+  {
+    "id": "i1000-0070",
+    "number": 70,
+    "english": "carry out ～",
+    "japanese": "～を実行する"
+  },
+  {
+    "id": "i1000-0071",
+    "number": 71,
+    "english": "point out ～",
+    "japanese": "～を指摘する"
+  },
+  {
+    "id": "i1000-0072",
+    "number": 72,
+    "english": "figure out (～)",
+    "japanese": "～を理解する、～を計算する、～を解く"
+  },
+  {
+    "id": "i1000-0073",
+    "number": 73,
+    "english": "turn out (～)",
+    "japanese": "①～であることが分かる、（結果的に）～になる ②～を産出する ③（催しなどに）繰り出す"
+  },
+  {
+    "id": "i1000-0074",
+    "number": 74,
+    "english": "fill out ～",
+    "japanese": "（書類など）に書き込む"
+  },
+  {
+    "id": "i1000-0075",
+    "number": 75,
+    "english": "pick out ～",
+    "japanese": "～を選ぶ"
+  },
+  {
+    "id": "i1000-0076",
+    "number": 76,
+    "english": "put on ～",
+    "japanese": "～を（身に）つける、（電気器具ガスなど）をつける"
+  },
+  {
+    "id": "i1000-0077",
+    "number": 77,
+    "english": "work on (～)",
+    "japanese": "①働き続ける ②～に取り組む、～を手がける、～に影響を与える、（薬などが）～に効く"
+  },
+  {
+    "id": "i1000-0078",
+    "number": 78,
+    "english": "try on ～",
+    "japanese": "～を試着する"
+  },
+  {
+    "id": "i1000-0079",
+    "number": 79,
+    "english": "turn on (～)",
+    "japanese": "（スイッチなど）をつける、（水・ガスなど）を出す、（明かりなどが）つく"
+  },
+  {
+    "id": "i1000-0080",
+    "number": 80,
+    "english": "turn off (～)",
+    "japanese": "（スイッチなど）を消す、（水・ガスなど）を止める、（明かりなどが）消える"
+  },
+  {
+    "id": "i1000-0081",
+    "number": 81,
+    "english": "take off (～)",
+    "japanese": "①～を脱ぐ、～を取り除く ②離陸する、（流行・売り上げなどが）急増［急伸］する ③～を休暇としてとる"
+  },
+  {
+    "id": "i1000-0082",
+    "number": 82,
+    "english": "get along",
+    "japanese": "①暮らす、（なんとか）やっていく ②仲良くやっていく、進む"
+  },
+  {
+    "id": "i1000-0083",
+    "number": 83,
+    "english": "get together (～)",
+    "japanese": "集まる、～を集める"
+  },
+  {
+    "id": "i1000-0084",
+    "number": 84,
+    "english": "calm down (～)",
+    "japanese": "～を落ち着かせる［静める］、落ち着く［静まる］"
+  },
+  {
+    "id": "i1000-0085",
+    "number": 85,
+    "english": "think over ～",
+    "japanese": "～をよく考える"
+  },
+  {
+    "id": "i1000-0086",
+    "number": 86,
+    "english": "keep doing",
+    "japanese": "…し続ける"
+  },
+  {
+    "id": "i1000-0087",
+    "number": 87,
+    "english": "take place",
+    "japanese": "催される、起こる"
+  },
+  {
+    "id": "i1000-0088",
+    "number": 88,
+    "english": "play a role/part (in ～)",
+    "japanese": "（～で）役割を演じる［果たす］"
+  },
+  {
+    "id": "i1000-0089",
+    "number": 89,
+    "english": "make sure (～)",
+    "japanese": "（～を）確かめる、確実に～をする"
+  },
+  {
+    "id": "i1000-0090",
+    "number": 90,
+    "english": "make sense",
+    "japanese": "意味をなす、道理にかなう"
+  },
+  {
+    "id": "i1000-0091",
+    "number": 91,
+    "english": "make a difference",
+    "japanese": "違いが生じる、重要である"
+  },
+  {
+    "id": "i1000-0092",
+    "number": 92,
+    "english": "make a mistake",
+    "japanese": "間違いをする"
+  },
+  {
+    "id": "i1000-0093",
+    "number": 93,
+    "english": "make progress",
+    "japanese": "進歩する"
+  },
+  {
+    "id": "i1000-0094",
+    "number": 94,
+    "english": "make up one's mind",
+    "japanese": "決心する"
+  },
+  {
+    "id": "i1000-0095",
+    "number": 95,
+    "english": "do one's best",
+    "japanese": "最善を尽くす"
+  },
+  {
+    "id": "i1000-0096",
+    "number": 96,
+    "english": "keep one's promise/word",
+    "japanese": "約束を守る"
+  },
+  {
+    "id": "i1000-0097",
+    "number": 97,
+    "english": "get lost",
+    "japanese": "道に迷う"
+  },
+  {
+    "id": "i1000-0098",
+    "number": 98,
+    "english": "enjoy oneself",
+    "japanese": "楽しい時を過ごす"
+  },
+  {
+    "id": "i1000-0099",
+    "number": 99,
+    "english": "have/take ～ off",
+    "japanese": "～を休みとしてとる"
+  },
+  {
+    "id": "i1000-0100",
+    "number": 100,
+    "english": "pay attention to ～",
+    "japanese": "～に注意を払う"
+  },
+  {
+    "id": "i1000-0101",
+    "number": 101,
+    "english": "take care of ～",
+    "japanese": "～に気をつける、～の世話をする"
+  },
+  {
+    "id": "i1000-0102",
+    "number": 102,
+    "english": "look forward to ～",
+    "japanese": "～を楽しみに待つ"
+  },
+  {
+    "id": "i1000-0103",
+    "number": 103,
+    "english": "ask for ～",
+    "japanese": "～を求める"
+  },
+  {
+    "id": "i1000-0104",
+    "number": 104,
+    "english": "get rid of ～",
+    "japanese": "（厄介なもの）を取り除く"
+  },
+  {
+    "id": "i1000-0105",
+    "number": 105,
+    "english": "fall in love with ～",
+    "japanese": "（事・物）を大好きになる、（人）と恋に落ちる"
+  },
+  {
+    "id": "i1000-0106",
+    "number": 106,
+    "english": "used to do/be",
+    "japanese": "～したものだった、昔は～であった"
+  },
+  {
+    "id": "i1000-0107",
+    "number": 107,
+    "english": "had better do",
+    "japanese": "…したほうがいい、…すべきだ"
+  },
+  {
+    "id": "i1000-0108",
+    "number": 108,
+    "english": "help A with B",
+    "japanese": "AのBを手伝う、AをBで助ける"
+  },
+  {
+    "id": "i1000-0109",
+    "number": 109,
+    "english": "prefer A to B",
+    "japanese": "ＢよりＡを好む"
+  },
+  {
+    "id": "i1000-0110",
+    "number": 110,
+    "english": "turn A into B",
+    "japanese": "ＡをＢに（質的に）変える"
+  },
+  {
+    "id": "i1000-0111",
+    "number": 111,
+    "english": "prevent A from B",
+    "japanese": "AがBするのを妨げる、AをBから防ぐ"
+  },
+  {
+    "id": "i1000-0112",
+    "number": 112,
+    "english": "remind A of/about B",
+    "japanese": "AにBを思い出させる"
+  },
+  {
+    "id": "i1000-0113",
+    "number": 113,
+    "english": "regard A as B",
+    "japanese": "AをBとみなす"
+  },
+  {
+    "id": "i1000-0114",
+    "number": 114,
+    "english": "associate A with B",
+    "japanese": "ＡをＢと結びつけて考える"
+  },
+  {
+    "id": "i1000-0115",
+    "number": 115,
+    "english": "inform A of/about B",
+    "japanese": "AにBを知らせる"
+  },
+  {
+    "id": "i1000-0116",
+    "number": 116,
+    "english": "after all",
+    "japanese": "結局（は）、やっぱり"
+  },
+  {
+    "id": "i1000-0117",
+    "number": 117,
+    "english": "all the time",
+    "japanese": "いつも、常に"
+  },
+  {
+    "id": "i1000-0118",
+    "number": 118,
+    "english": "all the way",
+    "japanese": "ずっと、はるばる"
+  },
+  {
+    "id": "i1000-0119",
+    "number": 119,
+    "english": "～ and so on/forth",
+    "japanese": "～など"
+  },
+  {
+    "id": "i1000-0120",
+    "number": 120,
+    "english": "and yet",
+    "japanese": "それにも関わらず"
+  },
+  {
+    "id": "i1000-0121",
+    "number": 121,
+    "english": "as ～ as possible/one can",
+    "japanese": "できる限り～"
+  },
+  {
+    "id": "i1000-0122",
+    "number": 122,
+    "english": "as a result (of ～)",
+    "japanese": "（～の）結果として"
+  },
+  {
+    "id": "i1000-0123",
+    "number": 123,
+    "english": "as a whole",
+    "japanese": "全体として（の）"
+  },
+  {
+    "id": "i1000-0124",
+    "number": 124,
+    "english": "as usual",
+    "japanese": "いつものように"
+  },
+  {
+    "id": "i1000-0125",
+    "number": 125,
+    "english": "at best",
+    "japanese": "よくても、せいぜい"
+  },
+  {
+    "id": "i1000-0126",
+    "number": 126,
+    "english": "at least",
+    "japanese": "少なくとも"
+  },
+  {
+    "id": "i1000-0127",
+    "number": 127,
+    "english": "at (the) most",
+    "japanese": "せいぜい、多くても"
+  },
+  {
+    "id": "i1000-0128",
+    "number": 128,
+    "english": "at a time",
+    "japanese": "一度に"
+  },
+  {
+    "id": "i1000-0129",
+    "number": 129,
+    "english": "at once",
+    "japanese": "①すぐに ②同時に"
+  },
+  {
+    "id": "i1000-0130",
+    "number": 130,
+    "english": "at all",
+    "japanese": "①（否定文で）まったく ②（疑問文で）一体、そもそも ③（肯定文で）そもそも、ともかく"
+  },
+  {
+    "id": "i1000-0131",
+    "number": 131,
+    "english": "at any rate",
+    "japanese": "とにかく、いずれにしても"
+  },
+  {
+    "id": "i1000-0132",
+    "number": 132,
+    "english": "at random",
+    "japanese": "無作為に、手当たり次第に"
+  },
+  {
+    "id": "i1000-0133",
+    "number": 133,
+    "english": "more or less",
+    "japanese": "①多かれ少なかれ、程度の差はあれ②ほぼ、おおよそ"
+  },
+  {
+    "id": "i1000-0134",
+    "number": 134,
+    "english": "at times",
+    "japanese": "ときどき"
+  },
+  {
+    "id": "i1000-0135",
+    "number": 135,
+    "english": "between you and me",
+    "japanese": "ここだけの話だが、内緒だが"
+  },
+  {
+    "id": "i1000-0136",
+    "number": 136,
+    "english": "by hand",
+    "japanese": "手で"
+  },
+  {
+    "id": "i1000-0137",
+    "number": 137,
+    "english": "by mistake",
+    "japanese": "間違って"
+  },
+  {
+    "id": "i1000-0138",
+    "number": 138,
+    "english": "by no means",
+    "japanese": "全然～ない"
+  },
+  {
+    "id": "i1000-0139",
+    "number": 139,
+    "english": "by the way",
+    "japanese": "ところで"
+  },
+  {
+    "id": "i1000-0140",
+    "number": 140,
+    "english": "far from ～",
+    "japanese": "～からほど遠い、～どころではない"
+  },
+  {
+    "id": "i1000-0141",
+    "number": 141,
+    "english": "for a while",
+    "japanese": "しばらくの間"
+  },
+  {
+    "id": "i1000-0142",
+    "number": 142,
+    "english": "for example/instance",
+    "japanese": "例えば"
+  },
+  {
+    "id": "i1000-0143",
+    "number": 143,
+    "english": "for one thing",
+    "japanese": "一つには"
+  },
+  {
+    "id": "i1000-0144",
+    "number": 144,
+    "english": "in a hurry",
+    "japanese": "急いで、あせって"
+  },
+  {
+    "id": "i1000-0145",
+    "number": 145,
+    "english": "in addition (to ～)",
+    "japanese": "（～に）加えて、さらに"
+  },
+  {
+    "id": "i1000-0146",
+    "number": 146,
+    "english": "in any case/event",
+    "japanese": "とにかく、いずれにしても"
+  },
+  {
+    "id": "i1000-0147",
+    "number": 147,
+    "english": "in detail",
+    "japanese": "詳細に"
+  },
+  {
+    "id": "i1000-0148",
+    "number": 148,
+    "english": "in fact",
+    "japanese": "①実際に ②（前言と対照して）（ところが）実際は"
+  },
+  {
+    "id": "i1000-0149",
+    "number": 149,
+    "english": "in general",
+    "japanese": "①一般に ②（名詞の後に置いて）一般の"
+  },
+  {
+    "id": "i1000-0150",
+    "number": 150,
+    "english": "in other words",
+    "japanese": "言い換えれば、つまり"
+  },
+  {
+    "id": "i1000-0151",
+    "number": 151,
+    "english": "in public",
+    "japanese": "人前で、公然と"
+  },
+  {
+    "id": "i1000-0152",
+    "number": 152,
+    "english": "in reality",
+    "japanese": "（ところが）実際には、（想像などではなく）現実に"
+  },
+  {
+    "id": "i1000-0153",
+    "number": 153,
+    "english": "in the end",
+    "japanese": "結局は、ついには"
+  },
+  {
+    "id": "i1000-0154",
+    "number": 154,
+    "english": "in the future",
+    "japanese": "将来は、今後は"
+  },
+  {
+    "id": "i1000-0155",
+    "number": 155,
+    "english": "in the long run",
+    "japanese": "長い目で見れば、結局は"
+  },
+  {
+    "id": "i1000-0156",
+    "number": 156,
+    "english": "no doubt",
+    "japanese": "おそらく、たぶん"
+  },
+  {
+    "id": "i1000-0157",
+    "number": 157,
+    "english": "no longer ～",
+    "japanese": "もはや～ない"
+  },
+  {
+    "id": "i1000-0158",
+    "number": 158,
+    "english": "not always ～",
+    "japanese": "必ずしも～ではない"
+  },
+  {
+    "id": "i1000-0159",
+    "number": 159,
+    "english": "on earth",
+    "japanese": "①（疑問詞を強めて）一体全体 ②（最上級を強めて）世界中で"
+  },
+  {
+    "id": "i1000-0160",
+    "number": 160,
+    "english": "on the other hand",
+    "japanese": "他方では、これに反して"
+  },
+  {
+    "id": "i1000-0161",
+    "number": 161,
+    "english": "so far",
+    "japanese": "今までの所"
+  },
+  {
+    "id": "i1000-0162",
+    "number": 162,
+    "english": "sooner or later",
+    "japanese": "遅かれ早かれ"
+  },
+  {
+    "id": "i1000-0163",
+    "number": 163,
+    "english": "these days",
+    "japanese": "近頃は、この頃は"
+  },
+  {
+    "id": "i1000-0164",
+    "number": 164,
+    "english": "according to ～",
+    "japanese": "①～によれば ②～に従って、～に応じて"
+  },
+  {
+    "id": "i1000-0165",
+    "number": 165,
+    "english": "owing/due to ～",
+    "japanese": "～のために"
+  },
+  {
+    "id": "i1000-0166",
+    "number": 166,
+    "english": "thanks to ～",
+    "japanese": "～のおかげで"
+  },
+  {
+    "id": "i1000-0167",
+    "number": 167,
+    "english": "in spite of ～",
+    "japanese": "～にもかかわらず"
+  },
+  {
+    "id": "i1000-0168",
+    "number": 168,
+    "english": "all over (～)",
+    "japanese": "（～の）至る所に［で］、一面に"
+  },
+  {
+    "id": "i1000-0169",
+    "number": 169,
+    "english": "apart from ～",
+    "japanese": "①～のほかに ②～を除いては"
+  },
+  {
+    "id": "i1000-0170",
+    "number": 170,
+    "english": "aside from ～",
+    "japanese": "～を除いては、～のほかに"
+  },
+  {
+    "id": "i1000-0171",
+    "number": 171,
+    "english": "ahead of ～",
+    "japanese": "（時間的に）～より先に、（位置的に）～の前に、～より進歩して"
+  },
+  {
+    "id": "i1000-0172",
+    "number": 172,
+    "english": "in search of ～",
+    "japanese": "～を求めて［探して］"
+  },
+  {
+    "id": "i1000-0173",
+    "number": 173,
+    "english": "in preparation",
+    "japanese": "～の準備中で"
+  },
+  {
+    "id": "i1000-0174",
+    "number": 174,
+    "english": "each other",
+    "japanese": "お互い"
+  },
+  {
+    "id": "i1000-0175",
+    "number": 175,
+    "english": "so ～ that …",
+    "japanese": "（結果を表して）非常に～なので…する"
+  },
+  {
+    "id": "i1000-0176",
+    "number": 176,
+    "english": "A as well as B",
+    "japanese": "BだけでなくAも"
+  },
+  {
+    "id": "i1000-0177",
+    "number": 177,
+    "english": "not only A but (also) B",
+    "japanese": "AだけでなくBも"
+  },
+  {
+    "id": "i1000-0178",
+    "number": 178,
+    "english": "as if/though …",
+    "japanese": "まるで…するように"
+  },
+  {
+    "id": "i1000-0179",
+    "number": 179,
+    "english": "as soon as …",
+    "japanese": "…するやいなや"
+  },
+  {
+    "id": "i1000-0180",
+    "number": 180,
+    "english": "Something is wrong with ～.",
+    "japanese": "～はどこか調子がおかしい［故障している］"
+  },
+  {
+    "id": "i1000-0181",
+    "number": 181,
+    "english": "bring up ～",
+    "japanese": "①～を育てる②（問題・話題など）を持ち出す = raise"
+  },
+  {
+    "id": "i1000-0182",
+    "number": 182,
+    "english": "call off ～",
+    "japanese": "～を中止する［取り消す］ = cancel"
+  },
+  {
+    "id": "i1000-0183",
+    "number": 183,
+    "english": "carry on (～)",
+    "japanese": "（～を）続ける = happen, occur"
+  },
+  {
+    "id": "i1000-0184",
+    "number": 184,
+    "english": "come about",
+    "japanese": "起こる = continue"
+  },
+  {
+    "id": "i1000-0185",
+    "number": 185,
+    "english": "come by ～",
+    "japanese": "～を手に入れる = get, obtain"
+  },
+  {
+    "id": "i1000-0186",
+    "number": 186,
+    "english": "come up with ～",
+    "japanese": "（解決策など）を思いつく = devise, invent, conceive"
+  },
+  {
+    "id": "i1000-0187",
+    "number": 187,
+    "english": "do away with ～",
+    "japanese": "～を取り除く、～を廃止する = eliminate, abolish"
+  },
+  {
+    "id": "i1000-0188",
+    "number": 188,
+    "english": "find fault with ～",
+    "japanese": "～にけちをつける、～を非難する = criticize"
+  },
+  {
+    "id": "i1000-0189",
+    "number": 189,
+    "english": "get over",
+    "japanese": "～を克服する、（病気など）から回復する = overcome"
+  },
+  {
+    "id": "i1000-0190",
+    "number": 190,
+    "english": "hand in ～",
+    "japanese": "（手渡しで）～を提出する［届ける］ = submit"
+  },
+  {
+    "id": "i1000-0191",
+    "number": 191,
+    "english": "learn ～ by heart",
+    "japanese": "～を暗記する = memorize"
+  },
+  {
+    "id": "i1000-0192",
+    "number": 192,
+    "english": "look into ～",
+    "japanese": "～を調べる = investigate"
+  },
+  {
+    "id": "i1000-0193",
+    "number": 193,
+    "english": "look over ～",
+    "japanese": "～を（ざっと）調べる = examine"
+  },
+  {
+    "id": "i1000-0194",
+    "number": 194,
+    "english": "pass away",
+    "japanese": "死ぬ = die"
+  },
+  {
+    "id": "i1000-0195",
+    "number": 195,
+    "english": "put off ～",
+    "japanese": "～を延期する = postpone"
+  },
+  {
+    "id": "i1000-0196",
+    "number": 196,
+    "english": "put together ～",
+    "japanese": "（部品など）を組み立てる、（考えなど）をまとめる = assemble, build"
+  },
+  {
+    "id": "i1000-0197",
+    "number": 197,
+    "english": "put up ～",
+    "japanese": "①～を掲げる、～を上げる、～を建てる②～を泊める = raise, lift, erect, construct/accommodete"
+  },
+  {
+    "id": "i1000-0198",
+    "number": 198,
+    "english": "put up with ～",
+    "japanese": "～を我慢する = tolerate, endure, stand"
+  },
+  {
+    "id": "i1000-0199",
+    "number": 199,
+    "english": "set about ～",
+    "japanese": "～を始める = begin, start"
+  },
+  {
+    "id": "i1000-0200",
+    "number": 200,
+    "english": "set in",
+    "japanese": "始まる = begin, start"
+  },
+  {
+    "id": "i1000-0201",
+    "number": 201,
+    "english": "take after ～",
+    "japanese": "～に似ている = resemble"
+  },
+  {
+    "id": "i1000-0202",
+    "number": 202,
+    "english": "of importance",
+    "japanese": "重要な = important"
+  },
+  {
+    "id": "i1000-0203",
+    "number": 203,
+    "english": "along with ～",
+    "japanese": "～と一緒に、～に加えて = besides"
+  },
+  {
+    "id": "i1000-0204",
+    "number": 204,
+    "english": "in connection with ～",
+    "japanese": "～に関連して = concerning, about"
+  },
+  {
+    "id": "i1000-0205",
+    "number": 205,
+    "english": "on board (～)",
+    "japanese": "（乗り物）に乗って、乗って（た） = aboard"
+  },
+  {
+    "id": "i1000-0206",
+    "number": 206,
+    "english": "prior to ～",
+    "japanese": "～より前で = before"
+  },
+  {
+    "id": "i1000-0207",
+    "number": 207,
+    "english": "(every) once in a while",
+    "japanese": "ときどき = sometimes, occasionally"
+  },
+  {
+    "id": "i1000-0208",
+    "number": 208,
+    "english": "above all (else)",
+    "japanese": "とりわけ、特に = especially, particularly"
+  },
+  {
+    "id": "i1000-0209",
+    "number": 209,
+    "english": "all of a sudden",
+    "japanese": "突然に、不意に = suddenly, abruptly"
+  },
+  {
+    "id": "i1000-0210",
+    "number": 210,
+    "english": "(all/just) the same",
+    "japanese": "それでもやはり = nevertheless"
+  },
+  {
+    "id": "i1000-0211",
+    "number": 211,
+    "english": "as a (general) rule",
+    "japanese": "普通は、概して = generally, usually"
+  },
+  {
+    "id": "i1000-0212",
+    "number": 212,
+    "english": "as well",
+    "japanese": "～もまた = too, also"
+  },
+  {
+    "id": "i1000-0213",
+    "number": 213,
+    "english": "before long",
+    "japanese": "間もなく = soon"
+  },
+  {
+    "id": "i1000-0214",
+    "number": 214,
+    "english": "by degrees",
+    "japanese": "徐々に = gradually"
+  },
+  {
+    "id": "i1000-0215",
+    "number": 215,
+    "english": "for good",
+    "japanese": "永久に = forever, permanently"
+  },
+  {
+    "id": "i1000-0216",
+    "number": 216,
+    "english": "for the most part",
+    "japanese": "大体は、大部分は = mostly, generally"
+  },
+  {
+    "id": "i1000-0217",
+    "number": 217,
+    "english": "from time to time",
+    "japanese": "ときどき = sometimes, occationally"
+  },
+  {
+    "id": "i1000-0218",
+    "number": 218,
+    "english": "in advance",
+    "japanese": "前もって = beforehand"
+  },
+  {
+    "id": "i1000-0219",
+    "number": 219,
+    "english": "in all",
+    "japanese": "全部で = altogether"
+  },
+  {
+    "id": "i1000-0220",
+    "number": 220,
+    "english": "in particular",
+    "japanese": "特に =especially, particularly"
+  },
+  {
+    "id": "i1000-0221",
+    "number": 221,
+    "english": "on occasion(s)",
+    "japanese": "ときどき = sometimes, occationally"
+  },
+  {
+    "id": "i1000-0222",
+    "number": 222,
+    "english": "on purpose",
+    "japanese": "わざと、故意に = intentionally, purposely"
+  },
+  {
+    "id": "i1000-0223",
+    "number": 223,
+    "english": "over and over (again)",
+    "japanese": "何度も繰り返し = repeatedly"
+  },
+  {
+    "id": "i1000-0224",
+    "number": 224,
+    "english": "right away",
+    "japanese": "今すぐ、直ちに = immediately"
+  },
+  {
+    "id": "i1000-0225",
+    "number": 225,
+    "english": "agree to ～",
+    "japanese": "（提案・計画・条件など）に同意する"
+  },
+  {
+    "id": "i1000-0226",
+    "number": 226,
+    "english": "agree with ～",
+    "japanese": "（人が）（人・考えなど）に同意する、（気候・食物などが）～に合う、～に一致［適合］する"
+  },
+  {
+    "id": "i1000-0227",
+    "number": 227,
+    "english": "apply for ～",
+    "japanese": "（仕事・許可など）を申し込む［志願する］"
+  },
+  {
+    "id": "i1000-0228",
+    "number": 228,
+    "english": "apply to ～",
+    "japanese": "①～に当てはまる ②（人・場所・組織）に申し込む"
+  },
+  {
+    "id": "i1000-0229",
+    "number": 229,
+    "english": "remember doing",
+    "japanese": "…したのを覚えている"
+  },
+  {
+    "id": "i1000-0230",
+    "number": 230,
+    "english": "remember to do",
+    "japanese": "忘れずに…する"
+  },
+  {
+    "id": "i1000-0231",
+    "number": 231,
+    "english": "catch up with/to ～",
+    "japanese": "（遅れた状態から）～に追いつく"
+  },
+  {
+    "id": "i1000-0232",
+    "number": 232,
+    "english": "keep pace with ～",
+    "japanese": "～に遅れずについていく"
+  },
+  {
+    "id": "i1000-0233",
+    "number": 233,
+    "english": "keep up with ～",
+    "japanese": "～に遅れずについていく"
+  },
+  {
+    "id": "i1000-0234",
+    "number": 234,
+    "english": "leave ～ alone",
+    "japanese": "～をそのままにしておく、～に干渉しない"
+  },
+  {
+    "id": "i1000-0235",
+    "number": 235,
+    "english": "let alone ～",
+    "japanese": "～は言うまでもなく"
+  },
+  {
+    "id": "i1000-0236",
+    "number": 236,
+    "english": "correspond to ～",
+    "japanese": "～に一致する、～に相当する"
+  },
+  {
+    "id": "i1000-0237",
+    "number": 237,
+    "english": "correspond with ～",
+    "japanese": "～とやりとりを交わす、～と文通する"
+  },
+  {
+    "id": "i1000-0238",
+    "number": 238,
+    "english": "hit on/upon ～",
+    "japanese": "～を思いつく、～に出くわす"
+  },
+  {
+    "id": "i1000-0239",
+    "number": 239,
+    "english": "occur to ～",
+    "japanese": "ふと（人）の心に浮かぶ"
+  },
+  {
+    "id": "i1000-0240",
+    "number": 240,
+    "english": "dawn on ～",
+    "japanese": "（考えなどが）（人）にわかり始める［思い浮かぶ］"
+  },
+  {
+    "id": "i1000-0241",
+    "number": 241,
+    "english": "make the best of ～",
+    "japanese": "（不利な状況で）～を最大限に利用する［善処する］"
+  },
+  {
+    "id": "i1000-0242",
+    "number": 242,
+    "english": "make the most of ～",
+    "japanese": "～を最大限に利用する"
+  },
+  {
+    "id": "i1000-0243",
+    "number": 243,
+    "english": "lay off ～",
+    "japanese": "～を一時解雇する"
+  },
+  {
+    "id": "i1000-0244",
+    "number": 244,
+    "english": "lay out ～",
+    "japanese": "～を並べる、～を設計する"
+  },
+  {
+    "id": "i1000-0245",
+    "number": 245,
+    "english": "be concerned about/for ～",
+    "japanese": "～を心配している"
+  },
+  {
+    "id": "i1000-0246",
+    "number": 246,
+    "english": "be concerned with/in ～",
+    "japanese": "～に関係している"
+  },
+  {
+    "id": "i1000-0247",
+    "number": 247,
+    "english": "be free from/of ～",
+    "japanese": "～がない"
+  },
+  {
+    "id": "i1000-0248",
+    "number": 248,
+    "english": "be free to do",
+    "japanese": "自由に…できる"
+  },
+  {
+    "id": "i1000-0249",
+    "number": 249,
+    "english": "be familiar to ～",
+    "japanese": "（人）によく知られている"
+  },
+  {
+    "id": "i1000-0250",
+    "number": 250,
+    "english": "be familiar with ～",
+    "japanese": "（物事）をよく知っている"
+  },
+  {
+    "id": "i1000-0251",
+    "number": 251,
+    "english": "be true of ～",
+    "japanese": "～に当てはめる"
+  },
+  {
+    "id": "i1000-0252",
+    "number": 252,
+    "english": "be true to ～",
+    "japanese": "～に忠実である"
+  },
+  {
+    "id": "i1000-0253",
+    "number": 253,
+    "english": "be tired from/with ～",
+    "japanese": "～で疲れる"
+  },
+  {
+    "id": "i1000-0254",
+    "number": 254,
+    "english": "be tired of ～",
+    "japanese": "～に飽きる［うんざりしている］"
+  },
+  {
+    "id": "i1000-0255",
+    "number": 255,
+    "english": "be bound for ～",
+    "japanese": "～行きである"
+  },
+  {
+    "id": "i1000-0256",
+    "number": 256,
+    "english": "be bound to do",
+    "japanese": "きっと…する、…する責任がある"
+  },
+  {
+    "id": "i1000-0257",
+    "number": 257,
+    "english": "be anxious about ～",
+    "japanese": "～を心配している"
+  },
+  {
+    "id": "i1000-0258",
+    "number": 258,
+    "english": "be anxious to do",
+    "japanese": "…したがる"
+  },
+  {
+    "id": "i1000-0259",
+    "number": 259,
+    "english": "～ to come",
+    "japanese": "（名詞の後に置いて）将来の～、来たるべき～"
+  },
+  {
+    "id": "i1000-0260",
+    "number": 260,
+    "english": "～ to go",
+    "japanese": "（名詞の後に置いて）あと～、残りの～、持ち帰り用の～"
+  },
+  {
+    "id": "i1000-0261",
+    "number": 261,
+    "english": "anything but ～",
+    "japanese": "全然～ではない、～どころではない"
+  },
+  {
+    "id": "i1000-0262",
+    "number": 262,
+    "english": "nothing but ～",
+    "japanese": "ただ～だけ、～にすぎない"
+  },
+  {
+    "id": "i1000-0263",
+    "number": 263,
+    "english": "at first",
+    "japanese": "最初は"
+  },
+  {
+    "id": "i1000-0264",
+    "number": 264,
+    "english": "for the first time",
+    "japanese": "初めて"
+  },
+  {
+    "id": "i1000-0265",
+    "number": 265,
+    "english": "in the way (of ～)",
+    "japanese": "（～の）邪魔になって"
+  },
+  {
+    "id": "i1000-0266",
+    "number": 266,
+    "english": "on the way (to ～)",
+    "japanese": "（～への）途中で"
+  },
+  {
+    "id": "i1000-0267",
+    "number": 267,
+    "english": "by now",
+    "japanese": "今はもう、今頃は"
+  },
+  {
+    "id": "i1000-0268",
+    "number": 268,
+    "english": "for now",
+    "japanese": "今のところは、当分は"
+  },
+  {
+    "id": "i1000-0269",
+    "number": 269,
+    "english": "on the contrary",
+    "japanese": "それどころか、それに反して"
+  },
+  {
+    "id": "i1000-0270",
+    "number": 270,
+    "english": "to the contrary",
+    "japanese": "それと反対の［に］"
+  },
+  {
+    "id": "i1000-0271",
+    "number": 271,
+    "english": "in the air",
+    "japanese": "未決定で、空中で［の］、（雰囲気などが）感じられて"
+  },
+  {
+    "id": "i1000-0272",
+    "number": 272,
+    "english": "on the air",
+    "japanese": "放送中の［で］"
+  },
+  {
+    "id": "i1000-0273",
+    "number": 273,
+    "english": "by chance",
+    "japanese": "偶然に"
+  },
+  {
+    "id": "i1000-0274",
+    "number": 274,
+    "english": "by any chance",
+    "japanese": "（疑問文で）もしかして"
+  },
+  {
+    "id": "i1000-0275",
+    "number": 275,
+    "english": "as a matter of course",
+    "japanese": "当然のこととして"
+  },
+  {
+    "id": "i1000-0276",
+    "number": 276,
+    "english": "as a matter of fact",
+    "japanese": "実を言うと、実際は"
+  },
+  {
+    "id": "i1000-0277",
+    "number": 277,
+    "english": "at a distance",
+    "japanese": "ある距離を置いて"
+  },
+  {
+    "id": "i1000-0278",
+    "number": 278,
+    "english": "in the distance",
+    "japanese": "遠方に［で］"
+  },
+  {
+    "id": "i1000-0279",
+    "number": 279,
+    "english": "inside out",
+    "japanese": "裏返して、ひっくり返して"
+  },
+  {
+    "id": "i1000-0280",
+    "number": 280,
+    "english": "upside down",
+    "japanese": "逆さまに、ひっくり返って"
+  },
+  {
+    "id": "i1000-0281",
+    "number": 281,
+    "english": "provide A with B",
+    "japanese": "AにBを供給する"
+  },
+  {
+    "id": "i1000-0282",
+    "number": 282,
+    "english": "supply A with B",
+    "japanese": "AにBを供給する"
+  },
+  {
+    "id": "i1000-0283",
+    "number": 283,
+    "english": "mistake A for B",
+    "japanese": "AをBと間違える"
+  },
+  {
+    "id": "i1000-0284",
+    "number": 284,
+    "english": "take A for B",
+    "japanese": "AをBだと（誤って）思う［間違える］"
+  },
+  {
+    "id": "i1000-0285",
+    "number": 285,
+    "english": "look on/upon A as B",
+    "japanese": "AをBと見なす"
+  },
+  {
+    "id": "i1000-0286",
+    "number": 286,
+    "english": "think of A as B",
+    "japanese": "AをBと見なす"
+  },
+  {
+    "id": "i1000-0287",
+    "number": 287,
+    "english": "distinguish A from B",
+    "japanese": "AをBと区別する"
+  },
+  {
+    "id": "i1000-0288",
+    "number": 288,
+    "english": "tell A from B",
+    "japanese": "AとBを区別する"
+  },
+  {
+    "id": "i1000-0289",
+    "number": 289,
+    "english": "participate in ～",
+    "japanese": "～に参加する"
+  },
+  {
+    "id": "i1000-0290",
+    "number": 290,
+    "english": "take part in ～",
+    "japanese": "～に参加する"
+  },
+  {
+    "id": "i1000-0291",
+    "number": 291,
+    "english": "compensate for ～",
+    "japanese": "～の埋め合わせをする、～を補償する"
+  },
+  {
+    "id": "i1000-0292",
+    "number": 292,
+    "english": "make up (～)",
+    "japanese": "①～を構成する、～を作り上げる ②仲直りをする ③～の埋め合わせをする"
+  },
+  {
+    "id": "i1000-0293",
+    "number": 293,
+    "english": "care for ～",
+    "japanese": "①～の世話をする ②～を好む、～を望む"
+  },
+  {
+    "id": "i1000-0294",
+    "number": 294,
+    "english": "look after ～",
+    "japanese": "～の世話をする"
+  },
+  {
+    "id": "i1000-0295",
+    "number": 295,
+    "english": "show up (～)",
+    "japanese": "①（予定の所に）現れる ②目立つ、～を目立たせる"
+  },
+  {
+    "id": "i1000-0296",
+    "number": 296,
+    "english": "turn up (～)",
+    "japanese": "①現れる、起こる ②（ガス・音量など）を大きくする、～を探し出す"
+  },
+  {
+    "id": "i1000-0297",
+    "number": 297,
+    "english": "consist in ～",
+    "japanese": "～にある"
+  },
+  {
+    "id": "i1000-0298",
+    "number": 298,
+    "english": "lie in ～",
+    "japanese": "～にある"
+  },
+  {
+    "id": "i1000-0299",
+    "number": 299,
+    "english": "give in (～)",
+    "japanese": "①屈服する ②～を提出する"
+  },
+  {
+    "id": "i1000-0300",
+    "number": 300,
+    "english": "give way (to ～)",
+    "japanese": "（～に）屈服する、（～に）道を譲る"
+  },
+  {
+    "id": "i1000-0301",
+    "number": 301,
+    "english": "stand out",
+    "japanese": "際立つ、目立つ"
+  },
+  {
+    "id": "i1000-0302",
+    "number": 302,
+    "english": "stick out",
+    "japanese": "突き出る、目立つ"
+  },
+  {
+    "id": "i1000-0303",
+    "number": 303,
+    "english": "cling to ～",
+    "japanese": "～にくっつく、～に固執［執着］する"
+  },
+  {
+    "id": "i1000-0304",
+    "number": 304,
+    "english": "stick to ～",
+    "japanese": "（主義・決定など）を堅持する、～にくっつく"
+  },
+  {
+    "id": "i1000-0305",
+    "number": 305,
+    "english": "count on/upon ～",
+    "japanese": "～に頼る、～を当てする"
+  },
+  {
+    "id": "i1000-0306",
+    "number": 306,
+    "english": "rest on/upon",
+    "japanese": "～に基づく、～に頼る"
+  },
+  {
+    "id": "i1000-0307",
+    "number": 307,
+    "english": "look out for ～",
+    "japanese": "～に気をつける"
+  },
+  {
+    "id": "i1000-0308",
+    "number": 308,
+    "english": "watch out for ～",
+    "japanese": "～に気をつける"
+  },
+  {
+    "id": "i1000-0309",
+    "number": 309,
+    "english": "hand over ～",
+    "japanese": "～を引き渡す、～を手渡す"
+  },
+  {
+    "id": "i1000-0310",
+    "number": 310,
+    "english": "turn over ～",
+    "japanese": "①～を引き渡す、～を譲る ②～をひっくり返す、（ページなど）をめくる、ひっくり返る"
+  },
+  {
+    "id": "i1000-0311",
+    "number": 311,
+    "english": "date back to ～",
+    "japanese": "～にさかのぼる、～に始まる"
+  },
+  {
+    "id": "i1000-0312",
+    "number": 312,
+    "english": "date from ～",
+    "japanese": "～から始まる、～にさかのぼる"
+  },
+  {
+    "id": "i1000-0313",
+    "number": 313,
+    "english": "put aside ～",
+    "japanese": "～を蓄える、～をわきに置く、～を取っておく"
+  },
+  {
+    "id": "i1000-0314",
+    "number": 314,
+    "english": "set aside ～",
+    "japanese": "～を蓄える、～を取っておく、～をわきに置く"
+  },
+  {
+    "id": "i1000-0315",
+    "number": 315,
+    "english": "sit up",
+    "japanese": "①（寝ないで）起きている ②（寝た状態から）上半身を起こす ③きちんと座る"
+  },
+  {
+    "id": "i1000-0316",
+    "number": 316,
+    "english": "stay up",
+    "japanese": "（寝ないで）起きている"
+  },
+  {
+    "id": "i1000-0317",
+    "number": 317,
+    "english": "hold back ～",
+    "japanese": "～を制止する、（真相など）を隠す"
+  },
+  {
+    "id": "i1000-0318",
+    "number": 318,
+    "english": "keep back ～",
+    "japanese": "（真相など）を隠す、～を制止する"
+  },
+  {
+    "id": "i1000-0319",
+    "number": 319,
+    "english": "feel sorry for ～",
+    "japanese": "～を気の毒に思う、～に同情する"
+  },
+  {
+    "id": "i1000-0320",
+    "number": 320,
+    "english": "take/have pity on ～",
+    "japanese": "～に同情する"
+  },
+  {
+    "id": "i1000-0321",
+    "number": 321,
+    "english": "sympathize with ～",
+    "japanese": "～に同情する"
+  },
+  {
+    "id": "i1000-0322",
+    "number": 322,
+    "english": "take pride in ～",
+    "japanese": "～を誇り［自慢］に思う"
+  },
+  {
+    "id": "i1000-0323",
+    "number": 323,
+    "english": "pride oneself on ～",
+    "japanese": "～を誇り［自慢］に思う"
+  },
+  {
+    "id": "i1000-0324",
+    "number": 324,
+    "english": "surrender to ～",
+    "japanese": "～に屈する"
+  },
+  {
+    "id": "i1000-0325",
+    "number": 325,
+    "english": "yield to ～",
+    "japanese": "～に屈する、～に道を譲る"
+  },
+  {
+    "id": "i1000-0326",
+    "number": 326,
+    "english": "be essential to ～",
+    "japanese": "～にとって不可欠である"
+  },
+  {
+    "id": "i1000-0327",
+    "number": 327,
+    "english": "be indispensable to/for ～",
+    "japanese": "～にとって不可欠である"
+  },
+  {
+    "id": "i1000-0328",
+    "number": 328,
+    "english": "be equal to ～",
+    "japanese": "～に等しい"
+  },
+  {
+    "id": "i1000-0329",
+    "number": 329,
+    "english": "be equivalent to ～",
+    "japanese": "～に等しい"
+  },
+  {
+    "id": "i1000-0330",
+    "number": 330,
+    "english": "be apt to do",
+    "japanese": "～しがちである"
+  },
+  {
+    "id": "i1000-0331",
+    "number": 331,
+    "english": "be inclined to do",
+    "japanese": "～する傾向がある、～したい気がする"
+  },
+  {
+    "id": "i1000-0332",
+    "number": 332,
+    "english": "in a sense",
+    "japanese": "ある意味では、ある点で"
+  },
+  {
+    "id": "i1000-0333",
+    "number": 333,
+    "english": "in a way",
+    "japanese": "ある意味では、ある点で"
+  },
+  {
+    "id": "i1000-0334",
+    "number": 334,
+    "english": "first of all",
+    "japanese": "まず第一に"
+  },
+  {
+    "id": "i1000-0335",
+    "number": 335,
+    "english": "in the first place",
+    "japanese": "まず第一に"
+  },
+  {
+    "id": "i1000-0336",
+    "number": 336,
+    "english": "back and forth",
+    "japanese": "行ったり来たり、前後［左右］に"
+  },
+  {
+    "id": "i1000-0337",
+    "number": 337,
+    "english": "up and down",
+    "japanese": "行ったり来たり、上下に"
+  },
+  {
+    "id": "i1000-0338",
+    "number": 338,
+    "english": "at present",
+    "japanese": "現在は、目下"
+  },
+  {
+    "id": "i1000-0339",
+    "number": 339,
+    "english": "at the moment",
+    "japanese": "（現在時制で）現在は、（過去時制で）ちょうどその時"
+  },
+  {
+    "id": "i1000-0340",
+    "number": 340,
+    "english": "in a word",
+    "japanese": "要するに、つまり"
+  },
+  {
+    "id": "i1000-0341",
+    "number": 341,
+    "english": "in short",
+    "japanese": "つまり、手短に言えば"
+  },
+  {
+    "id": "i1000-0342",
+    "number": 342,
+    "english": "generally speaking",
+    "japanese": "一般的に言えば"
+  },
+  {
+    "id": "i1000-0343",
+    "number": 343,
+    "english": "on the whole",
+    "japanese": "全体的には、概して"
+  },
+  {
+    "id": "i1000-0344",
+    "number": 344,
+    "english": "all in all",
+    "japanese": "全体的には、概して"
+  },
+  {
+    "id": "i1000-0345",
+    "number": 345,
+    "english": "in principle",
+    "japanese": "理論的に（は）、原則的に（は）"
+  },
+  {
+    "id": "i1000-0346",
+    "number": 346,
+    "english": "in theory",
+    "japanese": "理論上は"
+  },
+  {
+    "id": "i1000-0347",
+    "number": 347,
+    "english": "at all cost(s)/any cost",
+    "japanese": "ぜひとも"
+  },
+  {
+    "id": "i1000-0348",
+    "number": 348,
+    "english": "by all means",
+    "japanese": "①ぜひとも、必ず ②（承諾の返事として）ぜひどうぞ"
+  },
+  {
+    "id": "i1000-0349",
+    "number": 349,
+    "english": "as it were",
+    "japanese": "いわば"
+  },
+  {
+    "id": "i1000-0350",
+    "number": 350,
+    "english": "so to speak",
+    "japanese": "いわば"
+  },
+  {
+    "id": "i1000-0351",
+    "number": 351,
+    "english": "for one's (own) part",
+    "japanese": "～としては、～に関する限りは"
+  },
+  {
+    "id": "i1000-0352",
+    "number": 352,
+    "english": "on one's part",
+    "japanese": "～の側での、～としては"
+  },
+  {
+    "id": "i1000-0353",
+    "number": 353,
+    "english": "for the present",
+    "japanese": "当分の間（は）、差し当たり"
+  },
+  {
+    "id": "i1000-0354",
+    "number": 354,
+    "english": "for the time being",
+    "japanese": "当分の間（は）、差し当たり"
+  },
+  {
+    "id": "i1000-0355",
+    "number": 355,
+    "english": "close/near at hand",
+    "japanese": "（距離・時間的に）すぐ近くに"
+  },
+  {
+    "id": "i1000-0356",
+    "number": 356,
+    "english": "(just) around the corner",
+    "japanese": "（距離・時間的に）すぐ近くに"
+  },
+  {
+    "id": "i1000-0357",
+    "number": 357,
+    "english": "for all ～",
+    "japanese": "～にもかかわらず"
+  },
+  {
+    "id": "i1000-0358",
+    "number": 358,
+    "english": "with all ～",
+    "japanese": "～にもかかわらず"
+  },
+  {
+    "id": "i1000-0359",
+    "number": 359,
+    "english": "as for ～",
+    "japanese": "（人・物）～について言えば、～に関する限り"
+  },
+  {
+    "id": "i1000-0360",
+    "number": 360,
+    "english": "as to ～",
+    "japanese": "（物）～に関しては"
+  },
+  {
+    "id": "i1000-0361",
+    "number": 361,
+    "english": "not to mention ～",
+    "japanese": "～は言うまでもなく"
+  },
+  {
+    "id": "i1000-0362",
+    "number": 362,
+    "english": "to say nothing of ～",
+    "japanese": "～は言うまでもなく"
+  },
+  {
+    "id": "i1000-0363",
+    "number": 363,
+    "english": "be dependent on/upon ～",
+    "japanese": "～に依存している"
+  },
+  {
+    "id": "i1000-0364",
+    "number": 364,
+    "english": "be independent of ～",
+    "japanese": "～から独立している"
+  },
+  {
+    "id": "i1000-0365",
+    "number": 365,
+    "english": "in order",
+    "japanese": "整頓されて、順調で、適切で"
+  },
+  {
+    "id": "i1000-0366",
+    "number": 366,
+    "english": "out of order",
+    "japanese": "故障して、順序が狂って"
+  },
+  {
+    "id": "i1000-0367",
+    "number": 367,
+    "english": "look down on/upon ～",
+    "japanese": "～を見下す"
+  },
+  {
+    "id": "i1000-0368",
+    "number": 368,
+    "english": "look up to ～",
+    "japanese": "～を尊敬する"
+  },
+  {
+    "id": "i1000-0369",
+    "number": 369,
+    "english": "do with ～",
+    "japanese": "①（couldを伴って）～があればありがたい ②（受動態で）～をすませた、～を縁を切った ③（whatを使った疑問文・否定文で）を処理［処置］する"
+  },
+  {
+    "id": "i1000-0370",
+    "number": 370,
+    "english": "do without ～",
+    "japanese": "～なしですます"
+  },
+  {
+    "id": "i1000-0371",
+    "number": 371,
+    "english": "in/within sight",
+    "japanese": "見えて、視界に入って"
+  },
+  {
+    "id": "i1000-0372",
+    "number": 372,
+    "english": "out of sight",
+    "japanese": "見えなくて、視界から消えて"
+  },
+  {
+    "id": "i1000-0373",
+    "number": 373,
+    "english": "at one's ease",
+    "japanese": "くつろいで"
+  },
+  {
+    "id": "i1000-0374",
+    "number": 374,
+    "english": "ill at ease",
+    "japanese": "不安で、落ち着かないで"
+  },
+  {
+    "id": "i1000-0375",
+    "number": 375,
+    "english": "act on/upon ～",
+    "japanese": "①～に取り組む、～に作用する ②（命令・信念など）に従って行動する"
+  },
+  {
+    "id": "i1000-0376",
+    "number": 376,
+    "english": "break in ～",
+    "japanese": "①押し入る、口を挟む ②～を慣らす"
+  },
+  {
+    "id": "i1000-0377",
+    "number": 377,
+    "english": "break out",
+    "japanese": "①（火事・戦争などが）起こる ②（汗・吹き出物などが）出る、急にしだす"
+  },
+  {
+    "id": "i1000-0378",
+    "number": 378,
+    "english": "break up ～",
+    "japanese": "①ばらばらになる［解散する］、～をばらばらにする［解散させる］ ②（人が）別れる、（関係などが）終わる、～を終わらせる"
+  },
+  {
+    "id": "i1000-0379",
+    "number": 379,
+    "english": "call for ～",
+    "japanese": "①～を必要とする、～を求める ②（人）を誘い［迎え］に行く、（物）を取りに行く"
+  },
+  {
+    "id": "i1000-0380",
+    "number": 380,
+    "english": "call on/upon ～",
+    "japanese": "①（人）を訪問する ②～に要求する"
+  },
+  {
+    "id": "i1000-0381",
+    "number": 381,
+    "english": "come across ～",
+    "japanese": "①～を偶然見つける、～に偶然出会う ②（考えなどが）（相手に）伝わる［理解される］"
+  },
+  {
+    "id": "i1000-0382",
+    "number": 382,
+    "english": "come to ～",
+    "japanese": "①～に達する、～に来る ②（～to do）…するようになる③意識を回復する、正気に戻る"
+  },
+  {
+    "id": "i1000-0383",
+    "number": 383,
+    "english": "give out ～",
+    "japanese": "①～を配る、～を発する ②（供給物・力などが）尽きる［なくなる］"
+  },
+  {
+    "id": "i1000-0384",
+    "number": 384,
+    "english": "go by ～",
+    "japanese": "①（時などが）たつ、通り過ぎる ②～の名で通る［知られる］、～によって行動［判断］する"
+  },
+  {
+    "id": "i1000-0385",
+    "number": 385,
+    "english": "go off",
+    "japanese": "①出かける、去る、（電灯などが）消える ②（仕掛けが）作動する、（爆薬が）爆発する、（銃などが）発射される"
+  },
+  {
+    "id": "i1000-0386",
+    "number": 386,
+    "english": "go on ～",
+    "japanese": "①（状況などが）続く、（時間が）過ぎる ②（進行形で）起こる、行われる ③（旅行など）に出かける"
+  },
+  {
+    "id": "i1000-0387",
+    "number": 387,
+    "english": "go out",
+    "japanese": "①出かける②（灯火などが）消える、気絶する、死ぬ"
+  },
+  {
+    "id": "i1000-0388",
+    "number": 388,
+    "english": "go over ～",
+    "japanese": "①～に詳細に目を通す、～を調べる ②～を復習する、～を繰り返す"
+  },
+  {
+    "id": "i1000-0389",
+    "number": 389,
+    "english": "go with ～",
+    "japanese": "①～と付き合う、～と一緒に行く ②～に似合う"
+  },
+  {
+    "id": "i1000-0390",
+    "number": 390,
+    "english": "hold out ～",
+    "japanese": "①（手など）を差し出す ②（希望など）を抱かせる、持ちこたえる［耐える］"
+  },
+  {
+    "id": "i1000-0391",
+    "number": 391,
+    "english": "hold up ～",
+    "japanese": "①～を持ち上げる、～を支える、持ちこたえる ②～を遅らせる ③～に強盗に入る"
+  },
+  {
+    "id": "i1000-0392",
+    "number": 392,
+    "english": "live on ～",
+    "japanese": "①～を常食にする ②（～の収入・金額）で生活する ③生き続ける"
+  },
+  {
+    "id": "i1000-0393",
+    "number": 393,
+    "english": "look to ～",
+    "japanese": "①～の方を見る、～に気をつける ②～に頼る、～を当てにする"
+  },
+  {
+    "id": "i1000-0394",
+    "number": 394,
+    "english": "look up ～",
+    "japanese": "①（辞書などで）～を調べる ②（人）を訪ねる ③（景気などが）上向く［好転する］"
+  },
+  {
+    "id": "i1000-0395",
+    "number": 395,
+    "english": "put out ～",
+    "japanese": "①（火・明かりなど）を消す ②～を出す"
+  },
+  {
+    "id": "i1000-0396",
+    "number": 396,
+    "english": "settle down",
+    "japanese": "①定住する、落ち着く ②（腰を据えて）始める"
+  },
+  {
+    "id": "i1000-0397",
+    "number": 397,
+    "english": "stand by ～",
+    "japanese": "①傍観する、待機する ②～を支持［擁護］する、（約束など）を守る"
+  },
+  {
+    "id": "i1000-0398",
+    "number": 398,
+    "english": "stand for ～",
+    "japanese": "①～意味する、～の略である ②（否定文・疑問文で）～を許容する、を我慢する"
+  },
+  {
+    "id": "i1000-0399",
+    "number": 399,
+    "english": "take in ～",
+    "japanese": "①～を取り入れる、～を理解する ②～をだます ③～を見物をする"
+  },
+  {
+    "id": "i1000-0400",
+    "number": 400,
+    "english": "take on ～",
+    "japanese": "①～を引き受ける、～を雇う ②（様相・色・性質など）を呈する［帯びる］"
+  },
+  {
+    "id": "i1000-0401",
+    "number": 401,
+    "english": "take to ～",
+    "japanese": "（習慣的に）～を始める、～にふける"
+  },
+  {
+    "id": "i1000-0402",
+    "number": 402,
+    "english": "take up ～",
+    "japanese": "①（場所・時間）を取る、～を取り上げる ②（仕事・趣味など）を始める"
+  },
+  {
+    "id": "i1000-0403",
+    "number": 403,
+    "english": "turn down ～",
+    "japanese": "①～を却下［拒絶］する ②（音量・火力など）を小さくする"
+  },
+  {
+    "id": "i1000-0404",
+    "number": 404,
+    "english": "turn in ～",
+    "japanese": "①～を提出する ②～を引き渡す、～を返却する"
+  },
+  {
+    "id": "i1000-0405",
+    "number": 405,
+    "english": "make for ～",
+    "japanese": "①～のほうへ進む ②～に寄与する［役立つ］"
+  },
+  {
+    "id": "i1000-0406",
+    "number": 406,
+    "english": "make out ～",
+    "japanese": "①（通例canを伴い、否定文・疑問文で）～を理解する ②（通例canを伴って）～を見分ける ③（書類・小切手など）を作成する"
+  },
+  {
+    "id": "i1000-0407",
+    "number": 407,
+    "english": "meet with ～",
+    "japanese": "①～を受ける、～を経験する ②～と（約束して）会う、～と会見する"
+  },
+  {
+    "id": "i1000-0408",
+    "number": 408,
+    "english": "provide for ～",
+    "japanese": "①～を扶養する ②～に備える、（法律が）～を規定する"
+  },
+  {
+    "id": "i1000-0409",
+    "number": 409,
+    "english": "put down ～",
+    "japanese": "①～を置く ②～を鎮める［抑える］"
+  },
+  {
+    "id": "i1000-0410",
+    "number": 410,
+    "english": "run over ～",
+    "japanese": "①（車が）～をひく ②（～から）あふれる"
+  },
+  {
+    "id": "i1000-0411",
+    "number": 411,
+    "english": "set out ～",
+    "japanese": "①出発する ②～し始める ③～を並べる、～を設計する"
+  },
+  {
+    "id": "i1000-0412",
+    "number": 412,
+    "english": "be due to do",
+    "japanese": "①～のため［結果］である ②～する予定である"
+  },
+  {
+    "id": "i1000-0413",
+    "number": 413,
+    "english": "up to ～",
+    "japanese": "①～まで ②～次第である、～の責任である ③（悪いこと）をしようとしている"
+  },
+  {
+    "id": "i1000-0414",
+    "number": 414,
+    "english": "at large",
+    "japanese": "①（名詞の前に置いて）一般の、全体としての ②逃走中で、逮捕されないで"
+  },
+  {
+    "id": "i1000-0415",
+    "number": 415,
+    "english": "in effect",
+    "japanese": "①事実上、実際は ②（法律などが）実施されて"
+  },
+  {
+    "id": "i1000-0416",
+    "number": 416,
+    "english": "all but ～",
+    "japanese": "①～も同然、ほとんど～ ②～以外すべて"
+  },
+  {
+    "id": "i1000-0417",
+    "number": 417,
+    "english": "at length",
+    "japanese": "①詳細に、長々と②とうとう、ついに"
+  },
+  {
+    "id": "i1000-0418",
+    "number": 418,
+    "english": "next to ～",
+    "japanese": "①（場所・位置）～の次の［に］ ②（否定を表す語の前に置いて）ほとんど～"
+  },
+  {
+    "id": "i1000-0419",
+    "number": 419,
+    "english": "on end",
+    "japanese": "①連続して ②直立して、垂直にして"
+  },
+  {
+    "id": "i1000-0420",
+    "number": 420,
+    "english": "by way of ～",
+    "japanese": "①～経由で ②～として、～のつもりで（の）"
+  },
+  {
+    "id": "i1000-0421",
+    "number": 421,
+    "english": "add to ～",
+    "japanese": "～を増やす"
+  },
+  {
+    "id": "i1000-0422",
+    "number": 422,
+    "english": "adapt to ～",
+    "japanese": "（環境など）に順応する［慣れる］"
+  },
+  {
+    "id": "i1000-0423",
+    "number": 423,
+    "english": "object to ～",
+    "japanese": "～に反対する"
+  },
+  {
+    "id": "i1000-0424",
+    "number": 424,
+    "english": "admit to ～",
+    "japanese": "～を認める［告白する］"
+  },
+  {
+    "id": "i1000-0425",
+    "number": 425,
+    "english": "conform to/with ～",
+    "japanese": "～と一致する、～に従う［合わせる］"
+  },
+  {
+    "id": "i1000-0426",
+    "number": 426,
+    "english": "resort to ～",
+    "japanese": "（手段など）に訴える［頼る］"
+  },
+  {
+    "id": "i1000-0427",
+    "number": 427,
+    "english": "keep to ～",
+    "japanese": "～に沿って進む、～から離れない、～に従う"
+  },
+  {
+    "id": "i1000-0428",
+    "number": 428,
+    "english": "get to ～",
+    "japanese": "①～に到着する ②～できる、～するようになる"
+  },
+  {
+    "id": "i1000-0429",
+    "number": 429,
+    "english": "adhere to ～",
+    "japanese": "（主義・規則など）に忠実に従う、～にくっつく"
+  },
+  {
+    "id": "i1000-0430",
+    "number": 430,
+    "english": "reflect on/upon ～",
+    "japanese": "～を熟考［反省］する"
+  },
+  {
+    "id": "i1000-0431",
+    "number": 431,
+    "english": "decide on/upon ～",
+    "japanese": "～を（どれにするか）決める、（複数の選択肢から）～に決める"
+  },
+  {
+    "id": "i1000-0432",
+    "number": 432,
+    "english": "fall on/upon ～",
+    "japanese": "（責任・仕事などが）～に降りかかる、（休日などが）～に当たる"
+  },
+  {
+    "id": "i1000-0433",
+    "number": 433,
+    "english": "feed on ～",
+    "japanese": "～を常食［餌］にする"
+  },
+  {
+    "id": "i1000-0434",
+    "number": 434,
+    "english": "run into ～",
+    "japanese": "～に偶然出会う、～を偶然見つける、～にぶつかる"
+  },
+  {
+    "id": "i1000-0435",
+    "number": 435,
+    "english": "break into ～",
+    "japanese": "①～に侵入する②急に～をしだす"
+  },
+  {
+    "id": "i1000-0436",
+    "number": 436,
+    "english": "enter into ～",
+    "japanese": "（契約など）を取り結ぶ、（議論など）を始める"
+  },
+  {
+    "id": "i1000-0437",
+    "number": 437,
+    "english": "burst into ～",
+    "japanese": "急に～をしだす、突然～に入る"
+  },
+  {
+    "id": "i1000-0438",
+    "number": 438,
+    "english": "dispose of ～",
+    "japanese": "～を処分する、～を平らげる"
+  },
+  {
+    "id": "i1000-0439",
+    "number": 439,
+    "english": "approve of ～",
+    "japanese": "～に賛成する、～を承認する"
+  },
+  {
+    "id": "i1000-0440",
+    "number": 440,
+    "english": "boast of/about ～",
+    "japanese": "～を自慢する、～を誇らしげに話す"
+  },
+  {
+    "id": "i1000-0441",
+    "number": 441,
+    "english": "become of ～",
+    "japanese": "（what, whatever を主語にして） ～はどうなるか"
+  },
+  {
+    "id": "i1000-0442",
+    "number": 442,
+    "english": "derive from ～",
+    "japanese": "～に由来する、～から出ている"
+  },
+  {
+    "id": "i1000-0443",
+    "number": 443,
+    "english": "aim at ～",
+    "japanese": "～を目指す、～を狙う"
+  },
+  {
+    "id": "i1000-0444",
+    "number": 444,
+    "english": "interfere with ～",
+    "japanese": "～の邪魔をする、～を妨げる"
+  },
+  {
+    "id": "i1000-0445",
+    "number": 445,
+    "english": "part with ～",
+    "japanese": "（物）を（しぶしぶ）手放す"
+  },
+  {
+    "id": "i1000-0446",
+    "number": 446,
+    "english": "long for ～",
+    "japanese": "～を切望する"
+  },
+  {
+    "id": "i1000-0447",
+    "number": 447,
+    "english": "send for ～",
+    "japanese": "（人）を呼ぶ、（物）を取り寄せる"
+  },
+  {
+    "id": "i1000-0448",
+    "number": 448,
+    "english": "go about ～",
+    "japanese": "～に取りかかる、～に精を出す"
+  },
+  {
+    "id": "i1000-0449",
+    "number": 449,
+    "english": "run across ～",
+    "japanese": "①～を偶然見つける、～に偶然で会う ②～を走って横切る"
+  },
+  {
+    "id": "i1000-0450",
+    "number": 450,
+    "english": "end up",
+    "japanese": "最後には～になる"
+  },
+  {
+    "id": "i1000-0451",
+    "number": 451,
+    "english": "use up ～",
+    "japanese": "～を使い果たす"
+  },
+  {
+    "id": "i1000-0452",
+    "number": 452,
+    "english": "sum up ～",
+    "japanese": "（～を）要約する、～を合計する"
+  },
+  {
+    "id": "i1000-0453",
+    "number": 453,
+    "english": "clear up ～",
+    "japanese": "（天候が）晴れる、（疑念・不明点など）を明らかにする"
+  },
+  {
+    "id": "i1000-0454",
+    "number": 454,
+    "english": "tie up ～",
+    "japanese": "（人）を拘束する、～を固く縛る、提携する"
+  },
+  {
+    "id": "i1000-0455",
+    "number": 455,
+    "english": "cheer up ～",
+    "japanese": "元気づく、～を元気づける［応援する］"
+  },
+  {
+    "id": "i1000-0456",
+    "number": 456,
+    "english": "blow up ～",
+    "japanese": "爆発する、かっとなる、～を爆破する"
+  },
+  {
+    "id": "i1000-0457",
+    "number": 457,
+    "english": "call up ～",
+    "japanese": "（～に）電話をかける、（記憶・勇気など）を呼び起こす"
+  },
+  {
+    "id": "i1000-0458",
+    "number": 458,
+    "english": "shut up ～",
+    "japanese": "話をやめる、～を散らせる"
+  },
+  {
+    "id": "i1000-0459",
+    "number": 459,
+    "english": "step up ～",
+    "japanese": "①近づく、（壇上などに）上がる ②（量・速度など）を増す、（活動など）を促進する"
+  },
+  {
+    "id": "i1000-0460",
+    "number": 460,
+    "english": "cut down/back (on) ～",
+    "japanese": "～（の量）を減らす、～を切り詰める"
+  },
+  {
+    "id": "i1000-0461",
+    "number": 461,
+    "english": "slow down ～",
+    "japanese": "（～の）速度を落とす、ペースが落ちる"
+  },
+  {
+    "id": "i1000-0462",
+    "number": 462,
+    "english": "break down ～",
+    "japanese": "①～を分解する、～を壊す ②故障する、取り乱す、肉体的［精神的］に参る"
+  },
+  {
+    "id": "i1000-0463",
+    "number": 463,
+    "english": "hand down ～",
+    "japanese": "～を（子孫［後世］に）伝える"
+  },
+  {
+    "id": "i1000-0464",
+    "number": 464,
+    "english": "take down ～",
+    "japanese": "～を書き留める、（建築など）を取り壊す"
+  },
+  {
+    "id": "i1000-0465",
+    "number": 465,
+    "english": "burn down ～",
+    "japanese": "～を全焼させる、（建物が）全焼する"
+  },
+  {
+    "id": "i1000-0466",
+    "number": 466,
+    "english": "come out",
+    "japanese": "現れる、ばれる、出版される"
+  },
+  {
+    "id": "i1000-0467",
+    "number": 467,
+    "english": "run out",
+    "japanese": "使い果たす、尽きる"
+  },
+  {
+    "id": "i1000-0468",
+    "number": 468,
+    "english": "speak out/up",
+    "japanese": "はっきり［思い切って］話す"
+  },
+  {
+    "id": "i1000-0469",
+    "number": 469,
+    "english": "drop out",
+    "japanese": "脱落する、中途退学する"
+  },
+  {
+    "id": "i1000-0470",
+    "number": 470,
+    "english": "sort out ～",
+    "japanese": "～を整理する、～を処理する"
+  },
+  {
+    "id": "i1000-0471",
+    "number": 471,
+    "english": "wear out ～",
+    "japanese": "～をすり減らす［疲れ果てさせる］、すり減らす"
+  },
+  {
+    "id": "i1000-0472",
+    "number": 472,
+    "english": "roll out ～",
+    "japanese": "（新製品）を製造［発売］する、～を転がして出す、転がり出る"
+  },
+  {
+    "id": "i1000-0473",
+    "number": 473,
+    "english": "iron out ～",
+    "japanese": "（問題など）を解決［調節する］"
+  },
+  {
+    "id": "i1000-0474",
+    "number": 474,
+    "english": "set off ～",
+    "japanese": "出発する、～を引き起こす"
+  },
+  {
+    "id": "i1000-0475",
+    "number": 475,
+    "english": "show off ～",
+    "japanese": "（～を）見せびらかす"
+  },
+  {
+    "id": "i1000-0476",
+    "number": 476,
+    "english": "keep off ～",
+    "japanese": "～を近づけない、～に近づかない、～を慎む"
+  },
+  {
+    "id": "i1000-0477",
+    "number": 477,
+    "english": "give off ～",
+    "japanese": "（光・音・においなど）を発する"
+  },
+  {
+    "id": "i1000-0478",
+    "number": 478,
+    "english": "break off ～",
+    "japanese": "（～を）急にやめる、～を切り離す"
+  },
+  {
+    "id": "i1000-0479",
+    "number": 479,
+    "english": "take over ～",
+    "japanese": "（～を）引き継ぐ、～を支配する"
+  },
+  {
+    "id": "i1000-0480",
+    "number": 480,
+    "english": "put in ～",
+    "japanese": "①（物・言葉など）を差し入れる［加える］、（設備など）を取り付ける ②（労力・時間・金など）を注ぎ込む［投入する］"
+  },
+  {
+    "id": "i1000-0481",
+    "number": 481,
+    "english": "drop in",
+    "japanese": "（口調で）ちょっと立ち寄る"
+  },
+  {
+    "id": "i1000-0482",
+    "number": 482,
+    "english": "cut in",
+    "japanese": "（人・車が）割り込む"
+  },
+  {
+    "id": "i1000-0483",
+    "number": 483,
+    "english": "pass on ～",
+    "japanese": "（物・情報など）を次に回す［伝える］"
+  },
+  {
+    "id": "i1000-0484",
+    "number": 484,
+    "english": "give away ～",
+    "japanese": "（秘密など）を漏らす、～をただでやる、～を配る"
+  },
+  {
+    "id": "i1000-0485",
+    "number": 485,
+    "english": "adjust (A) to B",
+    "japanese": "（Aを）Bに合わせて調節する"
+  },
+  {
+    "id": "i1000-0486",
+    "number": 486,
+    "english": "compare A with/to B",
+    "japanese": "AとBを比較する、AをBにたとえる"
+  },
+  {
+    "id": "i1000-0487",
+    "number": 487,
+    "english": "expose A to B",
+    "japanese": "AをBにさらす"
+  },
+  {
+    "id": "i1000-0488",
+    "number": 488,
+    "english": "leave A (up) to B",
+    "japanese": "AをBに任せる、AをBに残す"
+  },
+  {
+    "id": "i1000-0489",
+    "number": 489,
+    "english": "attach A to B",
+    "japanese": "AをBに取りつける［付与する］"
+  },
+  {
+    "id": "i1000-0490",
+    "number": 490,
+    "english": "attribute A to B",
+    "japanese": "AをBのせい［結果］と考える"
+  },
+  {
+    "id": "i1000-0491",
+    "number": 491,
+    "english": "owe A to B",
+    "japanese": "A（恩・義務など）をBに負っている、A（金）をBに借りている"
+  },
+  {
+    "id": "i1000-0492",
+    "number": 492,
+    "english": "confine A to B",
+    "japanese": "AをBに限定する、AをBに閉じ込める"
+  },
+  {
+    "id": "i1000-0493",
+    "number": 493,
+    "english": "liken A to B",
+    "japanese": "AをBにたとえる"
+  },
+  {
+    "id": "i1000-0494",
+    "number": 494,
+    "english": "keep A from B",
+    "japanese": "AにBをさせない、AをBから守る"
+  },
+  {
+    "id": "i1000-0495",
+    "number": 495,
+    "english": "discourage A from B",
+    "japanese": "A（人）にBを思いとどまらせる"
+  },
+  {
+    "id": "i1000-0496",
+    "number": 496,
+    "english": "forbid A from B",
+    "japanese": "A（人）にBを禁止する"
+  },
+  {
+    "id": "i1000-0497",
+    "number": 497,
+    "english": "prohibit A from B",
+    "japanese": "A（人）にBを禁止する"
+  },
+  {
+    "id": "i1000-0498",
+    "number": 498,
+    "english": "order A from B",
+    "japanese": "BにAを注文する"
+  },
+  {
+    "id": "i1000-0499",
+    "number": 499,
+    "english": "substitute A for B",
+    "japanese": "Bの代わりにAを使う"
+  },
+  {
+    "id": "i1000-0500",
+    "number": 500,
+    "english": "exchange A for B",
+    "japanese": "AをBと交換する"
+  },
+  {
+    "id": "i1000-0501",
+    "number": 501,
+    "english": "blame A for B",
+    "japanese": "BのことでAを非難する、BをAのせいにする"
+  },
+  {
+    "id": "i1000-0502",
+    "number": 502,
+    "english": "punish A for B",
+    "japanese": "BのことでAを罰する"
+  },
+  {
+    "id": "i1000-0503",
+    "number": 503,
+    "english": "forgive A for B",
+    "japanese": "BのことでAを許す"
+  },
+  {
+    "id": "i1000-0504",
+    "number": 504,
+    "english": "deprive A of B",
+    "japanese": "AからBを奪う"
+  },
+  {
+    "id": "i1000-0505",
+    "number": 505,
+    "english": "rob A of B",
+    "japanese": "（暴力・脅迫などで）AからBを奪う"
+  },
+  {
+    "id": "i1000-0506",
+    "number": 506,
+    "english": "cure A of B",
+    "japanese": "AのBを治す、A（人）のB（悪癖など）を取り除く"
+  },
+  {
+    "id": "i1000-0507",
+    "number": 507,
+    "english": "accuse A of B",
+    "japanese": "BのことでAを非難［告訴］する"
+  },
+  {
+    "id": "i1000-0508",
+    "number": 508,
+    "english": "suspect A of B",
+    "japanese": "BについてAを疑う"
+  },
+  {
+    "id": "i1000-0509",
+    "number": 509,
+    "english": "assure A of B",
+    "japanese": "A（人）にB（物・事）を請け合う［保証する］"
+  },
+  {
+    "id": "i1000-0510",
+    "number": 510,
+    "english": "transform A into/to B",
+    "japanese": "AをBに変える［変質させる］"
+  },
+  {
+    "id": "i1000-0511",
+    "number": 511,
+    "english": "talk A into B",
+    "japanese": "A（人）を説得してBをさせる"
+  },
+  {
+    "id": "i1000-0512",
+    "number": 512,
+    "english": "present A with B",
+    "japanese": "AにBを贈る［与える］"
+  },
+  {
+    "id": "i1000-0513",
+    "number": 513,
+    "english": "diagnose A as B",
+    "japanese": "AをBと診断する"
+  },
+  {
+    "id": "i1000-0514",
+    "number": 514,
+    "english": "strike A as B",
+    "japanese": "A（人）にBの印象を与える"
+  },
+  {
+    "id": "i1000-0515",
+    "number": 515,
+    "english": "congratulate A on/for B",
+    "japanese": "BのことでAを祝う"
+  },
+  {
+    "id": "i1000-0516",
+    "number": 516,
+    "english": "name A after B",
+    "japanese": "AをBにちなんで名づける"
+  },
+  {
+    "id": "i1000-0517",
+    "number": 517,
+    "english": "make an effort/efforts",
+    "japanese": "努力する"
+  },
+  {
+    "id": "i1000-0518",
+    "number": 518,
+    "english": "make way",
+    "japanese": "道をあける"
+  },
+  {
+    "id": "i1000-0519",
+    "number": 519,
+    "english": "live/lead a ～ life",
+    "japanese": "［～］の生活をする"
+  },
+  {
+    "id": "i1000-0520",
+    "number": 520,
+    "english": "make/earn a/one's living",
+    "japanese": "生計を立てる"
+  },
+  {
+    "id": "i1000-0521",
+    "number": 521,
+    "english": "take one's place",
+    "japanese": "①いつもの席に着く、特定の地位を占める ②～に取って代わる"
+  },
+  {
+    "id": "i1000-0522",
+    "number": 522,
+    "english": "take turns",
+    "japanese": "交代でする"
+  },
+  {
+    "id": "i1000-0523",
+    "number": 523,
+    "english": "take a chance/chances",
+    "japanese": "思い切ってやってみる、賭ける"
+  },
+  {
+    "id": "i1000-0524",
+    "number": 524,
+    "english": "take shape",
+    "japanese": "（はっきりした）形をとる"
+  },
+  {
+    "id": "i1000-0525",
+    "number": 525,
+    "english": "take/have a seat",
+    "japanese": "着席する"
+  },
+  {
+    "id": "i1000-0526",
+    "number": 526,
+    "english": "take a risk/risks",
+    "japanese": "（あえて）危険を冒す、賭ける"
+  },
+  {
+    "id": "i1000-0527",
+    "number": 527,
+    "english": "shake hands",
+    "japanese": "握手する"
+  },
+  {
+    "id": "i1000-0528",
+    "number": 528,
+    "english": "change hands",
+    "japanese": "持ち主が変わる"
+  },
+  {
+    "id": "i1000-0529",
+    "number": 529,
+    "english": "have a say (in ～)",
+    "japanese": "（～に）発言権［発言力］を持つ"
+  },
+  {
+    "id": "i1000-0530",
+    "number": 530,
+    "english": "have/got one's (own) way",
+    "japanese": "思い通りにする"
+  },
+  {
+    "id": "i1000-0531",
+    "number": 531,
+    "english": "keep/hold one's temper",
+    "japanese": "冷静さを保つ"
+  },
+  {
+    "id": "i1000-0532",
+    "number": 532,
+    "english": "take advantage of ～",
+    "japanese": "～を利用する、～につけ込む"
+  },
+  {
+    "id": "i1000-0533",
+    "number": 533,
+    "english": "take control of ～",
+    "japanese": "～を制御［管理・支配］する"
+  },
+  {
+    "id": "i1000-0534",
+    "number": 534,
+    "english": "make use of ～",
+    "japanese": "～を利用する"
+  },
+  {
+    "id": "i1000-0535",
+    "number": 535,
+    "english": "make fun of ～",
+    "japanese": "～をからかう"
+  },
+  {
+    "id": "i1000-0536",
+    "number": 536,
+    "english": "make friends with ～",
+    "japanese": "～と親しくなる"
+  },
+  {
+    "id": "i1000-0537",
+    "number": 537,
+    "english": "make much of ～",
+    "japanese": "～を重要視する、（否定文で）～を理解する"
+  },
+  {
+    "id": "i1000-0538",
+    "number": 538,
+    "english": "have difficulty (in) doing",
+    "japanese": "～するのが困難である、苦労しながら～する"
+  },
+  {
+    "id": "i1000-0539",
+    "number": 539,
+    "english": "have access to ～",
+    "japanese": "～を利用できる、～に近づける"
+  },
+  {
+    "id": "i1000-0540",
+    "number": 540,
+    "english": "have an influence/effect on ～",
+    "japanese": "～に影響を与える"
+  },
+  {
+    "id": "i1000-0541",
+    "number": 541,
+    "english": "have a liking for ～",
+    "japanese": "～を好む"
+  },
+  {
+    "id": "i1000-0542",
+    "number": 542,
+    "english": "give rise to ～",
+    "japanese": "～を引き起こす［生む］"
+  },
+  {
+    "id": "i1000-0543",
+    "number": 543,
+    "english": "give birth to ～",
+    "japanese": "～を産む、～の原因になる"
+  },
+  {
+    "id": "i1000-0544",
+    "number": 544,
+    "english": "find one's way to ～",
+    "japanese": "～へたどり着く、～まで道を探しながら進む"
+  },
+  {
+    "id": "i1000-0545",
+    "number": 545,
+    "english": "keep an eye on ～",
+    "japanese": "～に気を付けている、～から目を離さない"
+  },
+  {
+    "id": "i1000-0546",
+    "number": 546,
+    "english": "fall victim to ～",
+    "japanese": "～の犠牲［餌食］になる"
+  },
+  {
+    "id": "i1000-0547",
+    "number": 547,
+    "english": "catch sight of ～",
+    "japanese": "～を見つける［見かける］"
+  },
+  {
+    "id": "i1000-0548",
+    "number": 548,
+    "english": "put emphasis/stress on/upon ～",
+    "japanese": "～を強調［重視］する"
+  },
+  {
+    "id": "i1000-0549",
+    "number": 549,
+    "english": "be related to ～",
+    "japanese": "～と関係がある、～と婚姻関係がある"
+  },
+  {
+    "id": "i1000-0550",
+    "number": 550,
+    "english": "be similar to ～",
+    "japanese": "～に似ている"
+  },
+  {
+    "id": "i1000-0551",
+    "number": 551,
+    "english": "be subject to ～",
+    "japanese": "～を受けやすい、～に服従している"
+  },
+  {
+    "id": "i1000-0552",
+    "number": 552,
+    "english": "be superior to ～",
+    "japanese": "～より優れている"
+  },
+  {
+    "id": "i1000-0553",
+    "number": 553,
+    "english": "be sensitive to ～",
+    "japanese": "～に敏感である"
+  },
+  {
+    "id": "i1000-0554",
+    "number": 554,
+    "english": "be accustomed to ～",
+    "japanese": "～に慣れている"
+  },
+  {
+    "id": "i1000-0555",
+    "number": 555,
+    "english": "be contrary to ～",
+    "japanese": "～に反している"
+  },
+  {
+    "id": "i1000-0556",
+    "number": 556,
+    "english": "be indifferent to/toward(s) ～",
+    "japanese": "～に無関心［無頓着］である"
+  },
+  {
+    "id": "i1000-0557",
+    "number": 557,
+    "english": "be preferable to ～",
+    "japanese": "～より好ましい［優れている］"
+  },
+  {
+    "id": "i1000-0558",
+    "number": 558,
+    "english": "be dedicated to ～",
+    "japanese": "（仕事・目的など）に打ち込んでいる"
+  },
+  {
+    "id": "i1000-0559",
+    "number": 559,
+    "english": "be peculiar to ～",
+    "japanese": "～に特有である"
+  },
+  {
+    "id": "i1000-0560",
+    "number": 560,
+    "english": "be prone to ～",
+    "japanese": "～になりやすい"
+  },
+  {
+    "id": "i1000-0561",
+    "number": 561,
+    "english": "be identical to/with ～",
+    "japanese": "～と同じ［同一］である"
+  },
+  {
+    "id": "i1000-0562",
+    "number": 562,
+    "english": "be involved in ～",
+    "japanese": "～に携わっている［関係している］、～に熱中している"
+  },
+  {
+    "id": "i1000-0563",
+    "number": 563,
+    "english": "be absorbed in ～",
+    "japanese": "～に熱中している"
+  },
+  {
+    "id": "i1000-0564",
+    "number": 564,
+    "english": "be lacking in ～",
+    "japanese": "～に欠けている"
+  },
+  {
+    "id": "i1000-0565",
+    "number": 565,
+    "english": "be versed in ～",
+    "japanese": "～に精通［熟達］している"
+  },
+  {
+    "id": "i1000-0566",
+    "number": 566,
+    "english": "be abundant in ～",
+    "japanese": "～が豊富である"
+  },
+  {
+    "id": "i1000-0567",
+    "number": 567,
+    "english": "be busy with ～",
+    "japanese": "～で忙しい"
+  },
+  {
+    "id": "i1000-0568",
+    "number": 568,
+    "english": "be popular with/among ～",
+    "japanese": "～に人気がある"
+  },
+  {
+    "id": "i1000-0569",
+    "number": 569,
+    "english": "be equipped with ～",
+    "japanese": "～を備えている"
+  },
+  {
+    "id": "i1000-0570",
+    "number": 570,
+    "english": "be content/contented with ～",
+    "japanese": "～に満足している"
+  },
+  {
+    "id": "i1000-0571",
+    "number": 571,
+    "english": "be confronted with/by ～",
+    "japanese": "（困難・問題など）に直面している"
+  },
+  {
+    "id": "i1000-0572",
+    "number": 572,
+    "english": "be acquainted with ～",
+    "japanese": "～に精通している、～と知り合いである"
+  },
+  {
+    "id": "i1000-0573",
+    "number": 573,
+    "english": "be characteristic of ～",
+    "japanese": "～に特有である、いかにも～らしい"
+  },
+  {
+    "id": "i1000-0574",
+    "number": 574,
+    "english": "be worthy of ～",
+    "japanese": "～に値する［ふさわしい］"
+  },
+  {
+    "id": "i1000-0575",
+    "number": 575,
+    "english": "be ignorant of ～",
+    "japanese": "～を知らない"
+  },
+  {
+    "id": "i1000-0576",
+    "number": 576,
+    "english": "be confident of/about ～",
+    "japanese": "～を確信している"
+  },
+  {
+    "id": "i1000-0577",
+    "number": 577,
+    "english": "be considerate of/to ～",
+    "japanese": "～に対して思いやりのある"
+  },
+  {
+    "id": "i1000-0578",
+    "number": 578,
+    "english": "be guilty of ～",
+    "japanese": "～について有罪である、～を犯している"
+  },
+  {
+    "id": "i1000-0579",
+    "number": 579,
+    "english": "be convinced of ～",
+    "japanese": "～を確信している"
+  },
+  {
+    "id": "i1000-0580",
+    "number": 580,
+    "english": "be tolerant of ～",
+    "japanese": "～に対して寛大である"
+  },
+  {
+    "id": "i1000-0581",
+    "number": 581,
+    "english": "be wary of ～",
+    "japanese": "～に用心深い"
+  },
+  {
+    "id": "i1000-0582",
+    "number": 582,
+    "english": "be suitable for/ to ～",
+    "japanese": "～に適している、（目的など）に合っている"
+  },
+  {
+    "id": "i1000-0583",
+    "number": 583,
+    "english": "be grateful (to A) for B",
+    "japanese": "Bのことで（Aに）感謝している"
+  },
+  {
+    "id": "i1000-0584",
+    "number": 584,
+    "english": "be particular about/over ～",
+    "japanese": "～についてやかましい［気難しい］"
+  },
+  {
+    "id": "i1000-0585",
+    "number": 585,
+    "english": "come down with ～",
+    "japanese": "（病気）にかかる"
+  },
+  {
+    "id": "i1000-0586",
+    "number": 586,
+    "english": "come into being/existence",
+    "japanese": "出現する、生まれ出る"
+  },
+  {
+    "id": "i1000-0587",
+    "number": 587,
+    "english": "come true",
+    "japanese": "（夢・予言などが）実現する"
+  },
+  {
+    "id": "i1000-0588",
+    "number": 588,
+    "english": "do ～ good",
+    "japanese": "（人）のためになる［役に立つ］"
+  },
+  {
+    "id": "i1000-0589",
+    "number": 589,
+    "english": "get in touch (with ～)",
+    "japanese": "（～と）連絡を取る"
+  },
+  {
+    "id": "i1000-0590",
+    "number": 590,
+    "english": "go blind",
+    "japanese": "失明する"
+  },
+  {
+    "id": "i1000-0591",
+    "number": 591,
+    "english": "have A in common (with B)",
+    "japanese": "（Bと）共通にAを持っている"
+  },
+  {
+    "id": "i1000-0592",
+    "number": 592,
+    "english": "keep/bear ～ in mind",
+    "japanese": "～を心に留めておく［忘れない］"
+  },
+  {
+    "id": "i1000-0593",
+    "number": 593,
+    "english": "look back on/upon/to ～",
+    "japanese": "～を回顧［回想］する"
+  },
+  {
+    "id": "i1000-0594",
+    "number": 594,
+    "english": "make it",
+    "japanese": "成功する、うまくやる、間に合う、出席する"
+  },
+  {
+    "id": "i1000-0595",
+    "number": 595,
+    "english": "put into practice/operation",
+    "japanese": "～を実行［実施］する"
+  },
+  {
+    "id": "i1000-0596",
+    "number": 596,
+    "english": "sign up for ～",
+    "japanese": "（受講など）の届け出をする、～に加わる"
+  },
+  {
+    "id": "i1000-0597",
+    "number": 597,
+    "english": "take ～ by surprise",
+    "japanese": "～を驚かす、～の不意を打つ"
+  },
+  {
+    "id": "i1000-0598",
+    "number": 598,
+    "english": "in terms of ～",
+    "japanese": "～の観点から、～に換算して"
+  },
+  {
+    "id": "i1000-0599",
+    "number": 599,
+    "english": "in contrast to/with ～",
+    "japanese": "～と著しく違って、～と対照をなして"
+  },
+  {
+    "id": "i1000-0600",
+    "number": 600,
+    "english": "in danger of ～",
+    "japanese": "～の危険があって"
+  },
+  {
+    "id": "i1000-0601",
+    "number": 601,
+    "english": "in need of ～",
+    "japanese": "～を必要として"
+  },
+  {
+    "id": "i1000-0602",
+    "number": 602,
+    "english": "in response to ～",
+    "japanese": "～に応じて［答えて］"
+  },
+  {
+    "id": "i1000-0603",
+    "number": 603,
+    "english": "in favor of ～",
+    "japanese": "～に賛成して、～のほうを選んで"
+  },
+  {
+    "id": "i1000-0604",
+    "number": 604,
+    "english": "in (the) face of ～",
+    "japanese": "～に直面して、～にもかかわらず"
+  },
+  {
+    "id": "i1000-0605",
+    "number": 605,
+    "english": "in charge of ～",
+    "japanese": "～を預かって［管理して］"
+  },
+  {
+    "id": "i1000-0606",
+    "number": 606,
+    "english": "in relation to ～",
+    "japanese": "～と比べて、～に関連して"
+  },
+  {
+    "id": "i1000-0607",
+    "number": 607,
+    "english": "in place of ～",
+    "japanese": "～の代わりに"
+  },
+  {
+    "id": "i1000-0608",
+    "number": 608,
+    "english": "in the presence of ～",
+    "japanese": "～のいるところ［面前］で"
+  },
+  {
+    "id": "i1000-0609",
+    "number": 609,
+    "english": "in honor of ～",
+    "japanese": "～に敬意を表して、～のために"
+  },
+  {
+    "id": "i1000-0610",
+    "number": 610,
+    "english": "in (the) light of ～",
+    "japanese": "～から見て、～を考慮して"
+  },
+  {
+    "id": "i1000-0611",
+    "number": 611,
+    "english": "in harmony with ～",
+    "japanese": "～と調和［一致］して"
+  },
+  {
+    "id": "i1000-0612",
+    "number": 612,
+    "english": "in exchange for ～",
+    "japanese": "～と交換に"
+  },
+  {
+    "id": "i1000-0613",
+    "number": 613,
+    "english": "for the sake of ～",
+    "japanese": "～のために"
+  },
+  {
+    "id": "i1000-0614",
+    "number": 614,
+    "english": "for fear of ～",
+    "japanese": "～を恐れて"
+  },
+  {
+    "id": "i1000-0615",
+    "number": 615,
+    "english": "for lack/want of ～",
+    "japanese": "～がない［不足している］ために"
+  },
+  {
+    "id": "i1000-0616",
+    "number": 616,
+    "english": "at the expense of ～",
+    "japanese": "～を犠牲にして"
+  },
+  {
+    "id": "i1000-0617",
+    "number": 617,
+    "english": "at (the) sight of ～",
+    "japanese": "～を見て"
+  },
+  {
+    "id": "i1000-0618",
+    "number": 618,
+    "english": "at the mercy of ～",
+    "japanese": "～のなすがままになって"
+  },
+  {
+    "id": "i1000-0619",
+    "number": 619,
+    "english": "as opposed to ～",
+    "japanese": "～ではなく、～とは対照的に"
+  },
+  {
+    "id": "i1000-0620",
+    "number": 620,
+    "english": "by means of ～",
+    "japanese": "～を用いて、～によって"
+  },
+  {
+    "id": "i1000-0621",
+    "number": 621,
+    "english": "by/in virtue of ～",
+    "japanese": "～のおかげで、～によって"
+  },
+  {
+    "id": "i1000-0622",
+    "number": 622,
+    "english": "on/in behalf of ～",
+    "japanese": "～を代表して、～のために"
+  },
+  {
+    "id": "i1000-0623",
+    "number": 623,
+    "english": "on a/the charge of ～",
+    "japanese": "～の容疑［罪］で"
+  },
+  {
+    "id": "i1000-0624",
+    "number": 624,
+    "english": "with/in regard to ～",
+    "japanese": "～に関して（は）"
+  },
+  {
+    "id": "i1000-0625",
+    "number": 625,
+    "english": "in part",
+    "japanese": "一部には、幾分（かは）"
+  },
+  {
+    "id": "i1000-0626",
+    "number": 626,
+    "english": "in turn",
+    "japanese": "徐々に、（立ち代わって）次に（は）"
+  },
+  {
+    "id": "i1000-0627",
+    "number": 627,
+    "english": "in place",
+    "japanese": "あるべき場所に、きちんと整って、用意ができて"
+  },
+  {
+    "id": "i1000-0628",
+    "number": 628,
+    "english": "in practice",
+    "japanese": "実際には"
+  },
+  {
+    "id": "i1000-0629",
+    "number": 629,
+    "english": "in demand",
+    "japanese": "需要があって、必要とされて"
+  },
+  {
+    "id": "i1000-0630",
+    "number": 630,
+    "english": "in the meantime/meanwhile",
+    "japanese": "その間（に）、一方で、話は変わって"
+  },
+  {
+    "id": "i1000-0631",
+    "number": 631,
+    "english": "in all likelihood",
+    "japanese": "十中八九、おおかた"
+  },
+  {
+    "id": "i1000-0632",
+    "number": 632,
+    "english": "at work",
+    "japanese": "①職業で、仕事中で[の] ②作用して、運転［作動］中で[の]"
+  },
+  {
+    "id": "i1000-0633",
+    "number": 633,
+    "english": "at risk",
+    "japanese": "危険な状態で"
+  },
+  {
+    "id": "i1000-0634",
+    "number": 634,
+    "english": "at a loss",
+    "japanese": "途方に暮れて、困って、損をして"
+  },
+  {
+    "id": "i1000-0635",
+    "number": 635,
+    "english": "at first sight",
+    "japanese": "一見したところでは、ひと目で[の]"
+  },
+  {
+    "id": "i1000-0636",
+    "number": 636,
+    "english": "at heart",
+    "japanese": "心の底では、本当は"
+  },
+  {
+    "id": "i1000-0637",
+    "number": 637,
+    "english": "at intervals",
+    "japanese": "時折、あちこちに"
+  },
+  {
+    "id": "i1000-0638",
+    "number": 638,
+    "english": "on the/an average",
+    "japanese": "平均して"
+  },
+  {
+    "id": "i1000-0639",
+    "number": 639,
+    "english": "on a ～ basis",
+    "japanese": "～の基準[原則]で"
+  },
+  {
+    "id": "i1000-0640",
+    "number": 640,
+    "english": "on a ～ scale",
+    "japanese": "～な規模で[の]"
+  },
+  {
+    "id": "i1000-0641",
+    "number": 641,
+    "english": "on display",
+    "japanese": "陳列中で[の]、展示して"
+  },
+  {
+    "id": "i1000-0642",
+    "number": 642,
+    "english": "on the increase",
+    "japanese": "増加中で"
+  },
+  {
+    "id": "i1000-0643",
+    "number": 643,
+    "english": "on (one's) guard",
+    "japanese": "警戒して"
+  },
+  {
+    "id": "i1000-0644",
+    "number": 644,
+    "english": "to ～ extent/degree",
+    "japanese": "～の程度に"
+  },
+  {
+    "id": "i1000-0645",
+    "number": 645,
+    "english": "to one's surprise",
+    "japanese": "～が驚いたことには"
+  },
+  {
+    "id": "i1000-0646",
+    "number": 646,
+    "english": "to the point",
+    "japanese": "要を得た、適切な"
+  },
+  {
+    "id": "i1000-0647",
+    "number": 647,
+    "english": "to make matters/things worse",
+    "japanese": "さらに悪いことに"
+  },
+  {
+    "id": "i1000-0648",
+    "number": 648,
+    "english": "to one's advantage",
+    "japanese": "（人）に都合がよい[よく]、（人）に有利な[に]"
+  },
+  {
+    "id": "i1000-0649",
+    "number": 649,
+    "english": "from ～ on/onward(s)",
+    "japanese": "～から以後は"
+  },
+  {
+    "id": "i1000-0650",
+    "number": 650,
+    "english": "from ～ point of view",
+    "japanese": "～の視点から（は）"
+  },
+  {
+    "id": "i1000-0651",
+    "number": 651,
+    "english": "for sure/certain",
+    "japanese": "確かに"
+  },
+  {
+    "id": "i1000-0652",
+    "number": 652,
+    "english": "under way",
+    "japanese": "（計画などが）進行中で"
+  },
+  {
+    "id": "i1000-0653",
+    "number": 653,
+    "english": "under construction",
+    "japanese": "建築[工事]中で"
+  },
+  {
+    "id": "i1000-0654",
+    "number": 654,
+    "english": "of late",
+    "japanese": "最近、近ごろ"
+  },
+  {
+    "id": "i1000-0655",
+    "number": 655,
+    "english": "of one's own accord/free will",
+    "japanese": "自分の意志で、自発的に"
+  },
+  {
+    "id": "i1000-0656",
+    "number": 656,
+    "english": "without fail",
+    "japanese": "必ず、間違いなく"
+  },
+  {
+    "id": "i1000-0657",
+    "number": 657,
+    "english": "behind the times",
+    "japanese": "時代遅れの[で]"
+  },
+  {
+    "id": "i1000-0658",
+    "number": 658,
+    "english": "beyond description",
+    "japanese": "言葉では表現できないほどの[に]"
+  },
+  {
+    "id": "i1000-0659",
+    "number": 659,
+    "english": "out of breath",
+    "japanese": "息切れして"
+  },
+  {
+    "id": "i1000-0660",
+    "number": 660,
+    "english": "out of character",
+    "japanese": "（その人の）性格に合わない[調和しない]、役に不向きな"
+  },
+  {
+    "id": "i1000-0661",
+    "number": 661,
+    "english": "no matter how/what/when, etc …",
+    "japanese": "どんなに[何が・いつなど]…でも"
+  },
+  {
+    "id": "i1000-0662",
+    "number": 662,
+    "english": "what we call ～",
+    "japanese": "いわゆる～"
+  },
+  {
+    "id": "i1000-0663",
+    "number": 663,
+    "english": "what ～ is",
+    "japanese": "現在の～"
+  },
+  {
+    "id": "i1000-0664",
+    "number": 664,
+    "english": "～ will do",
+    "japanese": "～は役に立つ[用が足りる]"
+  },
+  {
+    "id": "i1000-0665",
+    "number": 665,
+    "english": "may well do",
+    "japanese": "おそらく…するだろう、…するのはもっともだ"
+  },
+  {
+    "id": "i1000-0666",
+    "number": 666,
+    "english": "might (just) as well do",
+    "japanese": "…するのも同じだ、（気は進まないが）～してもよい、（どうせなら）…するほうがいい"
+  },
+  {
+    "id": "i1000-0667",
+    "number": 667,
+    "english": "cannot ～ too …",
+    "japanese": "いくら～してもしすぎることはない"
+  },
+  {
+    "id": "i1000-0668",
+    "number": 668,
+    "english": "the last ～ to do",
+    "japanese": "最も…しそうにない～"
+  },
+  {
+    "id": "i1000-0669",
+    "number": 669,
+    "english": "have A to do with B",
+    "japanese": "ＢとＡの関係がある"
+  },
+  {
+    "id": "i1000-0670",
+    "number": 670,
+    "english": "to tell (you) the truth",
+    "japanese": "実を言えば"
+  },
+  {
+    "id": "i1000-0671",
+    "number": 671,
+    "english": "needless to say",
+    "japanese": "言うまでもなく"
+  },
+  {
+    "id": "i1000-0672",
+    "number": 672,
+    "english": "feel like doing",
+    "japanese": "…したい気がする"
+  },
+  {
+    "id": "i1000-0673",
+    "number": 673,
+    "english": "be used to doing",
+    "japanese": "…することに慣れている"
+  },
+  {
+    "id": "i1000-0674",
+    "number": 674,
+    "english": "cannot help doing",
+    "japanese": "…せずにはいられない、…せざるを得ない"
+  },
+  {
+    "id": "i1000-0675",
+    "number": 675,
+    "english": "come close/near to doing",
+    "japanese": "もう少しで…しそうになる"
+  },
+  {
+    "id": "i1000-0676",
+    "number": 676,
+    "english": "with a view to doing",
+    "japanese": "…する目的で"
+  },
+  {
+    "id": "i1000-0677",
+    "number": 677,
+    "english": "joking/kidding aside",
+    "japanese": "冗談はさておき"
+  },
+  {
+    "id": "i1000-0678",
+    "number": 678,
+    "english": "catch ～ doing",
+    "japanese": "（人）が…しているところを見つける[捕らえる]"
+  },
+  {
+    "id": "i1000-0679",
+    "number": 679,
+    "english": "speaking/talking of ～",
+    "japanese": "～と言えば"
+  },
+  {
+    "id": "i1000-0680",
+    "number": 680,
+    "english": "judging from/by ～",
+    "japanese": "～から判断すると"
+  },
+  {
+    "id": "i1000-0681",
+    "number": 681,
+    "english": "that is (to say)",
+    "japanese": "すなわち、つまり"
+  },
+  {
+    "id": "i1000-0682",
+    "number": 682,
+    "english": "in itself",
+    "japanese": "それ自体では、本来は"
+  },
+  {
+    "id": "i1000-0683",
+    "number": 683,
+    "english": "to oneself",
+    "japanese": "①自分だけ（が使うの）に ②自分自身に、心の中に[で]"
+  },
+  {
+    "id": "i1000-0684",
+    "number": 684,
+    "english": "one after another",
+    "japanese": "次々に"
+  },
+  {
+    "id": "i1000-0685",
+    "number": 685,
+    "english": "none other than ～",
+    "japanese": "ほかならぬ～、まさに～"
+  },
+  {
+    "id": "i1000-0686",
+    "number": 686,
+    "english": "would/had rather do (than ～)",
+    "japanese": "（～するよりも）むしろ…したい"
+  },
+  {
+    "id": "i1000-0687",
+    "number": 687,
+    "english": "as many/much as ～",
+    "japanese": "～もの数[量]の、～と同数[量]の"
+  },
+  {
+    "id": "i1000-0688",
+    "number": 688,
+    "english": "as good as ～",
+    "japanese": "～も同然、ほとんど～"
+  },
+  {
+    "id": "i1000-0689",
+    "number": 689,
+    "english": "as ～ as any",
+    "japanese": "誰[どれ]にも劣らず～"
+  },
+  {
+    "id": "i1000-0690",
+    "number": 690,
+    "english": "all the + 比較級",
+    "japanese": "ますます～、それだけいっそう～"
+  },
+  {
+    "id": "i1000-0691",
+    "number": 691,
+    "english": "that much + 比較級",
+    "japanese": "（口語で）それだけいっそう～"
+  },
+  {
+    "id": "i1000-0692",
+    "number": 692,
+    "english": "much/still less ～",
+    "japanese": "（否定文中で）まして～はない"
+  },
+  {
+    "id": "i1000-0693",
+    "number": 693,
+    "english": "what is more",
+    "japanese": "さらに、おまけに"
+  },
+  {
+    "id": "i1000-0694",
+    "number": 694,
+    "english": "know better (than to do)",
+    "japanese": "（…しないだけの）分別がある、（…するほど）ばかではない"
+  },
+  {
+    "id": "i1000-0695",
+    "number": 695,
+    "english": "Couldn't be better.",
+    "japanese": "最高です、これ以上良い状態はあり得ない"
+  },
+  {
+    "id": "i1000-0696",
+    "number": 696,
+    "english": "worse still/yet",
+    "japanese": "いっそう悪いことに"
+  },
+  {
+    "id": "i1000-0697",
+    "number": 697,
+    "english": "to the best of one's knowledge",
+    "japanese": "（人）の知る限り（では）"
+  },
+  {
+    "id": "i1000-0698",
+    "number": 698,
+    "english": "not ～ (in) the least",
+    "japanese": "まったく～ない"
+  },
+  {
+    "id": "i1000-0699",
+    "number": 699,
+    "english": "to the full/fullest",
+    "japanese": "心ゆくまで、十分に"
+  },
+  {
+    "id": "i1000-0700",
+    "number": 700,
+    "english": "by far",
+    "japanese": "はるかに、ずっと"
+  },
+  {
+    "id": "i1000-0701",
+    "number": 701,
+    "english": "provided (that) …",
+    "japanese": "もし…ならば"
+  },
+  {
+    "id": "i1000-0702",
+    "number": 702,
+    "english": "every/each time …",
+    "japanese": "…するたびに"
+  },
+  {
+    "id": "i1000-0703",
+    "number": 703,
+    "english": "the moment/minute …",
+    "japanese": "…するとすぐに"
+  },
+  {
+    "id": "i1000-0704",
+    "number": 704,
+    "english": "when it comes to ～",
+    "japanese": "～のこととなると、～をする段になると"
+  },
+  {
+    "id": "i1000-0705",
+    "number": 705,
+    "english": "as it is",
+    "japanese": "①（通例、仮定法的な表現の直後で）実際のところは ②（事物が）あるがままの（に）"
+  },
+  {
+    "id": "i1000-0706",
+    "number": 706,
+    "english": "as/so far as ～ be concerned",
+    "japanese": "～に関する限り"
+  },
+  {
+    "id": "i1000-0707",
+    "number": 707,
+    "english": "as follows",
+    "japanese": "次のとおり"
+  },
+  {
+    "id": "i1000-0708",
+    "number": 708,
+    "english": "as is often the case (with～)",
+    "japanese": "（～に関して）よくあることだが"
+  },
+  {
+    "id": "i1000-0709",
+    "number": 709,
+    "english": "as ～ go",
+    "japanese": "一般の～と比べると、～としては"
+  },
+  {
+    "id": "i1000-0710",
+    "number": 710,
+    "english": "if only …",
+    "japanese": "①…でありさえすれば ②（現在・未来の願望を表して）…でさえあればなあ"
+  },
+  {
+    "id": "i1000-0711",
+    "number": 711,
+    "english": "if it were not for ～",
+    "japanese": "もし～がなければ"
+  },
+  {
+    "id": "i1000-0712",
+    "number": 712,
+    "english": "(in) the way …",
+    "japanese": "…から判断すると、…のように、…のやり方で"
+  },
+  {
+    "id": "i1000-0713",
+    "number": 713,
+    "english": "～ to death",
+    "japanese": "死ぬまで～、ひどく～"
+  },
+  {
+    "id": "i1000-0714",
+    "number": 714,
+    "english": "with ease",
+    "japanese": "容易に"
+  },
+  {
+    "id": "i1000-0715",
+    "number": 715,
+    "english": "believe it or not",
+    "japanese": "まさかと思うような話だが"
+  },
+  {
+    "id": "i1000-0716",
+    "number": 716,
+    "english": "not all that ～",
+    "japanese": "それほど～ではない"
+  },
+  {
+    "id": "i1000-0717",
+    "number": 717,
+    "english": "the 比較級 ～, the 比較級 …",
+    "japanese": "～であればあるほど、いっそう…だ"
+  },
+  {
+    "id": "i1000-0718",
+    "number": 718,
+    "english": "(Just) As ～, so …",
+    "japanese": "ちょうど～であるように…だ"
+  },
+  {
+    "id": "i1000-0719",
+    "number": 719,
+    "english": "(It is) No wonder (that) …",
+    "japanese": "…なのは当然だ"
+  },
+  {
+    "id": "i1000-0720",
+    "number": 720,
+    "english": "It happens that …",
+    "japanese": "たまたま…だ、折良く[運悪く]…だ"
+  },
+  {
+    "id": "i1000-0721",
+    "number": 721,
+    "english": "(The) Chances are (that) …",
+    "japanese": "ひょっとしたら[たぶん]…だろう"
+  },
+  {
+    "id": "i1000-0722",
+    "number": 722,
+    "english": "There is no doing",
+    "japanese": "…することはできない"
+  },
+  {
+    "id": "i1000-0723",
+    "number": 723,
+    "english": "not so much A as B",
+    "japanese": "AというよりむしろB"
+  },
+  {
+    "id": "i1000-0724",
+    "number": 724,
+    "english": "hardly ～ when/before …",
+    "japanese": "～するかしないかのうちに…する"
+  },
+  {
+    "id": "i1000-0725",
+    "number": 725,
+    "english": "never do without ～",
+    "japanese": "…すれば必ず～する"
+  },
+  {
+    "id": "i1000-0726",
+    "number": 726,
+    "english": "It goes without saying that …",
+    "japanese": "…なのは言うまでもない"
+  },
+  {
+    "id": "i1000-0727",
+    "number": 727,
+    "english": "(It is) True ～, but …",
+    "japanese": "確かに～だが、…だ"
+  },
+  {
+    "id": "i1000-0728",
+    "number": 728,
+    "english": "It is not long before …",
+    "japanese": "…するのに長くはかからない、間もなく…する"
+  },
+  {
+    "id": "i1000-0729",
+    "number": 729,
+    "english": "It is (high) time (that) …",
+    "japanese": "（とっくに）…してよいころだ"
+  },
+  {
+    "id": "i1000-0730",
+    "number": 730,
+    "english": "no sooner ～ than …",
+    "japanese": "～するやいなや…する"
+  },
+  {
+    "id": "i1000-0731",
+    "number": 731,
+    "english": "It is no use doing",
+    "japanese": "…しても無駄である"
+  },
+  {
+    "id": "i1000-0732",
+    "number": 732,
+    "english": "It is not until ～ that …",
+    "japanese": "～になって初めて…する"
+  },
+  {
+    "id": "i1000-0733",
+    "number": 733,
+    "english": "A is to B what C is to D",
+    "japanese": "AのBに対する関係はCのDに対する関係に等しい"
+  },
+  {
+    "id": "i1000-0734",
+    "number": 734,
+    "english": "not so much as do",
+    "japanese": "…さえしない"
+  },
+  {
+    "id": "i1000-0735",
+    "number": 735,
+    "english": "Nothing is more A than B.",
+    "japanese": "BほどAなものはない"
+  },
+  {
+    "id": "i1000-0736",
+    "number": 736,
+    "english": "the former ～, the latter …",
+    "japanese": "前者は～、後者は…"
+  },
+  {
+    "id": "i1000-0737",
+    "number": 737,
+    "english": "A is one thing, and B is another",
+    "japanese": "AとBとは別の物である"
+  },
+  {
+    "id": "i1000-0738",
+    "number": 738,
+    "english": "All one has to do is (to) do",
+    "japanese": "（人は）はただ…すればよい"
+  },
+  {
+    "id": "i1000-0739",
+    "number": 739,
+    "english": "Suffice (it) to say that …",
+    "japanese": "…と言えば十分である"
+  },
+  {
+    "id": "i1000-0740",
+    "number": 740,
+    "english": "be to do",
+    "japanese": "①（予定・運命）…することになっている ②（義務）…すべきである ③（意図・目的）…するつもりである ④（可能）…できる"
+  },
+  {
+    "id": "i1000-0741",
+    "number": 741,
+    "english": "be forced to do",
+    "japanese": "やむなく…する"
+  },
+  {
+    "id": "i1000-0742",
+    "number": 742,
+    "english": "be supposed to do",
+    "japanese": "…することになっている、（世間で）…と考えられている"
+  },
+  {
+    "id": "i1000-0743",
+    "number": 743,
+    "english": "be to blame (for ～)",
+    "japanese": "（～に対して）責めを負うべきである[責任がある]"
+  },
+  {
+    "id": "i1000-0744",
+    "number": 744,
+    "english": "be entitled to ～",
+    "japanese": "～の資格がある"
+  },
+  {
+    "id": "i1000-0745",
+    "number": 745,
+    "english": "tend to do",
+    "japanese": "…する傾向がある、…しがちである"
+  },
+  {
+    "id": "i1000-0746",
+    "number": 746,
+    "english": "happen to do",
+    "japanese": "偶然…する"
+  },
+  {
+    "id": "i1000-0747",
+    "number": 747,
+    "english": "manage to do",
+    "japanese": "なんとか…する[やり遂げる]"
+  },
+  {
+    "id": "i1000-0748",
+    "number": 748,
+    "english": "can afford to do",
+    "japanese": "（経済的・時間的に）…する余裕がある"
+  },
+  {
+    "id": "i1000-0749",
+    "number": 749,
+    "english": "bother to do",
+    "japanese": "わざわざ…する"
+  },
+  {
+    "id": "i1000-0750",
+    "number": 750,
+    "english": "come to an end/a close",
+    "japanese": "終わる"
+  },
+  {
+    "id": "i1000-0751",
+    "number": 751,
+    "english": "go so far as to do",
+    "japanese": "…しさえする"
+  },
+  {
+    "id": "i1000-0752",
+    "number": 752,
+    "english": "have no (other) choice but to do",
+    "japanese": "…するよりほかに仕方がない"
+  },
+  {
+    "id": "i1000-0753",
+    "number": 753,
+    "english": "spend ～ (in) doing",
+    "japanese": "…して（時間・期間）を過ごす"
+  },
+  {
+    "id": "i1000-0754",
+    "number": 754,
+    "english": "make a point of doing",
+    "japanese": "必ず…するよう努力する、…することを重視する"
+  },
+  {
+    "id": "i1000-0755",
+    "number": 755,
+    "english": "remain to be seen",
+    "japanese": "（結果などは）未定である"
+  },
+  {
+    "id": "i1000-0756",
+    "number": 756,
+    "english": "bring oneself to do",
+    "japanese": "…する気持ちになる"
+  },
+  {
+    "id": "i1000-0757",
+    "number": 757,
+    "english": "take the trouble to do",
+    "japanese": "わざわざ[労を惜しまず]…する"
+  },
+  {
+    "id": "i1000-0758",
+    "number": 758,
+    "english": "leave nothing to be desired",
+    "japanese": "申し分ない"
+  },
+  {
+    "id": "i1000-0759",
+    "number": 759,
+    "english": "in order/so as to do",
+    "japanese": "…するために"
+  },
+  {
+    "id": "i1000-0760",
+    "number": 760,
+    "english": "in that …",
+    "japanese": "…の点で、…のゆえに"
+  },
+  {
+    "id": "i1000-0761",
+    "number": 761,
+    "english": "as/so long as …",
+    "japanese": "（条件・時間的限度）…である限り"
+  },
+  {
+    "id": "i1000-0762",
+    "number": 762,
+    "english": "see (to it) that …",
+    "japanese": "…するように取り計らう[気をつける]"
+  },
+  {
+    "id": "i1000-0763",
+    "number": 763,
+    "english": "so that ～ can do",
+    "japanese": "～が…できるように"
+  },
+  {
+    "id": "i1000-0764",
+    "number": 764,
+    "english": "by the time …",
+    "japanese": "…までに（は）"
+  },
+  {
+    "id": "i1000-0765",
+    "number": 765,
+    "english": "～, so (that) …",
+    "japanese": "～だ、その結果…だ"
+  },
+  {
+    "id": "i1000-0766",
+    "number": 766,
+    "english": "now that …",
+    "japanese": "…である以上、今はもう…なので"
+  },
+  {
+    "id": "i1000-0767",
+    "number": 767,
+    "english": "in case …",
+    "japanese": "①[主に米]もし…ならば ②[主に英]…するといけないから、…に備えて"
+  },
+  {
+    "id": "i1000-0768",
+    "number": 768,
+    "english": "given (that) …",
+    "japanese": "…を考慮すれば、…なので"
+  },
+  {
+    "id": "i1000-0769",
+    "number": 769,
+    "english": "even as …",
+    "japanese": "まさに…するときに"
+  },
+  {
+    "id": "i1000-0770",
+    "number": 770,
+    "english": "if any",
+    "japanese": "もしあるとしても、もしあれば"
+  },
+  {
+    "id": "i1000-0771",
+    "number": 771,
+    "english": "on (the) condition (that) …",
+    "japanese": "…という条件で、…ならば"
+  },
+  {
+    "id": "i1000-0772",
+    "number": 772,
+    "english": "lest ～ (should) …",
+    "japanese": "～が…しないように、～が…するといけないから"
+  },
+  {
+    "id": "i1000-0773",
+    "number": 773,
+    "english": "what with A and B",
+    "japanese": "AやらBやらで"
+  },
+  {
+    "id": "i1000-0774",
+    "number": 774,
+    "english": "A, and B at that",
+    "japanese": "Aだ、その上Bでもある"
+  },
+  {
+    "id": "i1000-0775",
+    "number": 775,
+    "english": "inasmuch/in as much as …",
+    "japanese": "…だから"
+  },
+  {
+    "id": "i1000-0776",
+    "number": 776,
+    "english": "just about",
+    "japanese": "ほぼ、かろうじて"
+  },
+  {
+    "id": "i1000-0777",
+    "number": 777,
+    "english": "go ahead",
+    "japanese": "先に行く、（ためらわず）進む"
+  },
+  {
+    "id": "i1000-0778",
+    "number": 778,
+    "english": "check out ～",
+    "japanese": "①（魅力的なので）～を見てみる、～を調査[点検]する ②（図書館などから）～借り出す"
+  },
+  {
+    "id": "i1000-0779",
+    "number": 779,
+    "english": "hold on",
+    "japanese": "①持ちこたえる、頑張る ②待つ、電話を切らずにいる ③しっかりつかむ"
+  },
+  {
+    "id": "i1000-0780",
+    "number": 780,
+    "english": "hang up ～",
+    "japanese": "（電話を）切る、（衣服など）を掛ける、～を中断する"
+  },
+  {
+    "id": "i1000-0781",
+    "number": 781,
+    "english": "give ～ a try",
+    "japanese": "～を試してみる"
+  },
+  {
+    "id": "i1000-0782",
+    "number": 782,
+    "english": "give ～ a hand",
+    "japanese": "～に手を貸す"
+  },
+  {
+    "id": "i1000-0783",
+    "number": 783,
+    "english": "call back ～",
+    "japanese": "～に折り返し電話する、～に電話をかけ直す、～を呼び戻す"
+  },
+  {
+    "id": "i1000-0784",
+    "number": 784,
+    "english": "from scratch",
+    "japanese": "最初から"
+  },
+  {
+    "id": "i1000-0785",
+    "number": 785,
+    "english": "see ～ off",
+    "japanese": "～を見送る"
+  },
+  {
+    "id": "i1000-0786",
+    "number": 786,
+    "english": "hold one's breath",
+    "japanese": "息を止める、（期待して）息をひそめて待つ"
+  },
+  {
+    "id": "i1000-0787",
+    "number": 787,
+    "english": "at/behind the wheel",
+    "japanese": "（車・船などを）運転して"
+  },
+  {
+    "id": "i1000-0788",
+    "number": 788,
+    "english": "having said that",
+    "japanese": "そうは言ったものの"
+  },
+  {
+    "id": "i1000-0789",
+    "number": 789,
+    "english": "on the dot",
+    "japanese": "（口語で）時間ちょうどに、きっかりに"
+  },
+  {
+    "id": "i1000-0790",
+    "number": 790,
+    "english": "ask ～ a favor",
+    "japanese": "～にお願いをする[頼む]"
+  },
+  {
+    "id": "i1000-0791",
+    "number": 791,
+    "english": "drive at ～",
+    "japanese": "（whatを目的語に）～のつもりである"
+  },
+  {
+    "id": "i1000-0792",
+    "number": 792,
+    "english": "lose (one's) face",
+    "japanese": "面目を失う"
+  },
+  {
+    "id": "i1000-0793",
+    "number": 793,
+    "english": "before one knows it",
+    "japanese": "あっという間に"
+  },
+  {
+    "id": "i1000-0794",
+    "number": 794,
+    "english": "stick around/about",
+    "japanese": "（口語で）（帰らずに）そこらで待つ"
+  },
+  {
+    "id": "i1000-0795",
+    "number": 795,
+    "english": "call it a day",
+    "japanese": "その日の仕事を終える"
+  },
+  {
+    "id": "i1000-0796",
+    "number": 796,
+    "english": "have (a) good command of ～",
+    "japanese": "（外国語など）を自由に使いこなす力がある"
+  },
+  {
+    "id": "i1000-0797",
+    "number": 797,
+    "english": "keep one's fingers crossed",
+    "japanese": "（幸運[成功]を）祈る"
+  },
+  {
+    "id": "i1000-0798",
+    "number": 798,
+    "english": "pay a visit (to ～）",
+    "japanese": "（～を）訪問する"
+  },
+  {
+    "id": "i1000-0799",
+    "number": 799,
+    "english": "serve ～ right",
+    "japanese": "～にとって当然の報いである"
+  },
+  {
+    "id": "i1000-0800",
+    "number": 800,
+    "english": "go to the polls",
+    "japanese": "投票に行く"
+  },
+  {
+    "id": "i1000-0801",
+    "number": 801,
+    "english": "take office",
+    "japanese": "（公職に）就任する"
+  },
+  {
+    "id": "i1000-0802",
+    "number": 802,
+    "english": "turn a blind eye to ～",
+    "japanese": "～を見て見ぬふりをする"
+  },
+  {
+    "id": "i1000-0803",
+    "number": 803,
+    "english": "last but not least",
+    "japanese": "最後になったが"
+  },
+  {
+    "id": "i1000-0804",
+    "number": 804,
+    "english": "know ～ by sight",
+    "japanese": "～の顔を（見て）知っている"
+  },
+  {
+    "id": "i1000-0805",
+    "number": 805,
+    "english": "pull ～'s leg",
+    "japanese": "（口調で）～をからかう[かつぐ]"
+  },
+  {
+    "id": "i1000-0806",
+    "number": 806,
+    "english": "the bottom line",
+    "japanese": "（口語で）要点、（決算書の最下行の）数字、最終結果"
+  },
+  {
+    "id": "i1000-0807",
+    "number": 807,
+    "english": "have/take a look (at ～)",
+    "japanese": "（～を）見る"
+  },
+  {
+    "id": "i1000-0808",
+    "number": 808,
+    "english": "What ～ like?",
+    "japanese": "～はどんなものか"
+  },
+  {
+    "id": "i1000-0809",
+    "number": 809,
+    "english": "What ～ for?",
+    "japanese": "どうして～か何の目的で～か"
+  },
+  {
+    "id": "i1000-0810",
+    "number": 810,
+    "english": "have no idea",
+    "japanese": "見当がつかない"
+  },
+  {
+    "id": "i1000-0811",
+    "number": 811,
+    "english": "could use ～",
+    "japanese": "（口語で）～があればありがたい、～が欲しい"
+  },
+  {
+    "id": "i1000-0812",
+    "number": 812,
+    "english": "How come SV?",
+    "japanese": "どうして…か [= Why(…)?]"
+  },
+  {
+    "id": "i1000-0813",
+    "number": 813,
+    "english": "take one's time",
+    "japanese": "（時間をかけて）ゆっくりやる、自分のペースでやる"
+  },
+  {
+    "id": "i1000-0814",
+    "number": 814,
+    "english": "take it easy",
+    "japanese": "のんびり構える"
+  },
+  {
+    "id": "i1000-0815",
+    "number": 815,
+    "english": "My pleasure.",
+    "japanese": "（お礼の言葉に対して）どういたしまして"
+  },
+  {
+    "id": "i1000-0816",
+    "number": 816,
+    "english": "make oneself understood",
+    "japanese": "自分の言うことを相手に分からせる"
+  },
+  {
+    "id": "i1000-0817",
+    "number": 817,
+    "english": "see much of ～",
+    "japanese": "～によく会う"
+  },
+  {
+    "id": "i1000-0818",
+    "number": 818,
+    "english": "think again",
+    "japanese": "考え直す、考えを変える"
+  },
+  {
+    "id": "i1000-0819",
+    "number": 819,
+    "english": "help oneself to ～",
+    "japanese": "～を自由に取る"
+  },
+  {
+    "id": "i1000-0820",
+    "number": 820,
+    "english": "I'm afraid not.",
+    "japanese": "残念ながらそうではないようです"
+  },
+  {
+    "id": "i1000-0821",
+    "number": 821,
+    "english": "treat A to B",
+    "japanese": "A(人)にB(食事など)をおごる"
+  },
+  {
+    "id": "i1000-0822",
+    "number": 822,
+    "english": "be fed up with ～",
+    "japanese": "～にうんざりしている"
+  },
+  {
+    "id": "i1000-0823",
+    "number": 823,
+    "english": "come to think of it",
+    "japanese": "考えてみると、そういえば"
+  },
+  {
+    "id": "i1000-0824",
+    "number": 824,
+    "english": "think much/highly of ～",
+    "japanese": "～を高く評価する、～を尊敬[尊重]する"
+  },
+  {
+    "id": "i1000-0825",
+    "number": 825,
+    "english": "Legend has it (that) …",
+    "japanese": "伝説によると…ということだ"
+  },
+  {
+    "id": "i1000-0826",
+    "number": 826,
+    "english": "Here we are.",
+    "japanese": "さあ着いた"
+  },
+  {
+    "id": "i1000-0827",
+    "number": 827,
+    "english": "hit it off (with～)",
+    "japanese": "（人と）仲良くなる[意気投合する]"
+  },
+  {
+    "id": "i1000-0828",
+    "number": 828,
+    "english": "watch one's step",
+    "japanese": "足元[言動]に注意する"
+  },
+  {
+    "id": "i1000-0829",
+    "number": 829,
+    "english": "give one's regard to ～",
+    "japanese": "（伝言・手紙などで）～によろしくと伝える"
+  },
+  {
+    "id": "i1000-0830",
+    "number": 830,
+    "english": "You're kidding (me).",
+    "japanese": "冗談でしょうまさか"
+  },
+  {
+    "id": "i1000-0831",
+    "number": 831,
+    "english": "be susceptible to ～",
+    "japanese": "～の影響を受けやすい、～に感染しやすい"
+  },
+  {
+    "id": "i1000-0832",
+    "number": 832,
+    "english": "be at odds (with ～)",
+    "japanese": "（～と）食い違っている、（～と）反目し合っている"
+  },
+  {
+    "id": "i1000-0833",
+    "number": 833,
+    "english": "be committed to ～",
+    "japanese": "～に献身する、～と固く約束する[誓う]"
+  },
+  {
+    "id": "i1000-0834",
+    "number": 834,
+    "english": "be here to stay",
+    "japanese": "定着している"
+  },
+  {
+    "id": "i1000-0835",
+    "number": 835,
+    "english": "be liable to do/to ～",
+    "japanese": "…しがちである/～にかかりやすい"
+  },
+  {
+    "id": "i1000-0836",
+    "number": 836,
+    "english": "be intent on/upon ～",
+    "japanese": "～に懸命[熱心]である"
+  },
+  {
+    "id": "i1000-0837",
+    "number": 837,
+    "english": "be no match for ～",
+    "japanese": "とても～にはかなわない"
+  },
+  {
+    "id": "i1000-0838",
+    "number": 838,
+    "english": "be vulnerable to ～",
+    "japanese": "（病気・誘惑など）に弱い、（非難・攻撃など）を受けやすい"
+  },
+  {
+    "id": "i1000-0839",
+    "number": 839,
+    "english": "be eligible for ～",
+    "japanese": "～の資格がある"
+  },
+  {
+    "id": "i1000-0840",
+    "number": 840,
+    "english": "be worth doing",
+    "japanese": "…する価値がある"
+  },
+  {
+    "id": "i1000-0841",
+    "number": 841,
+    "english": "be out to do",
+    "japanese": "…しようと狙っている"
+  },
+  {
+    "id": "i1000-0842",
+    "number": 842,
+    "english": "be all ears",
+    "japanese": "一心を耳に傾けている"
+  },
+  {
+    "id": "i1000-0843",
+    "number": 843,
+    "english": "be beside oneself (with ～)",
+    "japanese": "（～で）我を忘れる、（～に）夢中である"
+  },
+  {
+    "id": "i1000-0844",
+    "number": 844,
+    "english": "be cut out to be ～",
+    "japanese": "～に向いている[適している]"
+  },
+  {
+    "id": "i1000-0845",
+    "number": 845,
+    "english": "be (all) the rage",
+    "japanese": "（大）流行している"
+  },
+  {
+    "id": "i1000-0846",
+    "number": 846,
+    "english": "account for ～",
+    "japanese": "①～の説明となる、～の理由を説明する ②（割合など）を占める"
+  },
+  {
+    "id": "i1000-0847",
+    "number": 847,
+    "english": "allow for ～",
+    "japanese": "～を可能にする、～を考慮に入れる"
+  },
+  {
+    "id": "i1000-0848",
+    "number": 848,
+    "english": "settle for ～",
+    "japanese": "（不十分ながら）～で我慢する"
+  },
+  {
+    "id": "i1000-0849",
+    "number": 849,
+    "english": "yearn for ～",
+    "japanese": "～を恋しがる、～にあこがれる"
+  },
+  {
+    "id": "i1000-0850",
+    "number": 850,
+    "english": "count for ～",
+    "japanese": "～の価値[重要性]を持つ"
+  },
+  {
+    "id": "i1000-0851",
+    "number": 851,
+    "english": "cope with ～",
+    "japanese": "～をうまく処理する、～に対処する"
+  },
+  {
+    "id": "i1000-0852",
+    "number": 852,
+    "english": "coincide with ～",
+    "japanese": "～と一致する、～と同時に起こる"
+  },
+  {
+    "id": "i1000-0853",
+    "number": 853,
+    "english": "comply with ～",
+    "japanese": "（規則・命令など）に従う[応じる]"
+  },
+  {
+    "id": "i1000-0854",
+    "number": 854,
+    "english": "dispense with ～",
+    "japanese": "～なしですます"
+  },
+  {
+    "id": "i1000-0855",
+    "number": 855,
+    "english": "attend to ～",
+    "japanese": "～を処理する、～に注意を払う、～の世話をする"
+  },
+  {
+    "id": "i1000-0856",
+    "number": 856,
+    "english": "aspire to ～",
+    "japanese": "～を熱望する"
+  },
+  {
+    "id": "i1000-0857",
+    "number": 857,
+    "english": "submit to ～",
+    "japanese": "～に屈する[服従する]"
+  },
+  {
+    "id": "i1000-0858",
+    "number": 858,
+    "english": "consent to ～",
+    "japanese": "～に同意する"
+  },
+  {
+    "id": "i1000-0859",
+    "number": 859,
+    "english": "deal in ～",
+    "japanese": "（商品）を取り扱う、（仕事など）に従事する"
+  },
+  {
+    "id": "i1000-0860",
+    "number": 860,
+    "english": "persist in ～",
+    "japanese": "～に固執する、～をやり直す"
+  },
+  {
+    "id": "i1000-0861",
+    "number": 861,
+    "english": "indulge in ～",
+    "japanese": "思う存分～をする、（快楽など）にふける"
+  },
+  {
+    "id": "i1000-0862",
+    "number": 862,
+    "english": "embark on/upon ～",
+    "japanese": "（事業・計画など）に乗り出す、～を始める"
+  },
+  {
+    "id": "i1000-0863",
+    "number": 863,
+    "english": "dwell on/upon ～",
+    "japanese": "①～を詳しく述べる[書く] ②～をくよくよ[つくづく]考える、～に拘る"
+  },
+  {
+    "id": "i1000-0864",
+    "number": 864,
+    "english": "tell on/upon ～",
+    "japanese": "～に（悪く）影響する、～にこたえる"
+  },
+  {
+    "id": "i1000-0865",
+    "number": 865,
+    "english": "refrain from ～",
+    "japanese": "～を慎む"
+  },
+  {
+    "id": "i1000-0866",
+    "number": 866,
+    "english": "discriminate against ～",
+    "japanese": "～を差別する"
+  },
+  {
+    "id": "i1000-0867",
+    "number": 867,
+    "english": "abide by ～",
+    "japanese": "（法など）に従う、（約束など）を守る"
+  },
+  {
+    "id": "i1000-0868",
+    "number": 868,
+    "english": "work out ～",
+    "japanese": "①（問題などが）うまくいく、～を計画する、～を解決する、～の答を出す ②運動する"
+  },
+  {
+    "id": "i1000-0869",
+    "number": 869,
+    "english": "rule out ～",
+    "japanese": "（可能性など）を排除する、～を認めない"
+  },
+  {
+    "id": "i1000-0870",
+    "number": 870,
+    "english": "single out ～",
+    "japanese": "～を（１つだけ）選び出す"
+  },
+  {
+    "id": "i1000-0871",
+    "number": 871,
+    "english": "pass out",
+    "japanese": "気絶する、酔いつぶれる"
+  },
+  {
+    "id": "i1000-0872",
+    "number": 872,
+    "english": "miss out on ～",
+    "japanese": "（好機など）を逃す、～を取り逃す"
+  },
+  {
+    "id": "i1000-0873",
+    "number": 873,
+    "english": "wind up ～",
+    "japanese": "～を終わりにする、終わる"
+  },
+  {
+    "id": "i1000-0874",
+    "number": 874,
+    "english": "pull up ～",
+    "japanese": "①～を引き抜く[引き上げる]、（いすなど）を引き寄せる②（車などが）止まる、（車など）を止める"
+  },
+  {
+    "id": "i1000-0875",
+    "number": 875,
+    "english": "throw up ～",
+    "japanese": "①～をさっと上げる、～を投げ上げる ②（食べた物を）吐く、～を吐く"
+  },
+  {
+    "id": "i1000-0876",
+    "number": 876,
+    "english": "round up ～",
+    "japanese": "～を寄せ集める、～を検挙[逮捕]する"
+  },
+  {
+    "id": "i1000-0877",
+    "number": 877,
+    "english": "catch on",
+    "japanese": "①（ファッション・考えなどが）人気が出る[流行する] ②理解する、気づく"
+  },
+  {
+    "id": "i1000-0878",
+    "number": 878,
+    "english": "get away with ～",
+    "japanese": "①（罰を受けずに）～をうまくやる ②～を持ち逃げする"
+  },
+  {
+    "id": "i1000-0879",
+    "number": 879,
+    "english": "shy away (from ～)",
+    "japanese": "（～を）避ける[敬遠する]"
+  },
+  {
+    "id": "i1000-0880",
+    "number": 880,
+    "english": "hang around/about/round",
+    "japanese": "ぶらつく、付き合う"
+  },
+  {
+    "id": "i1000-0881",
+    "number": 881,
+    "english": "get down to ～",
+    "japanese": "（仕事・問題など）に本気で取り掛かる"
+  },
+  {
+    "id": "i1000-0882",
+    "number": 882,
+    "english": "let down ～",
+    "japanese": "～を失望させる"
+  },
+  {
+    "id": "i1000-0883",
+    "number": 883,
+    "english": "pull off ～",
+    "japanese": "[口語で]（困難なこと）をやってのける"
+  },
+  {
+    "id": "i1000-0884",
+    "number": 884,
+    "english": "follow through (on/with ～)",
+    "japanese": "（～を）やり遂げる"
+  },
+  {
+    "id": "i1000-0885",
+    "number": 885,
+    "english": "find oneself ～",
+    "japanese": "（気がつくと）～にいる[～である]"
+  },
+  {
+    "id": "i1000-0886",
+    "number": 886,
+    "english": "make do (with～)",
+    "japanese": "（代用品などで）間に合わせる"
+  },
+  {
+    "id": "i1000-0887",
+    "number": 887,
+    "english": "make good ～",
+    "japanese": "①成功する②（約束など）を果たす、（損害など）を償う"
+  },
+  {
+    "id": "i1000-0888",
+    "number": 888,
+    "english": "make (both) ends meet",
+    "japanese": "収入内でやりくりする"
+  },
+  {
+    "id": "i1000-0889",
+    "number": 889,
+    "english": "make believe (that …)",
+    "japanese": "（…という）ふりをする"
+  },
+  {
+    "id": "i1000-0890",
+    "number": 890,
+    "english": "take ～ for granted",
+    "japanese": "～を当然のことと思う"
+  },
+  {
+    "id": "i1000-0891",
+    "number": 891,
+    "english": "take ～ into account",
+    "japanese": "～を考慮に入れる"
+  },
+  {
+    "id": "i1000-0892",
+    "number": 892,
+    "english": "take hold of ^",
+    "japanese": "～をつかむ、～を捕まえる"
+  },
+  {
+    "id": "i1000-0893",
+    "number": 893,
+    "english": "take notice (of～)",
+    "japanese": "（～に）注目する、（～に）気づく"
+  },
+  {
+    "id": "i1000-0894",
+    "number": 894,
+    "english": "take effect",
+    "japanese": "①（法律などが）施行[実施]される ②（薬などが）効く"
+  },
+  {
+    "id": "i1000-0895",
+    "number": 895,
+    "english": "take pains",
+    "japanese": "骨を折る、努力する"
+  },
+  {
+    "id": "i1000-0896",
+    "number": 896,
+    "english": "keep track of ～",
+    "japanese": "（記録するなどして）～を把握する、～の跡をたどる"
+  },
+  {
+    "id": "i1000-0897",
+    "number": 897,
+    "english": "keep ～ company",
+    "japanese": "（人）と一緒にいる、（人）の相手をする、（話など）に付き合う"
+  },
+  {
+    "id": "i1000-0898",
+    "number": 898,
+    "english": "keep abreast of/with ～",
+    "japanese": "（時勢など）に遅れずついて行く"
+  },
+  {
+    "id": "i1000-0899",
+    "number": 899,
+    "english": "let go of ～",
+    "japanese": "～を手放す"
+  },
+  {
+    "id": "i1000-0900",
+    "number": 900,
+    "english": "live up to ～",
+    "japanese": "（期待など）に添う[恥じない行動をする]、（義務など）を果たす"
+  },
+  {
+    "id": "i1000-0901",
+    "number": 901,
+    "english": "look ～ in the eye(s)",
+    "japanese": "～の目を正視する"
+  },
+  {
+    "id": "i1000-0902",
+    "number": 902,
+    "english": "hold true",
+    "japanese": "当てはまる、有効である"
+  },
+  {
+    "id": "i1000-0903",
+    "number": 903,
+    "english": "come to terms with ～",
+    "japanese": "～と折り合いがつく、（あきらめて）～を受け入れる"
+  },
+  {
+    "id": "i1000-0904",
+    "number": 904,
+    "english": "come to light",
+    "japanese": "明るみに出る、現れる"
+  },
+  {
+    "id": "i1000-0905",
+    "number": 905,
+    "english": "come of age",
+    "japanese": "（法律的に）成人になる"
+  },
+  {
+    "id": "i1000-0906",
+    "number": 906,
+    "english": "come in handy",
+    "japanese": "役に立つ"
+  },
+  {
+    "id": "i1000-0907",
+    "number": 907,
+    "english": "fall short of ～",
+    "japanese": "（目標・基準など）に達しない"
+  },
+  {
+    "id": "i1000-0908",
+    "number": 908,
+    "english": "go a long way to do",
+    "japanese": "…するのに大いに役立つ"
+  },
+  {
+    "id": "i1000-0909",
+    "number": 909,
+    "english": "pave the way for/to ～",
+    "japanese": "～への準備をする[道を開く]"
+  },
+  {
+    "id": "i1000-0910",
+    "number": 910,
+    "english": "put ～ to use",
+    "japanese": "～を利用する"
+  },
+  {
+    "id": "i1000-0911",
+    "number": 911,
+    "english": "stand to reason",
+    "japanese": "もっともである、理屈に合う"
+  },
+  {
+    "id": "i1000-0912",
+    "number": 912,
+    "english": "see/do the sights (of～)",
+    "japanese": "（～の）観光をする"
+  },
+  {
+    "id": "i1000-0913",
+    "number": 913,
+    "english": "read between the line",
+    "japanese": "行間を読む、真意をつかむ"
+  },
+  {
+    "id": "i1000-0914",
+    "number": 914,
+    "english": "follow suit",
+    "japanese": "人のまねをする、先例になろう"
+  },
+  {
+    "id": "i1000-0915",
+    "number": 915,
+    "english": "play a joke on ～",
+    "japanese": "～に（悪意のない）いたずらをする"
+  },
+  {
+    "id": "i1000-0916",
+    "number": 916,
+    "english": "get on ～'s nerves",
+    "japanese": "～の神経にさわる"
+  },
+  {
+    "id": "i1000-0917",
+    "number": 917,
+    "english": "get/have the better of ～",
+    "japanese": "～に勝つ、～を出し抜く"
+  },
+  {
+    "id": "i1000-0918",
+    "number": 918,
+    "english": "get/be even with ～",
+    "japanese": "（人）に仕返しをする[恨みを晴らす]"
+  },
+  {
+    "id": "i1000-0919",
+    "number": 919,
+    "english": "hold/keep ～ in check",
+    "japanese": "～を抑える[食い止める]"
+  },
+  {
+    "id": "i1000-0920",
+    "number": 920,
+    "english": "have an eye for ～",
+    "japanese": "～に対する眼識[鑑識力]がある"
+  },
+  {
+    "id": "i1000-0921",
+    "number": 921,
+    "english": "have ～ on one's mind",
+    "japanese": "～を気にしている[心配している]"
+  },
+  {
+    "id": "i1000-0922",
+    "number": 922,
+    "english": "have yet to do",
+    "japanese": "まだ…していない、これから…しなければならない"
+  },
+  {
+    "id": "i1000-0923",
+    "number": 923,
+    "english": "dare to do",
+    "japanese": "思い切って[あえて]…する"
+  },
+  {
+    "id": "i1000-0924",
+    "number": 924,
+    "english": "impose A on/upon B",
+    "japanese": "AをBに課す[押しつける]"
+  },
+  {
+    "id": "i1000-0925",
+    "number": 925,
+    "english": "ascribe A to B",
+    "japanese": "AをBのせいにする"
+  },
+  {
+    "id": "i1000-0926",
+    "number": 926,
+    "english": "bring A home to B",
+    "japanese": "A(ある事柄)をB(人)に痛感させる"
+  },
+  {
+    "id": "i1000-0927",
+    "number": 927,
+    "english": "a variety of ～",
+    "japanese": "①（同一種類のもので）いろいろ[さまざま]な～ ②～の１種[１つの型]"
+  },
+  {
+    "id": "i1000-0928",
+    "number": 928,
+    "english": "a handful of ～",
+    "japanese": "一握りの～、少数[量]の～"
+  },
+  {
+    "id": "i1000-0929",
+    "number": 929,
+    "english": "a host of ～",
+    "japanese": "多数の～"
+  },
+  {
+    "id": "i1000-0930",
+    "number": 930,
+    "english": "scores of ～",
+    "japanese": "多数の～"
+  },
+  {
+    "id": "i1000-0931",
+    "number": 931,
+    "english": "many a/an ～",
+    "japanese": "多くの～、あまたの～"
+  },
+  {
+    "id": "i1000-0932",
+    "number": 932,
+    "english": "quite a few ～",
+    "japanese": "かなりの数の～"
+  },
+  {
+    "id": "i1000-0933",
+    "number": 933,
+    "english": "all manner of ～",
+    "japanese": "あらゆる種類の～"
+  },
+  {
+    "id": "i1000-0934",
+    "number": 934,
+    "english": "(all) on one's own",
+    "japanese": "（すべて）自分1人で、（すべて）独力で"
+  },
+  {
+    "id": "i1000-0935",
+    "number": 935,
+    "english": "at issue",
+    "japanese": "問題の、論争中の[で]"
+  },
+  {
+    "id": "i1000-0936",
+    "number": 936,
+    "english": "at ～'s disposal",
+    "japanese": "（人）の自由になって[使えて]"
+  },
+  {
+    "id": "i1000-0937",
+    "number": 937,
+    "english": "at stake",
+    "japanese": "危うくなった[て]、賭けられた[て]"
+  },
+  {
+    "id": "i1000-0938",
+    "number": 938,
+    "english": "(enough) ～ to go around",
+    "japanese": "全員に行き渡るだけの～"
+  },
+  {
+    "id": "i1000-0939",
+    "number": 939,
+    "english": "every other ～",
+    "japanese": "①１つおきの～、～おきに ②残りのすべての～"
+  },
+  {
+    "id": "i1000-0940",
+    "number": 940,
+    "english": "for a rainy day",
+    "japanese": "（将来）まさかの時[緊急時]に備えて"
+  },
+  {
+    "id": "i1000-0941",
+    "number": 941,
+    "english": "in earnest",
+    "japanese": "本格的に、熱心に"
+  },
+  {
+    "id": "i1000-0942",
+    "number": 942,
+    "english": "in (good) shape",
+    "japanese": "調子が良くて"
+  },
+  {
+    "id": "i1000-0943",
+    "number": 943,
+    "english": "in store (for～)",
+    "japanese": "（～のために）用意して、（～の身に）降りかかろうとして"
+  },
+  {
+    "id": "i1000-0944",
+    "number": 944,
+    "english": "in the works",
+    "japanese": "準備[計画・進行]中で"
+  },
+  {
+    "id": "i1000-0945",
+    "number": 945,
+    "english": "nothing short of ～",
+    "japanese": "まさしく～（の）"
+  },
+  {
+    "id": "i1000-0946",
+    "number": 946,
+    "english": "～ of one's own",
+    "japanese": "自分自身の～"
+  },
+  {
+    "id": "i1000-0947",
+    "number": 947,
+    "english": "of one's (own) doing",
+    "japanese": "（人）が…した"
+  },
+  {
+    "id": "i1000-0948",
+    "number": 948,
+    "english": "on the move",
+    "japanese": "（忙しく）移動中の[で]、活躍中の[で]"
+  },
+  {
+    "id": "i1000-0949",
+    "number": 949,
+    "english": "on the ～ side",
+    "japanese": "～気味で[の]"
+  },
+  {
+    "id": "i1000-0950",
+    "number": 950,
+    "english": "out of hand",
+    "japanese": "①手に負えない ②即座に"
+  },
+  {
+    "id": "i1000-0951",
+    "number": 951,
+    "english": "out of the question",
+    "japanese": "あり得ない、不可能で"
+  },
+  {
+    "id": "i1000-0952",
+    "number": 952,
+    "english": "per capita",
+    "japanese": "一人当たりの[で]"
+  },
+  {
+    "id": "i1000-0953",
+    "number": 953,
+    "english": "right as rain",
+    "japanese": "すっかり健康[正常]で"
+  },
+  {
+    "id": "i1000-0954",
+    "number": 954,
+    "english": "second to none",
+    "japanese": "誰[何]にも劣らない"
+  },
+  {
+    "id": "i1000-0955",
+    "number": 955,
+    "english": "something of a ～",
+    "japanese": "ちょっとした～、ある程度の～"
+  },
+  {
+    "id": "i1000-0956",
+    "number": 956,
+    "english": "upward(s) of ～",
+    "japanese": "～以上（の）"
+  },
+  {
+    "id": "i1000-0957",
+    "number": 957,
+    "english": "regardless of ～",
+    "japanese": "～に（も）かかわらず、～に関係なく"
+  },
+  {
+    "id": "i1000-0958",
+    "number": 958,
+    "english": "in accordance with ～",
+    "japanese": "～に従って、～に応じて"
+  },
+  {
+    "id": "i1000-0959",
+    "number": 959,
+    "english": "in proportion to ～",
+    "japanese": "～に比例して"
+  },
+  {
+    "id": "i1000-0960",
+    "number": 960,
+    "english": "in the wake of ～",
+    "japanese": "～の通過後[跡]に、～の結果として"
+  },
+  {
+    "id": "i1000-0961",
+    "number": 961,
+    "english": "as of ～",
+    "japanese": "～現在で、～の時点で"
+  },
+  {
+    "id": "i1000-0962",
+    "number": 962,
+    "english": "but for ～",
+    "japanese": "～がないならば"
+  },
+  {
+    "id": "i1000-0963",
+    "number": 963,
+    "english": "on ～ terms with …",
+    "japanese": "…と～の関係[間柄]で"
+  },
+  {
+    "id": "i1000-0964",
+    "number": 964,
+    "english": "on the verge of ～",
+    "japanese": "～をしそうで、～の瀬戸際で"
+  },
+  {
+    "id": "i1000-0965",
+    "number": 965,
+    "english": "within walking distance of ～",
+    "japanese": "～から歩いて行けるところに"
+  },
+  {
+    "id": "i1000-0966",
+    "number": 966,
+    "english": "to the effect that …",
+    "japanese": "…という趣旨の[で]"
+  },
+  {
+    "id": "i1000-0967",
+    "number": 967,
+    "english": "a case in point",
+    "japanese": "適例"
+  },
+  {
+    "id": "i1000-0968",
+    "number": 968,
+    "english": "the pros and cons",
+    "japanese": "賛否両論"
+  },
+  {
+    "id": "i1000-0969",
+    "number": 969,
+    "english": "a white elephant",
+    "japanese": "無用の長物"
+  },
+  {
+    "id": "i1000-0970",
+    "number": 970,
+    "english": "the elephant in the room",
+    "japanese": "誰も触れたがらない話題"
+  },
+  {
+    "id": "i1000-0971",
+    "number": 971,
+    "english": "part and parcel (of ～)",
+    "japanese": "（～の）不可分の要素、（～の）最重要部分"
+  },
+  {
+    "id": "i1000-0972",
+    "number": 972,
+    "english": "all along",
+    "japanese": "最初からずっと"
+  },
+  {
+    "id": "i1000-0973",
+    "number": 973,
+    "english": "all too",
+    "japanese": "とても、非常に"
+  },
+  {
+    "id": "i1000-0974",
+    "number": 974,
+    "english": "as such",
+    "japanese": "そういうものとして、それ自体では"
+  },
+  {
+    "id": "i1000-0975",
+    "number": 975,
+    "english": "(at) first hand",
+    "japanese": "直接に、じかに"
+  },
+  {
+    "id": "i1000-0976",
+    "number": 976,
+    "english": "at ～'s convenience",
+    "japanese": "～の都合の良いときに"
+  },
+  {
+    "id": "i1000-0977",
+    "number": 977,
+    "english": "at/on short notice",
+    "japanese": "急に、即座に"
+  },
+  {
+    "id": "i1000-0978",
+    "number": 978,
+    "english": "at will",
+    "japanese": "思いのままに、随意に"
+  },
+  {
+    "id": "i1000-0979",
+    "number": 979,
+    "english": "by and large",
+    "japanese": "概して"
+  },
+  {
+    "id": "i1000-0980",
+    "number": 980,
+    "english": "down the road",
+    "japanese": "（口論で）やがては、将来は"
+  },
+  {
+    "id": "i1000-0981",
+    "number": 981,
+    "english": "early on",
+    "japanese": "早い時期に、早くから"
+  },
+  {
+    "id": "i1000-0982",
+    "number": 982,
+    "english": "for a change",
+    "japanese": "気分転換に、たまには"
+  },
+  {
+    "id": "i1000-0983",
+    "number": 983,
+    "english": "for all I know",
+    "japanese": "よくは知らないが、たぶん"
+  },
+  {
+    "id": "i1000-0984",
+    "number": 984,
+    "english": "for nothing",
+    "japanese": "①無料で ②無駄に"
+  },
+  {
+    "id": "i1000-0985",
+    "number": 985,
+    "english": "if anything",
+    "japanese": "どちらかと言えば、もしあるとしても"
+  },
+  {
+    "id": "i1000-0986",
+    "number": 986,
+    "english": "in a row",
+    "japanese": "連続して"
+  },
+  {
+    "id": "i1000-0987",
+    "number": 987,
+    "english": "in person",
+    "japanese": "（代理人でなく）じかに、自ら"
+  },
+  {
+    "id": "i1000-0988",
+    "number": 988,
+    "english": "in retrospect",
+    "japanese": "（過去を）振り返って（みて）"
+  },
+  {
+    "id": "i1000-0989",
+    "number": 989,
+    "english": "more often than not",
+    "japanese": "普通は、たいてい"
+  },
+  {
+    "id": "i1000-0990",
+    "number": 990,
+    "english": "on second thought",
+    "japanese": "考え直してみて"
+  },
+  {
+    "id": "i1000-0991",
+    "number": 991,
+    "english": "on the face of it",
+    "japanese": "見たところは、表面上は"
+  },
+  {
+    "id": "i1000-0992",
+    "number": 992,
+    "english": "on the spot",
+    "japanese": "①その場で、即座に ②（口語で）窮地に立って、困って"
+  },
+  {
+    "id": "i1000-0993",
+    "number": 993,
+    "english": "once (and) for all",
+    "japanese": "きっぱりと、これを最後に"
+  },
+  {
+    "id": "i1000-0994",
+    "number": 994,
+    "english": "one of these days",
+    "japanese": "そのうちに"
+  },
+  {
+    "id": "i1000-0995",
+    "number": 995,
+    "english": "once upon a time",
+    "japanese": "昔々"
+  },
+  {
+    "id": "i1000-0996",
+    "number": 996,
+    "english": "only too",
+    "japanese": "①（glad, happy, pleased などの前で）とても、大いに ②遺憾[残念]ながら"
+  },
+  {
+    "id": "i1000-0997",
+    "number": 997,
+    "english": "sort/kind of ～",
+    "japanese": "ちょっと、なんとなく"
+  },
+  {
+    "id": "i1000-0998",
+    "number": 998,
+    "english": "such as it is",
+    "japanese": "大したものではないが、こんな程度のものだが、"
+  },
+  {
+    "id": "i1000-0999",
+    "number": 999,
+    "english": "the other way around/round/about",
+    "japanese": "逆に、あべこべに"
+  },
+  {
+    "id": "i1000-1000",
+    "number": 1000,
+    "english": "to date",
+    "japanese": "現在まで（のところ）"
+  }
+]
