@@ -6,6 +6,7 @@
     target1000: {title:'英熟語Target 1000',kind:'英熟語',total:1000}
   };
   const views = ['home','memorize','setup','quiz','result','ranking'];
+  const MEMORY_PAGE_SIZE=5;
   const datasets = new Map(), datasetPromises = new Map();
   let selectedBook='target1900', activeView='home', member=null, lifetimeCorrect=0;
   let sessionKnown=false, sessionEpoch=0, sessionTicket=0, rankingTicket=0;
@@ -36,6 +37,7 @@
   function toast(message) {clearTimeout(toastTimer);$('toast').textContent=message;$('toast').hidden=false;toastTimer=setTimeout(()=>{$('toast').hidden=true;},3500);}
   function show(view,{scroll=true}={}) {
     activeView=view;
+    document.body.dataset.view=view;
     for(const id of views)$(id+'View').hidden=id!==view;
     if(scroll)window.scrollTo({top:0,behavior:'instant'});
     document.title=view==='home'?'Target':({memorize:'暗記',setup:'テスト',quiz:'テスト',result:'テスト結果',ranking:'ランキング'}[view]+' | Target');
@@ -68,8 +70,8 @@
     $('loggedInSettings').hidden=!member;$('loginForm').hidden=!!member;
     $('identityName').textContent=member?.name||'';$('identityInitial').textContent=member?.name?.trim()?.slice(0,1)||'K';
     $('settingsScore').textContent=lifetimeCorrect.toLocaleString('ja-JP')+'問';
-    $('testMode').textContent=member?'正解数は「'+(member.name.trim()||'KGSアカウント')+'」としてランキングに記録されます。':'ゲスト練習です。正解数はランキングに記録されません。';
-    $('testStart').textContent=starting?'準備中…':member?'テストを始める':'ゲストでテストを始める';
+    $('testMode').textContent=member?'ランキングに記録':'ゲスト（記録なし）';
+    $('testStart').textContent=starting?'準備中…':'開始';
   }
   async function refreshSession({notify=true}={}) {
     const ticket=++sessionTicket,epoch=sessionEpoch;
@@ -115,21 +117,22 @@
   }
   function renderMemory() {
     const rows=datasets.get(memoryBook);if(!rows)return;
-    const pageCount=Math.ceil(rows.length/10);memoryPage=Math.max(0,Math.min(memoryPage,pageCount-1));
-    const start=memoryPage*10,subset=rows.slice(start,start+10),fragment=document.createDocumentFragment();
+    const pageCount=Math.ceil(rows.length/MEMORY_PAGE_SIZE);memoryPage=Math.max(0,Math.min(memoryPage,pageCount-1));
+    const start=memoryPage*MEMORY_PAGE_SIZE,subset=rows.slice(start,start+MEMORY_PAGE_SIZE),fragment=document.createDocumentFragment();
     for(const row of subset){const line=element('div','memory-row');line.append(element('span','word-number',row.number));const copy=element('div','memory-copy');copy.append(element('div','memory-word',row.english),element('div','memory-meaning',row.japanese));line.append(copy);fragment.append(line);}
     $('memorySheet').replaceChildren(fragment);$('memorySheet').classList.toggle('meanings-hidden',meaningsHidden);
-    $('memorySheet').setAttribute('aria-label',books[memoryBook].kind+' '+(start+1)+'〜'+Math.min(start+10,rows.length));
-    $('memorizeRange').textContent=(start+1)+'–'+Math.min(start+10,rows.length);
+    $('memorySheet').setAttribute('aria-label',books[memoryBook].kind+' '+(start+1)+'〜'+Math.min(start+MEMORY_PAGE_SIZE,rows.length));
+    $('memorizeRange').textContent=(start+1)+'–'+Math.min(start+MEMORY_PAGE_SIZE,rows.length);
     $('memoryPrevious').disabled=memoryPage===0;$('memoryNext').disabled=false;
-    $('memoryNext').replaceChildren(document.createTextNode(memoryPage===pageCount-1?'暗記を終える':'次の10個'));
+    $('memoryNext').textContent=memoryPage===pageCount-1?'終了':'次へ';
+    $('memoryNext').setAttribute('aria-label',memoryPage===pageCount-1?'暗記を終了':'次の5個');
     if($('memoryPage').options.length!==pageCount){const options=document.createDocumentFragment();for(let index=0;index<pageCount;index++){const option=element('option','',index+1);option.value=String(index);options.append(option);}$('memoryPage').replaceChildren(options);}
     $('memoryPage').value=String(memoryPage);$('memoryPageTotal').textContent='/ '+pageCount;
     $('meaningsToggle').textContent=meaningsHidden?'訳を表示':'訳を隠す';$('meaningsToggle').setAttribute('aria-pressed',String(meaningsHidden));
   }
   function memoryNext({fromSheet=false}={}) {
     if(!datasets.has(memoryBook)){openMemory();return;}
-    if(memoryPage>=Math.ceil(books[memoryBook].total/10)-1){if(fromSheet)toast('最後のページです');else home();return;}
+    if(memoryPage>=Math.ceil(books[memoryBook].total/MEMORY_PAGE_SIZE)-1){if(fromSheet)toast('最後のページです');else home();return;}
     memoryPage++;renderMemory();window.scrollTo({top:0,behavior:'instant'});
   }
   function openSetup() {
@@ -187,8 +190,8 @@
     if(!quiz)return;const question=questionShape(quiz.question),fragment=document.createDocumentFragment();
     $('questionPosition').textContent=(quiz.answeredCount+1)+' / '+quiz.total+'問';$('quizCorrect').textContent=quiz.correctCount+'問 正解';
     $('quizProgress').max=quiz.total;$('quizProgress').value=quiz.answeredCount;
-    $('quizMode').textContent=quiz.recorded?'ランキングに記録':'ゲスト練習';
-    $('questionNumber').textContent=books[quiz.settings.book].title+' · No. '+question.number;
+    $('quizMode').textContent=quiz.recorded?'ランキングに記録':'ゲスト';
+    $('questionNumber').textContent='No. '+question.number;
     $('questionInstruction').textContent=quiz.settings.direction==='english'?'英語を選んでください':'訳を選んでください';
     $('questionPrompt').textContent=question.prompt;$('questionPrompt').closest('.question-card').classList.toggle('english-prompt',quiz.settings.direction==='japanese');
     question.choices.forEach((choice,index)=>{const button=element('button','choice-button');button.type='button';button.dataset.choiceId=choice.id;button.append(element('span','choice-letter',String.fromCharCode(65+index)),element('span','choice-text',choice.text));button.addEventListener('click',()=>answer(choice.id));fragment.append(button);});
@@ -238,7 +241,7 @@
   function showResult() {
     if(!quiz)return;
     $('resultBook').textContent=books[quiz.settings.book].title;$('resultCorrect').textContent=String(quiz.correctCount);$('resultTotal').textContent='/ '+quiz.total+'問';
-    $('resultMode').textContent=quiz.recorded?'正解数をランキングに記録しました。':'ゲスト練習の結果です。ランキングには記録されません。';show('result');
+    $('resultMode').textContent=quiz.recorded?'ランキングに記録':'ゲスト（記録なし）';show('result');
     if(quiz.recorded)void refreshSession({notify:false});
   }
   function openQuit() {
@@ -257,7 +260,7 @@
     } catch(error) {if(ticket===rankingTicket){$('rankingStatus').textContent='';setError('rankingError',error.message);}}
     finally {if(ticket===rankingTicket)$('rankingRefresh').disabled=false;}
   }
-  function setPinVisible(visible) {$('accountPin').type=visible?'text':'password';$('pinVisibility').setAttribute('aria-pressed',String(visible));$('pinVisibility').setAttribute('aria-label',visible?'PINを隠す':'PINを表示');}
+  function setPinVisible(visible) {$('accountPin').type=visible?'text':'password';$('pinVisibility').textContent=visible?'隠す':'表示';$('pinVisibility').setAttribute('aria-pressed',String(visible));$('pinVisibility').setAttribute('aria-label',visible?'PINを隠す':'PINを表示');}
   function openSettings() {setError('settingsError');$('settingsStatus').textContent='';renderIdentity();$('settingsDialog').showModal();}
   async function login(event) {
     event.preventDefault();if(loginPending||logoutPending)return;setError('settingsError');$('settingsStatus').textContent='';

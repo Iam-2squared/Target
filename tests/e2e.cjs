@@ -135,18 +135,18 @@ async function openPage(context){const page=await context.newPage();page.on('pag
     eq((await target(Guest,'/api/ranking')).ranking,[],'Logging in alone does not publish the KGS roster');
   });
 
-  await scenario('Both memorization books show ten items and preserve final-page boundaries on phones',async()=>{
+  await scenario('Both memorization books show five items and preserve final-page boundaries on phones',async()=>{
     const page=await openPage(Guest);
     for(const [bookName,total] of [['target1900',1900],['target1000',1000]]){
       await page.locator('[data-book="'+bookName+'"]').click();await page.locator('#memorizeOpen').click();await page.locator('#memorySheet .memory-row').first().waitFor();
-      eq(await page.locator('#memorySheet .memory-row').count(),10,'Ten actual entries per page');
+      eq(await page.locator('#memorySheet .memory-row').count(),5,'Five actual entries per page');
       ok((await page.locator('#memorySheet').innerText()).includes(book(bookName)[0].english),'Page begins with the first source entry');
-      await page.locator('#memoryNext').click();ok((await page.locator('#memorySheet').innerText()).includes(book(bookName)[10].english),'Next advances to entries11–20');
-      await page.locator('#memoryPrevious').click();await page.locator('#memoryPage').selectOption({value:String(total/10-1)});
-      eq(await page.locator('#memorySheet .memory-row').count(),10);eq(await page.locator('#memorySheet .memory-word').last().textContent(),book(bookName).at(-1).english,'Final numbered entry is present: '+bookName+' / '+await page.locator('#memoryPage').inputValue()+' / '+await page.locator('#memorizeRange').innerText());
-      await page.locator('#memorySheet .memory-word').first().click();eq(await page.locator('#memoryPage').inputValue(),String(total/10-1),'Tapping the last page cannot run beyond the source');
+      await page.locator('#memoryNext').click();ok((await page.locator('#memorySheet').innerText()).includes(book(bookName)[5].english),'Next advances to entries6–10');
+      await page.locator('#memoryPrevious').click();await page.locator('#memoryPage').selectOption({value:String(total/5-1)});
+      eq(await page.locator('#memorySheet .memory-row').count(),5);eq(await page.locator('#memorySheet .memory-word').last().textContent(),book(bookName).at(-1).english,'Final numbered entry is present: '+bookName+' / '+await page.locator('#memoryPage').inputValue()+' / '+await page.locator('#memorizeRange').innerText());
+      await page.locator('#memorySheet .memory-word').first().click();eq(await page.locator('#memoryPage').inputValue(),String(total/5-1),'Tapping the last page cannot run beyond the source');
       for(const width of [320,375,390,430,1280])await layout(page,width,'memory-'+bookName);
-      await page.locator('#brandHome').click();
+      await page.locator('#memorizeView [data-home]').click();
     }
     await page.close();
   });
@@ -156,7 +156,7 @@ async function openPage(context){const page=await context.newPage();page.on('pag
     for(const direction of ['english','japanese']){
       await page.locator('[data-book="target1000"]').click();await page.locator('#testOpen').click();await page.locator('input[name="direction"][value="'+direction+'"]').check();await page.locator('#rangeFrom').fill('1');await page.locator('#rangeTo').fill('10');await page.locator('#testStart').click();
       for(let i=0;i<10;i++){await page.locator('#questionChoices button').first().waitFor();eq(await page.locator('#questionChoices button').count(),4);eq(new Set(await page.locator('#questionChoices button').allTextContents()).size,4);await page.locator('#questionChoices button').first().click();await page.locator('#answerFeedback').waitFor({state:'visible'});await page.locator('#quizNext').click();}
-      await page.locator('#resultView').waitFor({state:'visible'});ok((await page.locator('#resultMode').innerText()).includes('ゲスト'),'Guest results clearly identify their scope');await page.locator('#brandHome').click();
+      await page.locator('#resultView').waitFor({state:'visible'});ok((await page.locator('#resultMode').innerText()).includes('ゲスト'),'Guest results clearly identify their scope');await page.locator('#resultView [data-home]').click();
     }
     eq(scored,[],'Intentional guest practice never fabricates cloud scores');eq((await target(Guest,'/api/ranking')).ranking,[]);await page.close();
   });
