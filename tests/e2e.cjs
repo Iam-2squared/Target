@@ -135,16 +135,17 @@ async function openPage(context){const page=await context.newPage();page.on('pag
     eq((await target(Guest,'/api/ranking')).ranking,[],'Logging in alone does not publish the KGS roster');
   });
 
-  await scenario('Both memorization books show five items and preserve final-page boundaries on phones',async()=>{
+  await scenario('Both memorization books show up to five readable items and preserve final-page boundaries on phones',async()=>{
     const page=await openPage(Guest);
     for(const [bookName,total] of [['target1900',1900],['target1000',1000]]){
       await page.locator('[data-book="'+bookName+'"]').click();await page.locator('#memorizeOpen').click();await page.locator('#memorySheet .memory-row').first().waitFor();
-      eq(await page.locator('#memorySheet .memory-row').count(),5,'Five actual entries per page');
+      const initialCount=await page.locator('#memorySheet .memory-row').count();ok(initialCount>=1&&initialCount<=5,'The page contains one to five complete entries');
       ok((await page.locator('#memorySheet').innerText()).includes(book(bookName)[0].english),'Page begins with the first source entry');
-      await page.locator('#memoryNext').click();ok((await page.locator('#memorySheet').innerText()).includes(book(bookName)[5].english),'Next advances to entries6–10');
-      await page.locator('#memoryPrevious').click();await page.locator('#memoryPage').selectOption({value:String(total/5-1)});
-      eq(await page.locator('#memorySheet .memory-row').count(),5);eq(await page.locator('#memorySheet .memory-word').last().textContent(),book(bookName).at(-1).english,'Final numbered entry is present: '+bookName+' / '+await page.locator('#memoryPage').inputValue()+' / '+await page.locator('#memorizeRange').innerText());
-      await page.locator('#memorySheet .memory-word').first().click();eq(await page.locator('#memoryPage').inputValue(),String(total/5-1),'Tapping the last page cannot run beyond the source');
+      const previousLast=Number(await page.locator('#memorySheet .word-number').last().innerText());
+      await page.locator('#memoryNext').click();eq(Number(await page.locator('#memorySheet .word-number').first().innerText()),previousLast+1,'Next begins immediately after the previous page without skipping an entry');
+      await page.locator('#memoryPrevious').click();const lastPage=String(await page.locator('#memoryPage option').count()-1);await page.locator('#memoryPage').selectOption({value:lastPage});
+      const finalCount=await page.locator('#memorySheet .memory-row').count();ok(finalCount>=1&&finalCount<=5);eq(await page.locator('#memorySheet .memory-word').last().textContent(),book(bookName).at(-1).english,'Final numbered entry is present: '+bookName+' / '+await page.locator('#memoryPage').inputValue()+' / '+await page.locator('#memorizeRange').innerText());
+      await page.locator('#memorySheet .memory-word').first().click();eq(await page.locator('#memoryPage').inputValue(),lastPage,'Tapping the last page cannot run beyond the source');
       for(const width of [320,375,390,430,1280])await layout(page,width,'memory-'+bookName);
       await page.locator('#memorizeView [data-home]').click();
     }

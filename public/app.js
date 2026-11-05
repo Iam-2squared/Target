@@ -11,6 +11,7 @@
   let selectedBook='target1900', activeView='home', member=null, lifetimeCorrect=0;
   let sessionKnown=false, sessionEpoch=0, sessionTicket=0, rankingTicket=0;
   let memoryPage=0, memoryBook='target1900', meaningsHidden=false, memoryTicket=0;
+  let memoryPages=[], memoryLayoutKey='', memoryLayoutFrame=0;
   let quiz=null, startRetry=null, starting=false, loginPending=false, logoutPending=false;
   let toastTimer;
 
@@ -108,33 +109,71 @@
   }
   async function openMemory() {
     const book=selectedBook,ticket=++memoryTicket;
-    if(memoryBook!==book)memoryPage=0;memoryBook=book;
+    if(memoryBook!==book){memoryPage=0;memoryPages=[];memoryLayoutKey='';}memoryBook=book;
     $('memorySheet').replaceChildren(element('p','memory-loading','読み込み中…'));
     $('memorizeBook').textContent=books[book].title;setError('memorizeError');show('memorize');
     $('memoryNext').disabled=true;$('memoryPrevious').disabled=true;
     try{await dataset(book);if(ticket===memoryTicket&&activeView==='memorize')renderMemory();}
     catch(error){if(ticket!==memoryTicket)return;setError('memorizeError',error.message);$('memorySheet').replaceChildren();$('memoryNext').disabled=false;$('memoryNext').textContent='再読み込み';}
   }
+  function memoryRow(row) {
+    const line=element('div','memory-row'),copy=element('div','memory-copy');
+    line.append(element('span','word-number',row.number));
+    copy.append(element('div','memory-word',row.english),element('div','memory-meaning',row.japanese));
+    line.append(copy);return line;
+  }
+  function planMemoryPages(rows) {
+    const sheet=$('memorySheet'),width=sheet.clientWidth,height=sheet.clientHeight;
+    if(!width||!height)return false;
+    const key=memoryBook+':'+width+':'+height;
+    if(key===memoryLayoutKey&&memoryPages.length)return true;
+    const anchor=memoryPages[memoryPage]?.start??0,wasLast=memoryPages.length>0&&memoryPage===memoryPages.length-1;
+    const measure=element('div','memory-measure'),fragment=document.createDocumentFragment();
+    measure.setAttribute('aria-hidden','true');measure.inert=true;
+    for(const row of rows)fragment.append(memoryRow(row));
+    measure.append(fragment);sheet.replaceChildren(measure);
+    const heights=Array.from(measure.children,node=>Math.ceil(node.getBoundingClientRect().height));
+    const capacity=Math.max(1,height-5),pages=[];
+    let start=0,used=0,count=0;
+    for(let index=0;index<heights.length;index++){
+      if(count&&(count===MEMORY_PAGE_SIZE||used+heights[index]>capacity)){
+        pages.push({start,end:index});start=index;used=0;count=0;
+      }
+      used+=heights[index];count++;
+    }
+    if(count)pages.push({start,end:rows.length});
+    memoryPages=pages;memoryLayoutKey=key;
+    memoryPage=wasLast?pages.length-1:Math.max(0,pages.findIndex(page=>page.start<=anchor&&anchor<page.end));
+    return true;
+  }
   function renderMemory() {
     const rows=datasets.get(memoryBook);if(!rows)return;
-    const pageCount=Math.ceil(rows.length/MEMORY_PAGE_SIZE);memoryPage=Math.max(0,Math.min(memoryPage,pageCount-1));
-    const start=memoryPage*MEMORY_PAGE_SIZE,subset=rows.slice(start,start+MEMORY_PAGE_SIZE),fragment=document.createDocumentFragment();
-    for(const row of subset){const line=element('div','memory-row');line.append(element('span','word-number',row.number));const copy=element('div','memory-copy');copy.append(element('div','memory-word',row.english),element('div','memory-meaning',row.japanese));line.append(copy);fragment.append(line);}
+    if(!planMemoryPages(rows))return;
+    const pageCount=memoryPages.length;memoryPage=Math.max(0,Math.min(memoryPage,pageCount-1));
+    const {start,end}=memoryPages[memoryPage],fragment=document.createDocumentFragment();
+    for(const row of rows.slice(start,end))fragment.append(memoryRow(row));
     $('memorySheet').replaceChildren(fragment);$('memorySheet').classList.toggle('meanings-hidden',meaningsHidden);
-    $('memorySheet').setAttribute('aria-label',books[memoryBook].kind+' '+(start+1)+'〜'+Math.min(start+MEMORY_PAGE_SIZE,rows.length));
-    $('memorizeRange').textContent=(start+1)+'–'+Math.min(start+MEMORY_PAGE_SIZE,rows.length);
+    $('memorySheet').setAttribute('aria-label',books[memoryBook].kind+' '+(start+1)+'〜'+end);
+    $('memorizeRange').textContent=(start+1)+'–'+end;
     $('memoryPrevious').disabled=memoryPage===0;$('memoryNext').disabled=false;
     $('memoryNext').textContent=memoryPage===pageCount-1?'終了':'次へ';
-    $('memoryNext').setAttribute('aria-label',memoryPage===pageCount-1?'暗記を終了':'次の5個');
+    $('memoryNext').setAttribute('aria-label',memoryPage===pageCount-1?'暗記を終了':'次のページ');
     if($('memoryPage').options.length!==pageCount){const options=document.createDocumentFragment();for(let index=0;index<pageCount;index++){const option=element('option','',index+1);option.value=String(index);options.append(option);}$('memoryPage').replaceChildren(options);}
     $('memoryPage').value=String(memoryPage);$('memoryPageTotal').textContent='/ '+pageCount;
     $('meaningsToggle').textContent=meaningsHidden?'訳を表示':'訳を隠す';$('meaningsToggle').setAttribute('aria-pressed',String(meaningsHidden));
   }
   function memoryNext({fromSheet=false}={}) {
     if(!datasets.has(memoryBook)){openMemory();return;}
-    if(memoryPage>=Math.ceil(books[memoryBook].total/MEMORY_PAGE_SIZE)-1){if(fromSheet)toast('最後のページです');else home();return;}
+    if(memoryPage>=memoryPages.length-1){if(fromSheet)toast('最後のページです');else home();return;}
     memoryPage++;renderMemory();window.scrollTo({top:0,behavior:'instant'});
   }
+  function queueMemoryLayout() {
+    if(activeView!=='memorize'||memoryLayoutFrame)return;
+    memoryLayoutFrame=requestAnimationFrame(()=>{memoryLayoutFrame=0;if(activeView==='memorize')renderMemory();});
+  }
+  if(typeof ResizeObserver==='function')new ResizeObserver(queueMemoryLayout).observe($('memorySheet'));
+  window.addEventListener('resize',queueMemoryLayout);
+  document.fonts?.ready.then(()=>{memoryLayoutKey='';queueMemoryLayout();});
   function openSetup() {
     $('setupBook').textContent=books[selectedBook].title;
     $('rangeFrom').max=String(books[selectedBook].total);$('rangeTo').max=String(books[selectedBook].total);
