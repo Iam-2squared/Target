@@ -47,6 +47,52 @@ function exactKeys(body, keys) {
   return Object.keys(body).length === keys.length && keys.every(key => Object.hasOwn(body, key));
 }
 
+function masteryBook(req, url, res) {
+  const invalid = () => {
+    // Parameter shape only: no URL values, account data or credentials. This
+    // distinguishes runtime rewrite forms without adding user-visible copy.
+    const query = req.query && typeof req.query === 'object' && !Array.isArray(req.query) ? req.query : {};
+    const helperBook = Object.hasOwn(query, 'book') ? query.book : undefined;
+    const helperRoute = Object.hasOwn(query, 'route') ? query.route : undefined;
+    const single = value => Array.isArray(value) && value.length === 1 ? value[0] : value;
+    const fields = [
+      'ub='+url.searchParams.getAll('book').length,
+      'uv='+Number(['target1900', 'target1000'].includes(url.searchParams.get('book'))),
+      'ur='+url.searchParams.getAll('route').length,
+      'rv='+Number(url.searchParams.get('route') === 'mastery'),
+      'uo='+[...url.searchParams.keys()].filter(key => !['book', 'route'].includes(key)).length,
+      'qb='+(typeof helperBook === 'string' ? 's' : Array.isArray(helperBook) ? 'a' : helperBook === undefined ? 'n' : 'o'),
+      'qv='+Number(['target1900', 'target1000'].includes(single(helperBook))),
+      'qr='+Number(single(helperRoute) === 'mastery'),
+      'qo='+Object.keys(query).filter(key => !['book', 'route'].includes(key)).length
+    ];
+    res.setHeader('X-Target-Mastery-Shape', fields.join(';'));
+    throw new HttpError(400, '教材を選んでください。', 'INVALID_BOOK');
+  };
+  const parameters = new Map();
+  for (const key of new Set(url.searchParams.keys())) {
+    const values = url.searchParams.getAll(key);
+    if (!['book', 'route'].includes(key) || values.length !== 1) invalid();
+    parameters.set(key, values[0]);
+  }
+  // Vercel's Node runtime can keep rewritten parameters in req.query while
+  // req.url contains only the destination URL. Reconcile representations;
+  // never let a helper value silently replace conflicting raw URL input.
+  if (req.query !== undefined && req.query !== null) {
+    if (typeof req.query !== 'object' || Array.isArray(req.query)) invalid();
+    for (const [key, supplied] of Object.entries(req.query)) {
+      const values = Array.isArray(supplied) ? supplied : [supplied];
+      if (!['book', 'route'].includes(key) || values.length !== 1 || typeof values[0] !== 'string') invalid();
+      if (parameters.has(key) && parameters.get(key) !== values[0]) invalid();
+      parameters.set(key, values[0]);
+    }
+  }
+  const book = parameters.get('book');
+  if (!['target1900', 'target1000'].includes(book) ||
+      (parameters.has('route') && parameters.get('route') !== 'mastery')) invalid();
+  return book;
+}
+
 function send(res, status, result) {
   const payload = Buffer.from(JSON.stringify(result));
   if (payload.length > 1024 * 1024) throw new Error('response limit');
@@ -69,7 +115,9 @@ async function handler(req, res) {
   try {
     const config = getConfig();
     const url = new URL(req.url, 'https://target.invalid');
-    const route = url.pathname === '/api/index' ? url.searchParams.get('route') : null;
+    const helperRoute = req.query && typeof req.query === 'object' ? req.query.route : undefined;
+    const route = url.pathname === '/api/index' ? url.searchParams.get('route') ??
+      (typeof helperRoute === 'string' ? helperRoute : Array.isArray(helperRoute) && typeof helperRoute[0] === 'string' ? helperRoute[0] : null) : null;
     const pathname = route ? '/api/' + route.replace(/^\/+/, '') : url.pathname;
     if (!['GET', 'POST'].includes(req.method)) throw new HttpError(405, 'この操作には対応していません。', 'METHOD');
     const shopAction={'/api/integrations/kgs/wallet':'wallet','/api/integrations/kgs/gacha':'draw'}[pathname];
@@ -96,15 +144,7 @@ async function handler(req, res) {
     }
     if (pathname === '/api/ranking' && req.method === 'GET') return send(res, 200, await store.rpc('ranking'));
     if (pathname === '/api/mastery' && req.method === 'GET') {
-      const book = url.searchParams.get('book');
-      const internalRoutes = url.searchParams.getAll('route');
-      // Vercel may preserve /api/mastery in req.url while adding the rewrite's
-      // route=mastery query. Accept only that exact optional routing metadata.
-      if (!['target1900', 'target1000'].includes(book) || url.searchParams.getAll('book').length !== 1 ||
-          internalRoutes.length > 1 || (internalRoutes.length === 1 && internalRoutes[0] !== 'mastery') ||
-          [...url.searchParams.keys()].some(key => key !== 'book' && key !== 'route')) {
-        throw new HttpError(400, '教材を選んでください。', 'INVALID_BOOK');
-      }
+      const book = masteryBook(req, url, res);
       const member = await identity.requireMember(req, res, config);
       return send(res, 200, await store.rpc('mastery', {memberId: member.id, name: member.name, book}));
     }
