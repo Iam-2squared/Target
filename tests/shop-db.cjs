@@ -54,7 +54,7 @@ async function fingerprints(){return(await db.query(`SELECT md5(pg_get_functiond
   const quiz=await rpc('start',{...earner,requestId:uuid(),book:'target1900',direction:'english',from:1,to:10,questions});check(!quiz.error,'Quiz still starts after wallet migration');
   const answerInput={...earner,quizId:quiz.quizId,questionId:questions[0].id,choiceId:questions[0].correctChoiceId,requestId:uuid()};
   const competingRequest=uuid(),[answer,competingDraw]=await Promise.all([rpc('answer',answerInput),shop('draw',{...earner,requestId:competingRequest})]);
-  check(answer.correct&&[100,1000,10000].includes(answer.awardPoints),'An actual old answer RPC awards new income');
+  check(answer.correct&&[100,500,1000,10000,100000].includes(answer.awardPoints),'The authoritative answer RPC awards new income');
   const incomeAfter=9900+answer.awardPoints,walletAfter=await shop('wallet',earner);
   eq(walletAfter.totalIncome,incomeAfter);eq(walletAfter.balance+walletAfter.spent,incomeAfter);
   if(competingDraw.error){eq(competingDraw.error.code,'INSUFFICIENT_BALANCE');const recovered=await shop('draw',{...earner,requestId:competingRequest});check(!recovered.error,'A failed insufficient attempt can succeed once income arrives');}

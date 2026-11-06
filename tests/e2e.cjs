@@ -28,7 +28,17 @@ const reportDir=path.join(root,'test-results');
 function ok(value,label){checks++;assert(value,label);}
 function eq(value,expected,label){checks++;assert.deepEqual(value,expected,label);}
 async function scenario(name,fn){const start=Date.now();try{await fn();results.push({name,status:'passed',durationMs:Date.now()-start});console.log('PASS '+name);}catch(error){results.push({name,status:'failed',durationMs:Date.now()-start,error:redact(error.message).split('\n')[0]});throw error;}}
-async function makeContext(){return browser.newContext({viewport:{width:390,height:900}});}
+async function makeContext(){
+  const context=await browser.newContext({viewport:{width:390,height:900}});
+  // These legacy guest cases exercise ordinary feedback/progression. The
+  // positive 1% bonus flow and full native track are covered by bonus-e2e.cjs.
+  // Keep genuine crypto for every other value and avoid a random bonus here.
+  await context.addInitScript(()=>{
+    const native=crypto.getRandomValues.bind(crypto);
+    crypto.getRandomValues=array=>{native(array);if(array instanceof Uint32Array&&array.length===1)while(array[0]%100===0)native(array);return array;};
+  });
+  return context;
+}
 async function request(context,base,route,input,status=200,extra={}){
   const response=await context.request.fetch(base+route,{method:input===undefined?'GET':'POST',headers:{Origin:base,'Content-Type':'application/json',...extra},...(input===undefined?{}:{data:input}),timeout:25000});
   const data=await response.json();eq(response.status(),status,route+' status ('+(data.error?.code||'ok')+')');
@@ -51,7 +61,7 @@ async function freshDatabase(url,folder){
 }
 function serverEnvironment(kind){
   const base={...process.env,NODE_ENV:'test',VERCEL:'',KGS_TARGET_INTEGRATION_SECRET:integrationSecret,KGS_PUSH_PUBLIC_KEY:'',KGS_PUSH_PRIVATE_KEY:'',KGS_PUSH_CRON_SECRET:'',KGS_PUSH_SUBJECT:''};
-  if(kind==='kgs')return{...base,DATABASE_URL:kgsDatabase.href,KGS_ALLOWED_ORIGINS:kgsBase,PORT:'3221',KGS_STORAGE_DRIVER:'local',KGS_LOCAL_STORAGE_DIR:path.join(os.tmpdir(),'kgs-target-identity-storage')};
+  if(kind==='kgs')return{...base,DATABASE_URL:kgsDatabase.href,KGS_ALLOWED_ORIGINS:kgsBase,KGS_TARGET_APP_URL:targetBase,PORT:'3221',KGS_STORAGE_DRIVER:'local',KGS_LOCAL_STORAGE_DIR:path.join(os.tmpdir(),'kgs-target-identity-storage')};
   const env={...base,TARGET_DATABASE_URL:targetDatabase.href,TARGET_RPC_SECRET:rpcSecret,TARGET_COOKIE_SECRET:cookieSecret,KGS_IDENTITY_URL:kgsBase,TARGET_ALLOWED_ORIGINS:kind==='broken'?brokenBase:targetBase,PORT:kind==='broken'?'3222':'3220'};
   if(kind==='broken')delete env.TARGET_COOKIE_SECRET;
   return env;
@@ -88,7 +98,7 @@ async function mediaProbe(page){await page.addInitScript(()=>{
 });}
 async function openPage(context,{audio=false}={}){const page=await context.newPage();if(audio)await mediaProbe(page);page.on('pageerror',error=>runtimeErrors.push(error.message));await page.goto(targetBase,{waitUntil:'networkidle'});return page;}
 function reward(result,quizBefore,lifetimeBefore,correct=result.correct){
-  eq(result.correct,correct);ok(Number.isSafeInteger(result.awardPoints),'A reward is an integer');ok(correct?[100,1000,10000].includes(result.awardPoints):result.awardPoints===0,'Only correct answers receive an allowed reward');
+  eq(result.correct,correct);ok(Number.isSafeInteger(result.awardPoints),'A reward is an integer');ok(correct?[100,500,1000,10000,100000].includes(result.awardPoints):result.awardPoints===0,'Only correct answers receive an allowed reward');
   eq(result.quizPoints,quizBefore+result.awardPoints,'The quiz total contains this reward once');eq(result.totalPoints,lifetimeBefore+result.awardPoints,'The lifetime total contains this reward once');
   return result.awardPoints;
 }
@@ -130,10 +140,10 @@ async function watchRewards(page){await page.evaluate(()=>{
   await kgs(Admin,'/api/admin/login',{secret:process.env.KGS_ADMIN_SECRET});await kgs(Admin,'/api/admin/code',{code});
   memberA=await register(KgsA,1,'練習する人A',pinA);memberB=await register(KgsB,2,'練習する人B',pinB);
 
-  await scenario('Reward mapping allocates exactly two, fifteen and eighty-three of a hundred outcomes',async()=>{
+  await scenario('Reward mapping allocates exactly one, two, fifteen and eighty-two of a hundred outcomes',async()=>{
     const mapped=(await targetDb.query('SELECT target_private.reward_points_for_roll(roll) AS amount,count(*)::int AS outcomes FROM generate_series(0,99) roll GROUP BY amount ORDER BY amount')).rows;
-    eq(mapped,[{amount:100,outcomes:83},{amount:1000,outcomes:15},{amount:10000,outcomes:2}],'Each integer roll has precisely the requested probability');
-    eq((await targetDb.query('SELECT roll,target_private.reward_points_for_roll(roll) AS amount FROM unnest(ARRAY[0,1,2,16,17,99]) roll ORDER BY roll')).rows,[{roll:0,amount:10000},{roll:1,amount:10000},{roll:2,amount:1000},{roll:16,amount:1000},{roll:17,amount:100},{roll:99,amount:100}],'All new probability boundaries are inclusive and correct');
+    eq(mapped,[{amount:100,outcomes:82},{amount:1000,outcomes:15},{amount:10000,outcomes:2},{amount:100000,outcomes:1}],'Each integer roll has precisely the requested probability');
+    eq((await targetDb.query('SELECT roll,target_private.reward_points_for_roll(roll) AS amount FROM unnest(ARRAY[0,1,2,3,17,18,99]) roll ORDER BY roll')).rows,[{roll:0,amount:100000},{roll:1,amount:10000},{roll:2,amount:10000},{roll:3,amount:1000},{roll:17,amount:1000},{roll:18,amount:100},{roll:99,amount:100}],'All new probability boundaries are inclusive and correct');
     const invalid=(await targetDb.query('SELECT target_private.reward_points_for_roll(-1) AS low,target_private.reward_points_for_roll(100) AS high,target_private.reward_points_for_roll(NULL) AS missing')).rows[0];eq(invalid,{low:null,high:null,missing:null});
   });
 
@@ -240,7 +250,7 @@ async function watchRewards(page){await page.evaluate(()=>{
         await page.locator('#questionChoices button').first().waitFor();eq(await page.locator('#questionChoices button').count(),4);eq(new Set(await page.locator('#questionChoices button').allTextContents()).size,4);
         await page.locator('#questionChoices button').first().click();await page.locator('#answerFeedback').waitFor({state:'visible'});
         eq(await page.locator('#questionChoices button').first().getAttribute('aria-pressed'),'true');
-        const correct=await page.locator('#feedbackTitle').innerText()==='正解';if(correct){guestCorrect++;const amount=displayedPoints(await page.locator('#feedbackReward').innerText());ok([100,1000,10000].includes(amount),'Guest correct answers use the same virtual reward amounts');guestPoints+=amount;}else ok(!await page.locator('#feedbackReward').isVisible(),'Wrong guest answers give no reward');
+        const correct=await page.locator('#feedbackTitle').innerText()==='正解';if(correct){guestCorrect++;const amount=displayedPoints(await page.locator('#feedbackReward').innerText());ok([100,500,1000,10000,100000].includes(amount),'Guest correct answers use the same virtual reward amounts');guestPoints+=amount;}else ok(!await page.locator('#feedbackReward').isVisible(),'Wrong guest answers give no reward');
         eq(displayedPoints(await page.locator('#quizPoints').innerText()),guestPoints,'Guest quiz points contain each local award once');
         eq(await page.locator('#quizSubmit').count(),0,'Guest practice needs no separate Answer button');await advanceResult(page);
       }
@@ -287,7 +297,7 @@ async function watchRewards(page){await page.evaluate(()=>{
     const page=await openPage(context,{audio:true});let quizPosts=0;page.on('request',request=>{if(new URL(request.url()).pathname.startsWith('/api/quiz/')&&request.method()==='POST')quizPosts++;});
     await page.locator('#testOpen').click();await page.locator('#questionCount').selectOption('50');await page.locator('#testStart').click();await page.locator('#questionChoices button').first().waitFor();
     await watchRewards(page);await watchResultProgress(page);eq(await page.locator('#quizNext').count(),0,'The visible Next button has been removed');
-    let earned=0;const timings=[],tiers=[[17,100,'standard',6],[16,1000,'bonus',12],[1,10000,'jackpot',24]],sizes=[[320,568],[375,667],[390,844],[430,932],[1280,900]];
+    let earned=0;const timings=[],tiers=[[18,100,'standard',6],[17,1000,'bonus',12],[1,10000,'jackpot',24]],sizes=[[320,568],[375,667],[390,844],[430,932],[1280,900]];
     const position=()=>page.locator('#questionPosition').innerText();
     async function choose(roll,{wrong=false}={}){
       await page.evaluate(value=>{window.__visualRewardRoll=value;},roll);
@@ -320,32 +330,32 @@ async function watchRewards(page){await page.evaluate(()=>{
     for(const [roll,amount] of tiers){const before=await choose(roll);earned+=amount;const visual=await page.evaluate(index=>window.__rewardObservations[index],before.reward);eq(visual.animations,0,'Reduced-motion results are static');ok(!visual.rain.shown&&visual.rain.count===0,'Reduced motion never rains banknotes');await autoProgress(before);}
     await page.emulateMedia({reducedMotion:'no-preference'});
 
-    const first=await choose(0);earned+=10000;await page.waitForTimeout(140);const began=Date.now();await advanceResult(page);ok(Date.now()-began<300,'A result tap advances before the one-second deadline');ok(await page.evaluate(()=>{const layer=document.getElementById('jackpotBillRain');return !layer||(layer.hidden&&layer.children.length===0);}), 'An early result tap clears every falling note');
-    await page.waitForTimeout(350);const second=await choose(17);earned+=100;await page.waitForTimeout(570);
+    const first=await choose(1);earned+=10000;await page.waitForTimeout(140);const began=Date.now();await advanceResult(page);ok(Date.now()-began<300,'A result tap advances before the one-second deadline');ok(await page.evaluate(()=>{const layer=document.getElementById('jackpotBillRain');return !layer||(layer.hidden&&layer.children.length===0);}), 'An early result tap clears every falling note');
+    await page.waitForTimeout(350);const second=await choose(18);earned+=100;await page.waitForTimeout(570);
     eq(await position(),second.position,'The first result timer cannot advance a newer result');ok(await page.locator('#rewardCelebration').isVisible(),'The newer reward keeps its own full display period');
     await autoProgress(second);eq(displayedPoints(await page.locator('#quizPoints').innerText()),earned);
 
-    const detailed=await choose(17);earned+=100;const detailBox=await page.locator('#questionChoices button').nth(detailed.choiceIndex).boundingBox();await page.mouse.click(detailBox.x+detailBox.width/2,detailBox.y+detailBox.height/2,{clickCount:2});await page.waitForFunction(old=>document.getElementById('questionPosition').textContent!==old,detailed.position,{timeout:500});ok(!await page.locator('#answerFeedback').isVisible(),'A quick same-position second tap advances the result once');await page.waitForTimeout(350);
+    const detailed=await choose(18);earned+=100;const detailBox=await page.locator('#questionChoices button').nth(detailed.choiceIndex).boundingBox();await page.mouse.click(detailBox.x+detailBox.width/2,detailBox.y+detailBox.height/2,{clickCount:2});await page.waitForFunction(old=>document.getElementById('questionPosition').textContent!==old,detailed.position,{timeout:500});ok(!await page.locator('#answerFeedback').isVisible(),'A quick same-position second tap advances the result once');await page.waitForTimeout(350);
 
-    const disabledTap=await choose(17);earned+=100;const disabled=await page.locator('#questionChoices button').first().boundingBox();ok(disabled);
+    const disabledTap=await choose(18);earned+=100;const disabled=await page.locator('#questionChoices button').first().boundingBox();ok(disabled);
     await page.mouse.click(disabled.x+disabled.width/2,disabled.y+disabled.height/2);await page.waitForFunction(old=>document.getElementById('questionPosition').textContent!==old,disabledTap.position);
     const newPosition=await position();await page.mouse.click(disabled.x+disabled.width/2,disabled.y+disabled.height/2);await page.mouse.click(disabled.x+disabled.width/2,disabled.y+disabled.height/2);
     eq(await position(),newPosition,'Rapid repeated result taps do not skip or answer the next question');ok(!await page.locator('#answerFeedback').isVisible());eq(await page.locator('#questionChoices button[aria-pressed="true"]').count(),0);await page.waitForTimeout(350);
 
-    const held=await choose(17);earned+=100;const heldBox=await page.locator('#questionChoices button').first().boundingBox();await page.mouse.move(heldBox.x+heldBox.width/2,heldBox.y+heldBox.height/2);await page.waitForTimeout(450);await page.mouse.down();await page.waitForTimeout(700);
+    const held=await choose(18);earned+=100;const heldBox=await page.locator('#questionChoices button').first().boundingBox();await page.mouse.move(heldBox.x+heldBox.width/2,heldBox.y+heldBox.height/2);await page.waitForTimeout(450);await page.mouse.down();await page.waitForTimeout(700);
     eq(await position(),held.position,'Holding a result gesture across the deadline cannot expose a new answer target');await page.mouse.up();await page.waitForFunction(old=>document.getElementById('questionPosition').textContent!==old,held.position);
     const afterHeld=await position();await page.waitForTimeout(1100);eq(await position(),afterHeld,'Releasing the held gesture progresses exactly once');ok(!await page.locator('#answerFeedback').isVisible());eq(await page.locator('#questionChoices button[aria-pressed="true"]').count(),0);
 
-    for(const key of ['Enter','Space']){const before=await choose(17);earned+=100;await page.locator('#quizAdvanceSurface').focus();await page.keyboard.press(key);await page.waitForFunction(old=>document.getElementById('questionPosition').textContent!==old,before.position);ok(!await page.locator('#answerFeedback').isVisible(),'Keyboard progress does not select an answer');}
-    const wrong=await choose(17,{wrong:true});eq(await page.locator('#feedbackTitle').innerText(),'不正解');ok((await page.locator('#feedbackAnswer').innerText()).startsWith('正解：'));ok(!await page.locator('#rewardCelebration').isVisible());await autoProgress(wrong);eq(displayedPoints(await page.locator('#quizPoints').innerText()),earned,'Wrong auto progress awards nothing');
+    for(const key of ['Enter','Space']){const before=await choose(18);earned+=100;await page.locator('#quizAdvanceSurface').focus();await page.keyboard.press(key);await page.waitForFunction(old=>document.getElementById('questionPosition').textContent!==old,before.position);ok(!await page.locator('#answerFeedback').isVisible(),'Keyboard progress does not select an answer');}
+    const wrong=await choose(18,{wrong:true});eq(await page.locator('#feedbackTitle').innerText(),'不正解');ok((await page.locator('#feedbackAnswer').innerText()).startsWith('正解：'));ok(!await page.locator('#rewardCelebration').isVisible());await autoProgress(wrong);eq(displayedPoints(await page.locator('#quizPoints').innerText()),earned,'Wrong auto progress awards nothing');
 
-    const paused=await choose(0);earned+=10000;const sounds=await page.evaluate(()=>window.__audioStarts.length);await page.locator('#quizQuit').click();await page.waitForTimeout(1150);eq(await position(),paused.position,'An open quit dialog pauses automatic progress');ok(!await page.locator('#quizAdvanceSurface').isVisible());ok(await page.evaluate(()=>{const layer=document.getElementById('jackpotBillRain');return !layer||(layer.hidden&&layer.children.length===0);}), 'Quit immediately removes every jackpot banknote');
+    const paused=await choose(1);earned+=10000;const sounds=await page.evaluate(()=>window.__audioStarts.length);await page.locator('#quizQuit').click();await page.waitForTimeout(1150);eq(await position(),paused.position,'An open quit dialog pauses automatic progress');ok(!await page.locator('#quizAdvanceSurface').isVisible());ok(await page.evaluate(()=>{const layer=document.getElementById('jackpotBillRain');return !layer||(layer.hidden&&layer.children.length===0);}), 'Quit immediately removes every jackpot banknote');
     await page.locator('#quitCancel').click();await waitForResult(page);const resumed=await page.evaluate(()=>window.__resultPlaybacks.length-1);eq(await page.evaluate(()=>window.__audioStarts.length),sounds,'Resuming a result does not replay its cue');ok(await page.evaluate(()=>{const layer=document.getElementById('jackpotBillRain');return !layer||layer.hidden;}),'Resuming a confirmed jackpot does not rain the same reward again');await page.waitForTimeout(350);eq(await position(),paused.position,'A cancelled quit gives the result a fresh readable interval');await autoProgress({result:resumed});
 
-    const background=await choose(0);earned+=10000;await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));});ok(await page.evaluate(()=>window.__mediaNodes.every(node=>node.paused)), 'The background signal pauses native audio immediately');await page.waitForTimeout(1100);eq(await position(),background.position,'A background visibility signal pauses auto progress');ok(!await page.locator('#quizAdvanceSurface').isVisible());ok(await page.evaluate(()=>{const layer=document.getElementById('jackpotBillRain');return !layer||(layer.hidden&&layer.children.length===0);}), 'Backgrounding cancels jackpot note animations');ok(await page.evaluate(()=>window.__mediaNodes.every(node=>node.paused)), 'Backgrounding pauses native audio');
+    const background=await choose(1);earned+=10000;await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));});ok(await page.evaluate(()=>window.__mediaNodes.every(node=>node.paused)), 'The background signal pauses native audio immediately');await page.waitForTimeout(1100);eq(await position(),background.position,'A background visibility signal pauses auto progress');ok(!await page.locator('#quizAdvanceSurface').isVisible());ok(await page.evaluate(()=>{const layer=document.getElementById('jackpotBillRain');return !layer||(layer.hidden&&layer.children.length===0);}), 'Backgrounding cancels jackpot note animations');ok(await page.evaluate(()=>window.__mediaNodes.every(node=>node.paused)), 'Backgrounding pauses native audio');
     await page.evaluate(()=>{delete document.hidden;document.dispatchEvent(new Event('visibilitychange'));});await waitForResult(page);const restored=await page.evaluate(()=>window.__resultPlaybacks.length-1);await autoProgress({result:restored});eq(displayedPoints(await page.locator('#quizPoints').innerText()),earned,'Background restoration keeps the same earned points');
 
-    await choose(0);earned+=10000;await page.locator('#quizQuit').click();await page.locator('#quitConfirm').click();await page.waitForTimeout(1150);ok(await page.locator('#homeView').isVisible());ok(!await page.locator('#rewardCelebration').isVisible());ok(!await page.locator('#quizAdvanceSurface').isVisible());eq(await page.locator('#rewardAnnouncement').textContent(),'');eq(quizPosts,0,'Guest result tests never submit shared scores');
+    await choose(1);earned+=10000;await page.locator('#quizQuit').click();await page.locator('#quitConfirm').click();await page.waitForTimeout(1150);ok(await page.locator('#homeView').isVisible());ok(!await page.locator('#rewardCelebration').isVisible());ok(!await page.locator('#quizAdvanceSurface').isVisible());eq(await page.locator('#rewardAnnouncement').textContent(),'');eq(quizPosts,0,'Guest result tests never submit shared scores');
     await fs.writeFile(path.join(reportDir,'reward-auto-timings.json'),JSON.stringify({timings,visibilitySignalSimulated:true,physicalSafariVerified:false},null,2)+'\n');await page.close();await context.close();
   });
 
@@ -463,12 +473,17 @@ async function watchRewards(page){await page.evaluate(()=>{
     const page=await context.newPage();await page.addInitScript(()=>{class UnavailableAudio{constructor(){throw Error('Audio unavailable in this browser');}}window.Audio=UnavailableAudio;window.AudioContext=UnavailableAudio;window.webkitAudioContext=UnavailableAudio;HTMLMediaElement.prototype.play=function(){return Promise.reject(new DOMException('Test audio unavailable','NotAllowedError'));};});page.on('pageerror',error=>runtimeErrors.push(error.message));await page.goto(targetBase,{waitUntil:'networkidle'});await page.locator('#testOpen').click();await page.locator('#questionCount').selectOption('10');await page.locator('#testStart').click();let earned=0,correctCount=0;
     for(let index=0;index<10;index++){
       await page.locator('#questionChoices button').first().waitFor();const number=Number((await page.locator('#questionNumber').innerText()).match(/No\. (\d+)/)[1]),texts=await page.locator('#questionChoices .choice-text').allTextContents(),correct=texts.indexOf(book('target1900')[number-1].english);ok(correct>=0);const selected=index<8?correct:(correct+1)%4;
-      await page.locator('#questionChoices button').nth(selected).click();await waitForResult(page);if(index<8){correctCount++;const amount=displayedPoints(await page.locator('#feedbackReward').innerText());ok([100,1000,10000].includes(amount));earned+=amount;}else ok(!await page.locator('#feedbackReward').isVisible());eq(displayedPoints(await page.locator('#quizPoints').innerText()),earned);await advanceResult(page);
+      await page.locator('#questionChoices button').nth(selected).click();await waitForResult(page);if(index<8){correctCount++;const amount=displayedPoints(await page.locator('#feedbackReward').innerText());ok([100,500,1000,10000,100000].includes(amount));earned+=amount;}else ok(!await page.locator('#feedbackReward').isVisible());eq(displayedPoints(await page.locator('#quizPoints').innerText()),earned);await advanceResult(page);
     }
     await page.locator('#resultView').waitFor({state:'visible'});eq(Number(await page.locator('#resultCorrect').innerText()),correctCount);eq(correctCount,8);eq(await page.locator('#resultTotal').innerText(),'/ 10問');eq(displayedPoints(await page.locator('#resultPoints').innerText()),earned);ok((await page.locator('#resultPoints').innerText()).includes('轟'));const session=await target(context,'/api/session');eq(session.correctCount,8);eq(session.totalPoints,earned);for(const width of [320,375,390,430,1280])await layout(page,width,'reward-result');await page.close();await classContext.close();await context.close();
   });
 
   await scenario('One choice tap gives immediate material feedback while the server confirms the score',async()=>{
+    // Isolated fixture: this scenario asserts ordinary cue counts around a
+    // delayed acknowledgement; jackpot audio/window behavior has its own suite.
+    const originalReward=(await targetDb.query("SELECT pg_get_functiondef('target_private.reward_points_for_roll(integer)'::regprocedure) AS definition")).rows[0].definition;
+    await targetDb.query("CREATE OR REPLACE FUNCTION target_private.reward_points_for_roll(p_roll integer) RETURNS integer LANGUAGE sql IMMUTABLE STRICT SECURITY INVOKER SET search_path=pg_catalog AS $$ SELECT CASE WHEN p_roll BETWEEN 0 AND 99 THEN 1000 ELSE NULL END $$");
+    try{
     const classContext=await makeContext(),context=await makeContext(),accountPin=pin();
     await register(classContext,6,'回答操作確認E',accountPin,codeChanged);await target(context,'/api/login',{attendanceNumber:6,accountPin});
     for(const cookie of await context.cookies(targetBase))remember(cookie.value);
@@ -497,7 +512,7 @@ async function watchRewards(page){await page.evaluate(()=>{
       await page.locator('#questionChoices button').evaluateAll(buttons=>{for(const button of buttons)button.dispatchEvent(new MouseEvent('click',{bubbles:true}));buttons[0].dispatchEvent(new MouseEvent('click',{bubbles:true}));});eq(answers.length,1,'Repeated or other choice taps cannot send another answer while confirmation is pending');eq(await page.evaluate(()=>window.__audioStarts.length),cueCount,'Repeated choices cannot repeat the feedback sound');
       eq(await page.locator('#questionChoices button').nth(correct).getAttribute('aria-pressed'),'true','Repeated taps cannot replace the submitted selection');
     }finally{release();}
-    await waitForResult(page);eq(await page.locator('#quizCorrect').innerText(),'1問 正解');eq((await target(context,'/api/session')).correctCount,1);const confirmedPoints=(await target(context,'/api/session')).totalPoints;ok([100,1000,10000].includes(confirmedPoints));eq(displayedPoints(await page.locator('#quizPoints').innerText()),confirmedPoints);eq(displayedPoints(await page.locator('#feedbackReward').innerText()),confirmedPoints);eq(await page.evaluate(()=>window.__audioStarts.length),1,'The confirmed reply does not repeat the material-feedback sound');eq(await page.evaluate(()=>window.__confirmedCelebrations),1,'The confirmed real reply animates its award exactly once');
+    await waitForResult(page);eq(await page.locator('#quizCorrect').innerText(),'1問 正解');eq((await target(context,'/api/session')).correctCount,1);const confirmedPoints=(await target(context,'/api/session')).totalPoints;ok([100,500,1000,10000,100000].includes(confirmedPoints));eq(displayedPoints(await page.locator('#quizPoints').innerText()),confirmedPoints);eq(displayedPoints(await page.locator('#feedbackReward').innerText()),confirmedPoints);eq(await page.evaluate(()=>window.__audioStarts.length),1,'The confirmed reply does not repeat the material-feedback sound');eq(await page.evaluate(()=>window.__confirmedCelebrations),1,'The confirmed real reply animates its award exactly once');
     await page.unroute('**/api/quiz/answer');await advanceResult(page);ok(!await page.locator('#rewardCelebration').isVisible(),'The recorded next question clears its award layer');ok(!await page.locator('#answerFeedback').isVisible());eq(await page.locator('#questionChoices button[aria-pressed="true"]').count(),0,'The next question clears the old selection');eq(await page.locator('#questionChoices button:enabled').count(),4,'The next question is immediately ready for one tap');
     const nextNumber=Number((await page.locator('#questionNumber').innerText()).match(/No\. (\d+)/)[1]),nextTexts=await page.locator('#questionChoices .choice-text').allTextContents(),nextWrong=nextTexts.findIndex(text=>text!==book('target1900')[nextNumber-1].english);await page.locator('#questionChoices button').nth(nextWrong).click();await waitForResult(page);eq(await page.locator('#feedbackTitle').innerText(),'不正解');await page.waitForFunction(()=>window.__audioStarts.length===2);ok((await page.evaluate(()=>window.__audioStarts[1].src)).endsWith('/audio/wrong.mp3'),'Wrong answers play their separate uploaded failure cue');eq((await target(context,'/api/session')).totalPoints,confirmedPoints,'A wrong second question does not increase the cumulative total');
     await advanceResult(page);
@@ -515,6 +530,7 @@ async function watchRewards(page){await page.evaluate(()=>{
     try{await page.locator('#questionChoices button').nth(lateCorrect).click();await lateStored;ok(!await page.locator('#rewardCelebration').isVisible(),'A later unconfirmed award has no decoration');await page.locator('#quizQuit').click();await page.locator('#quitConfirm').click();await page.locator('#homeView').waitFor({state:'visible'});}finally{releaseLate();}
     await lateReply;await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));ok(!await page.locator('#rewardCelebration').isVisible(),'A late acknowledged reply cannot restore a celebration after leaving the quiz');eq(await page.evaluate(()=>window.__confirmedCelebrations),shownBeforeLate,'A stale response cannot animate another award');
     await page.close();await context.close();await classContext.close();
+    }finally{await targetDb.query(originalReward);}
   });
 
   await scenario('Home still shows only the leading ten ranks and its ranking button opens every participant',async()=>{
@@ -529,7 +545,7 @@ async function watchRewards(page){await page.evaluate(()=>{
 
   await scenario('Target logout and production asset boundaries keep class credentials private',async()=>{
     await kgs(KgsA,'/api/login',{code:codeChanged,attendanceNumber:1,accountPin:pinNew});await target(A,'/api/logout',{});eq((await target(A,'/api/session')).member,null);eq((await classSession(KgsA)).member.id,memberA.id);
-    for(const filename of ['index.html','app.js','style.css','jackpot-effects.js','jackpot-effects.css']){const content=await fs.readFile(path.join(root,'dist',filename),'utf8');for(const secret of [integrationSecret,rpcSecret,cookieSecret,process.env.KGS_ADMIN_SECRET,process.env.KGS_SESSION_SECRET])ok(!content.includes(secret),'Production browser files contain no server secret');}
+    for(const filename of ['index.html','app.js','style.css','jackpot-effects.js','jackpot-effects.css','bonus-time.js','bonus-time.css']){const content=await fs.readFile(path.join(root,'dist',filename),'utf8');for(const secret of [integrationSecret,rpcSecret,cookieSecret,process.env.KGS_ADMIN_SECRET,process.env.KGS_SESSION_SECRET])ok(!content.includes(secret),'Production browser files contain no server secret');}
     const scriptResponse=await Guest.request.get(targetBase+'/server/router.cjs');eq(scriptResponse.status(),404,'Server sources are not static assets');eq(runtimeErrors,[],'Browser has no uncaught errors');
     for(const logs of serverLogs.values())for(const secret of secretSet)ok(!logs.includes(secret),'Runtime logs contain no credential');
   });

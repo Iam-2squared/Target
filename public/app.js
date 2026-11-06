@@ -17,6 +17,9 @@
   const SOUND_KEY='target-sound-enabled';
   let soundEnabled=readSoundSetting(),soundPlayers,soundGeneration=0,activeSound=null,soundSessionLease=null;
   let toastTimer, resultTimer, resultGeneration=0, resultDisplay=null, resultPointer=null, lastAdvanceTap=null;
+  const bonus=window.TargetBonusTime.create({session:()=>sessionEpoch,soundEnabled:()=>soundEnabled,
+    claimAudioSession:claimSoundSession,releaseAudioSession:releaseSoundSession,onPlaybackStart:stopSound,
+    onForeground:()=>{if(member)void refreshSession({notify:false});}});
 
   function element(tag,className,text) {
     const node=document.createElement(tag);
@@ -42,7 +45,7 @@
   function guestAward() {
     const limit=0x100000000-(0x100000000%100);let value;
     do {value=crypto.getRandomValues(new Uint32Array(1))[0];} while(value>=limit);
-    const roll=value%100;return roll<=1?10000:roll<=16?1000:100;
+    const roll=value%100;return roll===0?100000:roll<=2?10000:roll<=17?1000:100;
   }
   function hideRewardVisual() {
     window.TargetJackpotEffects?.hide();
@@ -73,10 +76,10 @@
     current.rewardCelebratedQuestionId=current.question.id;
     const amountNode=$('feedbackReward'),overlay=$('rewardCelebration');
     amountNode.replaceChildren(element('span','reward-sign','+'),element('span','reward-number',amount.toLocaleString('ja-JP')),element('span','reward-unit','轟'));
-    overlay.dataset.tier=amount===10000?'jackpot':amount===1000?'bonus':'standard';
+    overlay.dataset.tier=amount===100000?'grand':amount===10000?'jackpot':amount===1000?'bonus':amount===500?'bonus-time':'standard';
     overlay.style.setProperty('--reward-duration','1000ms');overlay.classList.toggle('reward-restored',restored);
     amountNode.hidden=false;overlay.hidden=false;
-    if(amount===10000)window.TargetJackpotEffects?.show({restored});else window.TargetJackpotEffects?.hide();
+    if(amount===10000||amount===100000)window.TargetJackpotEffects?.show({restored});else window.TargetJackpotEffects?.hide();
     $('rewardAnnouncement').textContent='+'+gou(amount);
   }
   function beginResultDisplay(current=quiz) {
@@ -101,6 +104,7 @@
   function advanceByTap(event) {
     event.preventDefault();event.stopPropagation();
     if(!liveResultDisplay(resultDisplay))return;
+    bonus.gesture();
     const tap=event.detail>0?{at:performance.now(),x:event.clientX,y:event.clientY}:null;
     if(nextQuestion(resultDisplay)&&tap)lastAdvanceTap=tap;
   }
@@ -111,18 +115,22 @@
   function readSoundSetting() {
     try{return localStorage.getItem(SOUND_KEY)!=='false';}catch{return true;}
   }
-  function releaseSoundSession(lease=soundSessionLease) {
-    if(!lease||soundSessionLease!==lease)return;
+  function releaseSoundSession(token) {
+    if(!token||token.released)return;token.released=true;
+    const lease=token.lease;if(soundSessionLease!==lease)return;
+    lease.users--;if(lease.users>0)return;
     soundSessionLease=null;
     try{if(lease.owned&&lease.session.type==='playback')lease.session.type=lease.previous;}catch{}
   }
   function claimSoundSession() {
     try{
+      if(soundSessionLease){soundSessionLease.users++;return {lease:soundSessionLease,released:false};}
       const session=navigator.audioSession;
       if(!session||typeof session.type!=='string')return null;
       const previous=session.type;
       if(previous!=='playback')session.type='playback';
-      return soundSessionLease={session,previous,owned:previous!=='playback'&&session.type==='playback'};
+      soundSessionLease={session,previous,owned:previous!=='playback'&&session.type==='playback',users:1};
+      return {lease:soundSessionLease,released:false};
     }catch{return null;}
   }
   function prepareSound() {
@@ -140,7 +148,7 @@
     const previous=activeSound;activeSound=null;
     if(previous)for(const [event,handler] of previous.listeners)previous.player.removeEventListener(event,handler);
     if(soundPlayers)for(const player of Object.values(soundPlayers)){try{player.pause();player.currentTime=0;}catch{}}
-    releaseSoundSession();
+    releaseSoundSession(previous?.lease);
   }
   function playSoundCue(kind,current=null) {
     if(!soundEnabled||document.hidden)return;
@@ -157,7 +165,7 @@
       activeSound=null;releaseSoundSession(lease);
     };
     const listeners=[['ended',finish],['error',finish],['pause',finish]];
-    activeSound={player,token,listeners};for(const [name,handler] of listeners)player.addEventListener(name,handler);
+    activeSound={player,token,listeners,lease};for(const [name,handler] of listeners)player.addEventListener(name,handler);
     try{
       if(player.error)player.load();
       player.muted=false;player.volume=.85;player.currentTime=0;
@@ -172,12 +180,14 @@
   }
   function feedbackSound(current,correct) {
     if(current.soundPlayed)return;current.soundPlayed=true;
+    if(bonus.active())return;
     playSoundCue(correct?'correct':'wrong',current);
   }
   function setSoundEnabled(enabled,{preview=false,persist=true}={}) {
     soundEnabled=enabled;$('soundSetting').value=enabled?'on':'off';
     if(persist)try{localStorage.setItem(SOUND_KEY,String(enabled));}catch{}
-    if(!enabled)stopSound();else if(preview)playSoundCue('correct');
+    bonus.setSoundEnabled(enabled);
+    if(!enabled)stopSound();else if(bonus.active())bonus.gesture();else if(preview)playSoundCue('correct');
   }
   window.addEventListener('storage',event=>{if(event.key===SOUND_KEY)setSoundEnabled(event.newValue!=='false',{persist:false});});
   document.addEventListener('visibilitychange',()=>{if(document.hidden)pauseResultDisplay();else if(confirmedResult())beginResultDisplay();});
@@ -196,11 +206,15 @@
   function appError(message,code='',status=0) {const error=new Error(message);error.code=code;error.status=status;return error;}
   async function api(path,body) {
     const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),20000);
+    const requestStartedAtMs=performance.now();
     try {
       const response=await fetch('/api'+path,{method:body===undefined?'GET':'POST',credentials:'same-origin',cache:'no-store',redirect:'error',headers:body===undefined?{'Accept':'application/json'}:{'Content-Type':'application/json','Accept':'application/json'},body:body===undefined?undefined:JSON.stringify(body),signal:controller.signal});
       let data;try{data=await response.json();}catch{throw appError('サーバーの応答を読み込めませんでした。もう一度お試しください。');}
       if(!response.ok){const details=data?.error;throw appError(typeof details?.message==='string'?details.message:'接続に失敗しました。もう一度お試しください。',typeof details?.code==='string'?details.code:'',response.status);}
       if(!data||typeof data!=='object'||Array.isArray(data))throw appError('サーバーの応答を確認できませんでした。');
+      const supplied=Number(response.headers.get('X-Target-Now'));
+      const processingHeader=response.headers.get('X-Target-Processing-Ms'),processing=processingHeader===null?undefined:Number(processingHeader);
+      Object.defineProperty(data,'__timing',{value:{serverNowMs:Number.isFinite(supplied)&&supplied>0?supplied:Date.now(),serverProcessingMs:Number.isFinite(processing)&&processing>=0?processing:undefined,requestStartedAtMs,receivedAtMs:performance.now()}});
       return data;
     } catch(error) {
       if(error?.name==='AbortError')throw appError('通信に時間がかかっています。入力はそのままで、もう一度お試しください。');
@@ -208,10 +222,16 @@
       throw error;
     } finally {clearTimeout(timeout);}
   }
+  function checkedBonus(value){
+    if(value===undefined||value===null)return null;
+    const started=typeof value.startedAt==='string'?Date.parse(value.startedAt):NaN,ends=typeof value.endsAt==='string'?Date.parse(value.endsAt):NaN;
+    if(!value||typeof value!=='object'||Array.isArray(value)||typeof value.id!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value.id)||value.durationMs!==15900||!Number.isFinite(started)||!Number.isFinite(ends)||ends-started!==15900)throw appError('ボーナスタイムの情報を確認できませんでした。同じ操作を再試行してください。');
+    return {id:value.id,startedAt:value.startedAt,endsAt:value.endsAt,durationMs:15900};
+  }
   function parseIdentity(data) {
     if(data.member!==null&&(!data.member||typeof data.member!=='object'||typeof data.member.name!=='string'||data.member.name.length>20))throw appError('アカウントの情報を確認できませんでした。');
     if(!Number.isSafeInteger(data.correctCount)||data.correctCount<0||!validPoints(data.totalPoints)||!validPoints(data.balance)||!validPoints(data.totalIncome)||!validPoints(data.spent)||data.totalIncome!==data.totalPoints||data.balance+data.spent!==data.totalIncome)throw appError('保有金額を確認できませんでした。');
-    return {member:data.member===null?null:{name:data.member.name},correctCount:data.correctCount,totalPoints:data.totalPoints,balance:data.balance};
+    return {member:data.member===null?null:{name:data.member.name},correctCount:data.correctCount,totalPoints:data.totalPoints,balance:data.balance,bonus:checkedBonus(data.bonus),timing:data.__timing};
   }
   function renderIdentity() {
     $('accountBadge').textContent=member?(member.name.trim()||'KGSアカウント'):(sessionKnown?'ゲスト':'接続未確認');
@@ -227,11 +247,13 @@
     try {
       const identity=parseIdentity(await api('/session'));
       if(ticket!==sessionTicket||epoch!==sessionEpoch)return;
+      if(!!member!==!!identity.member)bonus.reset();
       member=identity.member;lifetimeCorrect=identity.correctCount;lifetimePoints=identity.totalPoints;walletBalance=identity.balance;walletKnown=!!member;sessionKnown=true;
+      if(member)bonus.update(identity.bonus,identity.timing);
       $('connectionNotice').hidden=true;renderIdentity();
     } catch(error) {
       if(ticket!==sessionTicket||epoch!==sessionEpoch)return;
-      if(error.status===401){member=null;lifetimeCorrect=0;lifetimePoints=0;walletBalance=0;walletKnown=false;sessionKnown=true;}
+      if(error.status===401){bonus.reset();member=null;lifetimeCorrect=0;lifetimePoints=0;walletBalance=0;walletKnown=false;sessionKnown=true;}
       if(walletFeedback){walletKnown=false;if($('settingsDialog').open)setError('settingsError','保有金額を確認できませんでした。もう一度個人設定を開いてください。');}
       if(notify){$('connectionNotice').textContent='共有機能に接続できません。暗記とゲスト練習は利用できます。';$('connectionNotice').hidden=false;}
       renderIdentity();
@@ -342,7 +364,7 @@
   document.fonts?.ready.then(()=>{memoryLayoutKey='';queueMemoryLayout();});
   function openSetup() {
     $('setupBook').textContent=books[selectedBook].title;
-    renderSectionControls();prepareSound();void dataset(selectedBook).catch(()=>{});
+    renderSectionControls();prepareSound();if(soundEnabled)bonus.prepare();void dataset(selectedBook).catch(()=>{});
     setError('setupError');startRetry=null;renderIdentity();show('setup');
   }
   function questionShape(question) {
@@ -379,6 +401,7 @@
         const data=await api('/quiz/start',{...settings,requestId:attempt.requestId});
         if(!currentSetup())return;
         if(typeof data.quizId!=='string'||!data.quizId||!Number.isSafeInteger(data.total)||data.total<1||data.total>count||data.answeredCount!==0||data.correctCount!==0||data.quizPoints!==0)throw appError('テストの準備結果を確認できませんでした。');
+        bonus.update(checkedBonus(data.bonus),data.__timing);
         created={recorded:true,id:data.quizId,total:data.total,answeredCount:0,correctCount:0,quizPoints:0,question:questionShape(data.question)};
       }else{
         const questions=guestQuestions(await dataset(settings.book),settings);
@@ -389,7 +412,7 @@
       show('quiz');renderQuestion();
     } catch(error) {
       if(!currentSetup())return;
-      if(error.status===401){member=null;lifetimeCorrect=0;lifetimePoints=0;walletBalance=0;walletKnown=false;sessionKnown=true;sessionEpoch++;renderIdentity();}
+      if(error.status===401){bonus.reset();member=null;lifetimeCorrect=0;lifetimePoints=0;walletBalance=0;walletKnown=false;sessionKnown=true;sessionEpoch++;renderIdentity();}
       setError('setupError',error.message);
     } finally {starting=false;$('testStart').disabled=false;renderIdentity();}
   }
@@ -410,6 +433,7 @@
     if(!quiz||quiz.pending||quiz.pendingAnswer||quiz.feedback||quiz.sessionEpoch!==sessionEpoch)return;
     if(event?.detail>1||(event&&repeatsAdvanceTap(event)))return;
     if(!quiz.question.choices.some(choice=>choice.id===choiceId))return;
+    bonus.gesture();
     for(const button of $('questionChoices').querySelectorAll('button')){const selected=button.dataset.choiceId===choiceId;button.classList.toggle('selected',selected);button.setAttribute('aria-pressed',String(selected));}
     const known=quiz.recorded?materialFeedback(quiz,choiceId):{correct:choiceId===quiz.question.correctChoiceId};
     if(known)feedbackSound(quiz,known.correct);
@@ -431,8 +455,9 @@
     const question=quiz.question;
     const correctChoice=question.choices.find(choice=>choice.id===result.correctChoiceId);
     if(typeof result.correct!=='boolean'||typeof result.correctChoiceId!=='string'||!correctChoice||typeof result.correctText!=='string'||result.correctText!==correctChoice.text||result.correct!==(quiz.pendingAnswer?.choiceId===result.correctChoiceId)||!Number.isSafeInteger(result.answeredCount)||result.answeredCount!==quiz.answeredCount+1||!Number.isSafeInteger(result.correctCount)||result.correctCount!==quiz.correctCount+(result.correct?1:0)||result.total!==quiz.total||result.finished!==(result.answeredCount===quiz.total))throw appError('回答結果を確認できませんでした。同じ回答を再送してください。');
-    if(!validPoints(result.awardPoints)||![0,100,1000,10000].includes(result.awardPoints)||(!result.correct&&result.awardPoints!==0)||!validPoints(result.quizPoints)||result.quizPoints!==quiz.quizPoints+result.awardPoints||!validPoints(result.totalPoints)||result.totalPoints<result.quizPoints)throw appError('得点を確認できませんでした。同じ回答を再送してください。');
+    if(!validPoints(result.awardPoints)||![0,100,500,1000,10000,100000].includes(result.awardPoints)||(!result.correct&&result.awardPoints!==0)||!validPoints(result.quizPoints)||result.quizPoints!==quiz.quizPoints+result.awardPoints||!validPoints(result.totalPoints)||result.totalPoints<result.quizPoints)throw appError('得点を確認できませんでした。同じ回答を再送してください。');
     if(!result.finished)questionShape(result.nextQuestion);
+    const bonusState=checkedBonus(result.bonus);if(quiz.recorded)bonus.update(bonusState,result.__timing);
     quiz.feedback=result;quiz.answeredCount=result.answeredCount;quiz.correctCount=result.correctCount;quiz.quizPoints=result.quizPoints;quiz.finished=result.finished;
     renderAnswerFeedback(result);feedbackSound(quiz,result.correct);
     $('quizPoints').textContent=gou(quiz.quizPoints);
@@ -459,8 +484,9 @@
       if(current.recorded){result=await api('/quiz/answer',current.pendingAnswer);}
       else{
         if(!current.pendingGuestResult){
-          const correct=choiceId===current.question.correctChoiceId,answered=current.answeredCount+1,awardPoints=correct?guestAward():0,quizPoints=current.quizPoints+awardPoints;
-          current.pendingGuestResult={correct,correctChoiceId:current.question.correctChoiceId,correctText:current.question.correctText,answeredCount:answered,correctCount:current.correctCount+(correct?1:0),awardPoints,quizPoints,totalPoints:quizPoints,total:current.total,finished:answered===current.total,nextQuestion:current.questions[answered]||null};
+          const correct=choiceId===current.question.correctChoiceId,answered=current.answeredCount+1,awardPoints=correct?(bonus.active()?500:guestAward()):0,quizPoints=current.quizPoints+awardPoints;
+          if(awardPoints===100000)bonus.startGuest();
+          current.pendingGuestResult={correct,correctChoiceId:current.question.correctChoiceId,correctText:current.question.correctText,answeredCount:answered,correctCount:current.correctCount+(correct?1:0),awardPoints,quizPoints,totalPoints:quizPoints,bonus:bonus.snapshot(),total:current.total,finished:answered===current.total,nextQuestion:current.questions[answered]||null};
         }
         result=current.pendingGuestResult;
       }
@@ -468,7 +494,7 @@
     } catch(error) {
       if(quiz!==current||current.sessionEpoch!==sessionEpoch)return;
       clearRewardCelebration();
-      if(error.status===401){member=null;lifetimeCorrect=0;lifetimePoints=0;walletBalance=0;walletKnown=false;sessionKnown=true;sessionEpoch++;renderIdentity();}
+      if(error.status===401){bonus.reset();member=null;lifetimeCorrect=0;lifetimePoints=0;walletBalance=0;walletKnown=false;sessionKnown=true;sessionEpoch++;renderIdentity();}
       $('quizMode').textContent=current.recorded?'記録未確認':'ゲスト';
       setError('quizError',error.message+' 回答は保持しています。');$('answerRetry').hidden=error.status===401;
     } finally {current.pending=false;if(quiz===current)$('answerRetry').disabled=false;}
@@ -514,14 +540,14 @@
     loginPending=true;for(const id of ['attendanceNumber','accountPin','pinVisibility','loginButton'])$(id).disabled=true;$('loginButton').textContent='ログイン中…';
     try {
       const identity=parseIdentity(await api('/login',{attendanceNumber,accountPin}));if(!identity.member)throw appError('ログイン情報を確認できませんでした。');
-      clearRewardCelebration();sessionEpoch++;sessionTicket++;member=identity.member;lifetimeCorrect=identity.correctCount;lifetimePoints=identity.totalPoints;walletBalance=identity.balance;walletKnown=!!member;sessionKnown=true;$('accountPin').value='';$('attendanceNumber').value='';setPinVisible(false);$('connectionNotice').hidden=true;renderIdentity();$('settingsStatus').textContent='ログインしました。';
+      clearRewardCelebration();bonus.reset();sessionEpoch++;sessionTicket++;member=identity.member;lifetimeCorrect=identity.correctCount;lifetimePoints=identity.totalPoints;walletBalance=identity.balance;walletKnown=!!member;sessionKnown=true;bonus.update(identity.bonus,identity.timing);$('accountPin').value='';$('attendanceNumber').value='';setPinVisible(false);$('connectionNotice').hidden=true;renderIdentity();$('settingsStatus').textContent='ログインしました。';
     } catch(error){setError('settingsError',error.message);}
     finally{loginPending=false;for(const id of ['attendanceNumber','accountPin','pinVisibility','loginButton'])$(id).disabled=false;$('loginButton').textContent='ログイン';if(!$('settingsDialog').open){$('accountPin').value='';setPinVisible(false);}}
   }
   async function logout() {
     if(loginPending||logoutPending)return;logoutPending=true;$('logoutButton').disabled=true;setError('settingsError');$('settingsStatus').textContent='';
     try {
-      await api('/logout',{});clearRewardCelebration();sessionEpoch++;sessionTicket++;member=null;lifetimeCorrect=0;lifetimePoints=0;walletBalance=0;walletKnown=false;sessionKnown=true;$('accountPin').value='';$('attendanceNumber').value='';setPinVisible(false);renderIdentity();$('settingsStatus').textContent='ログアウトしました。';
+      await api('/logout',{});clearRewardCelebration();bonus.reset();sessionEpoch++;sessionTicket++;member=null;lifetimeCorrect=0;lifetimePoints=0;walletBalance=0;walletKnown=false;sessionKnown=true;$('accountPin').value='';$('attendanceNumber').value='';setPinVisible(false);renderIdentity();$('settingsStatus').textContent='ログアウトしました。';
       if(activeView==='quiz'&&quiz?.recorded){quiz=null;home();}
     } catch(error){setError('settingsError',error.message);}
     finally{logoutPending=false;$('logoutButton').disabled=false;}
@@ -541,7 +567,7 @@
   $('quizAdvanceSurface').addEventListener('click',advanceByTap);
   $('quizAdvanceSurface').addEventListener('pointerdown',event=>{if(event.button!==0||event.isPrimary===false||!liveResultDisplay(resultDisplay))return;clearTimeout(resultTimer);resultTimer=undefined;resultPointer={id:event.pointerId,display:resultDisplay};});
   document.addEventListener('pointerup',releaseResultPointer,true);document.addEventListener('pointercancel',releaseResultPointer,true);
-  document.addEventListener('keydown',event=>{if(event.repeat||!['Enter',' '].includes(event.key)||!liveResultDisplay(resultDisplay)||['INPUT','SELECT','TEXTAREA'].includes(document.activeElement?.tagName)||document.activeElement?.closest('button'))return;event.preventDefault();nextQuestion(resultDisplay);});
+  document.addEventListener('keydown',event=>{if(event.repeat||!['Enter',' '].includes(event.key)||!liveResultDisplay(resultDisplay)||['INPUT','SELECT','TEXTAREA'].includes(document.activeElement?.tagName)||document.activeElement?.closest('button'))return;event.preventDefault();bonus.gesture();nextQuestion(resultDisplay);});
   $('quizQuit').addEventListener('click',openQuit);$('quitCancel').addEventListener('click',()=>$('quitDialog').close());$('quitConfirm').addEventListener('click',()=>{quiz=null;$('quitDialog').close();home();});
   $('quitDialog').addEventListener('close',()=>{if(confirmedResult())beginResultDisplay();});
   $('resultView').addEventListener('click',event=>{if(event.target.closest('button,a')&&repeatsAdvanceTap(event)){event.preventDefault();event.stopImmediatePropagation();}},true);

@@ -1,10 +1,12 @@
 'use strict';
+const {performance}=require('node:perf_hooks');
 const {HttpError} = require('./errors.cjs');
 const {getConfig, checkOrigin} = require('./config.cjs');
 const store = require('./store.cjs');
 const identity = require('./identity.cjs');
 const shop = require('./shop.cjs');
 const {validateQuizInput, generateQuestions} = require('./questions.cjs');
+const PROCESSING_STARTED=Symbol('target.processing.started');
 
 const HEADERS = {
   'Cache-Control': 'private, no-store, max-age=0',
@@ -51,10 +53,18 @@ function send(res, status, result) {
   res.statusCode = status;
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Content-Length', payload.length);
+  // Fresh even for an idempotent answer replay: clients must never start a new
+  // 15.9-second interval from a historical receipt or their own wall clock.
+  res.setHeader('X-Target-Now', String(Date.now()));
+  // Let the same-origin client separate server/auth/DB wait from network time.
+  // The start belongs to this response and can never be supplied by the caller.
+  const started=res[PROCESSING_STARTED];
+  res.setHeader('X-Target-Processing-Ms',Number.isFinite(started)?Math.max(0,performance.now()-started).toFixed(3):'0');
   res.end(payload);
 }
 
 async function handler(req, res) {
+  res[PROCESSING_STARTED]=performance.now();
   for (const [name, value] of Object.entries(HEADERS)) res.setHeader(name, value);
   try {
     const config = getConfig();
@@ -73,16 +83,16 @@ async function handler(req, res) {
 
     if (pathname === '/api/session' && req.method === 'GET') {
       const token = identity.sessionToken(req, config);
-      if (!token) return send(res, 200, {member: null, correctCount: 0, totalPoints: 0,...shop.guestWallet()});
+      if (!token) return send(res, 200, {member: null, correctCount: 0, totalPoints: 0,bonus:null,...shop.guestWallet()});
       let member;
       try { member = await identity.requireMember(req, res, config); }
       catch (error) {
-        if (error instanceof HttpError && error.status === 401) return send(res, 200, {member: null, correctCount: 0, totalPoints: 0,...shop.guestWallet()});
+        if (error instanceof HttpError && error.status === 401) return send(res, 200, {member: null, correctCount: 0, totalPoints: 0,bonus:null,...shop.guestWallet()});
         throw error;
       }
       const profile = await store.rpc('profile', {memberId: member.id, name: member.name});
       const wallet=await shop.wallet(member);
-      return send(res, 200, {member: {name: member.name}, correctCount: profile.correctCount, totalPoints: wallet.totalIncome,...wallet});
+      return send(res, 200, {member: {name: member.name}, correctCount: profile.correctCount, totalPoints: wallet.totalIncome,bonus:profile.bonus??null,...wallet});
     }
     if (pathname === '/api/ranking' && req.method === 'GET') return send(res, 200, await store.rpc('ranking'));
     if (pathname === '/api/login' && req.method === 'POST') {
@@ -100,7 +110,7 @@ async function handler(req, res) {
       const profile = await store.rpc('profile', {memberId: result.member.id, name: result.member.name});
       const wallet=await shop.wallet(result.member);
       identity.setSession(res, result.token, result.expiresAt, config);
-      return send(res, 200, {member: {name: result.member.name}, correctCount: profile.correctCount, totalPoints: wallet.totalIncome,...wallet});
+      return send(res, 200, {member: {name: result.member.name}, correctCount: profile.correctCount, totalPoints: wallet.totalIncome,bonus:profile.bonus??null,...wallet});
     }
     if (pathname === '/api/logout' && req.method === 'POST') {
       const body = await readJson(req);

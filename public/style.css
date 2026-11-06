@@ -174,6 +174,18 @@ progress::-moz-progress-bar { background: #819fb9; }
 .reward-celebration[data-tier=jackpot] .feedback-reward { color: #ffe5a0; background: linear-gradient(#fff9df, #ffdc82 75%, #eab74d); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: none; }
 .reward-celebration[data-tier=jackpot] .reward-seal { transform: scale(1.1); }
 .reward-celebration[data-tier=jackpot] .reward-confetti i { width: 7px; height: 14px; }
+.reward-celebration[data-tier=grand] { --reward-ink:#6d3b00; --reward-edge:#e2aa24; --reward-glow:#ffc52d; --reward-enter:90ms; }
+.reward-celebration[data-tier=grand]::before { opacity:1; background:radial-gradient(ellipse at center,#fff4acfa 5%,#ffdc6fbf 42%,#fff2b000 80%); }
+.reward-celebration[data-tier=grand] .reward-halo { opacity:1; background:radial-gradient(circle,#ffcf4dcc,transparent 70%); }
+.reward-celebration[data-tier=grand] .reward-card { border:3px solid #c58b12; background:linear-gradient(125deg,#fffbd0,#fbd257 38%,#fff1a8 60%,#e9b733); box-shadow:0 20px 52px #8e65085c,0 0 0 6px #ffdb65a3,0 0 45px #ffcf4d99,inset 0 2px 0 #fff9; }
+.reward-celebration[data-tier=grand] .reward-card::after { display:block; }
+.reward-celebration[data-tier=grand] .feedback-reward { font-size:clamp(48px,14.5vw,78px); letter-spacing:-.055em; color:#643300; text-shadow:0 2px 0 #fff9; }
+.reward-celebration[data-tier=grand] .reward-seal { transform:scale(1.15); box-shadow:0 3px 0 #a96b00,0 0 22px #ffcd47; }
+.reward-celebration[data-tier=grand] .reward-star { background:#b47806; }
+.reward-celebration[data-tier=grand] .reward-confetti i { width:8px; height:15px; background:#e6a50f; }
+.reward-celebration[data-tier=grand] .reward-confetti i:nth-child(2n) { background:#fff5bd; }
+.reward-celebration[data-tier=bonus-time] { --reward-ink:#765000; --reward-edge:#ddb846; --reward-glow:#ffda63; --reward-paper:#fff3bd; }
+.reward-celebration[data-tier=bonus-time] .reward-confetti i:nth-child(n+7) { display:none; }
 @keyframes reward-arrive { from { opacity:1; transform:translateY(3px) scale(.96) rotate(-4deg); } to { opacity:1; transform:translateY(0) scale(1) rotate(-3deg); } }
 @keyframes reward-exit { from { opacity:1; } to { opacity:0; transform:translateY(-6px) scale(1.015); } }
 @keyframes reward-halo { from { transform:scale(.8); } to { transform:scale(1.06); } }
