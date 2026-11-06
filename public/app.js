@@ -14,7 +14,7 @@
   let memoryPage=0, memoryBook='target1900', meaningsHidden=false, memoryTicket=0;
   let memoryPages=[], memoryLayoutKey='', memoryLayoutFrame=0,memorySelectionKey='',memoryRange={from:1,to:100};
   let quiz=null, startRetry=null, starting=false, loginPending=false, logoutPending=false;
-  let toastTimer, soundContext, rewardTimer, rewardPaint=0;
+  let toastTimer, soundContext, resultTimer, resultGeneration=0, resultDisplay=null, resultPointer=null, lastAdvanceTap=null;
 
   function element(tag,className,text) {
     const node=document.createElement(tag);
@@ -43,30 +43,66 @@
     const roll=value%100;return roll===0?10000:roll<=5?1000:100;
   }
   function hideRewardVisual() {
-    clearTimeout(rewardTimer);rewardTimer=undefined;rewardPaint++;
     $('rewardCelebration').hidden=true;
   }
+  function cancelResultAdvance() {
+    clearTimeout(resultTimer);resultTimer=undefined;resultGeneration++;
+    resultDisplay=null;resultPointer=null;$('quizAdvanceSurface').hidden=true;
+  }
+  function confirmedResult(current=quiz) {
+    return !!current&&quiz===current&&current.feedback&&current.sessionEpoch===sessionEpoch&&
+      activeView==='quiz'&&!document.hidden&&!document.querySelector('dialog[open]');
+  }
+  function liveResultDisplay(display) {
+    return !!display&&resultDisplay===display&&display.generation===resultGeneration&&
+      confirmedResult(display.quiz)&&display.quiz.question.id===display.questionId&&display.epoch===sessionEpoch;
+  }
+  function pauseResultDisplay() {cancelResultAdvance();hideRewardVisual();}
   function clearRewardCelebration() {
-    hideRewardVisual();delete $('rewardCelebration').dataset.tier;
+    pauseResultDisplay();delete $('rewardCelebration').dataset.tier;
     $('rewardCelebration').style.removeProperty('--reward-duration');
+    $('rewardCelebration').classList.remove('reward-restored');
     $('feedbackReward').replaceChildren();$('feedbackReward').hidden=true;$('rewardAnnouncement').textContent='';
   }
   function celebrateReward(current,amount) {
-    if(!amount||activeView!=='quiz'||document.hidden||$('quitDialog').open||current.rewardCelebratedQuestionId===current.question.id)return;
+    if(!amount||!confirmedResult(current))return;
+    const restored=current.rewardCelebratedQuestionId===current.question.id;
     current.rewardCelebratedQuestionId=current.question.id;
-    hideRewardVisual();
     const amountNode=$('feedbackReward'),overlay=$('rewardCelebration');
-    const duration=amount===10000?650:amount===1000?500:380;
-    const paint=rewardPaint,questionId=current.question.id,epoch=current.sessionEpoch;
     amountNode.replaceChildren(element('span','reward-sign','+'),element('span','reward-number',amount.toLocaleString('ja-JP')),element('span','reward-unit','円'));
     overlay.dataset.tier=amount===10000?'jackpot':amount===1000?'bonus':'standard';
-    overlay.style.setProperty('--reward-duration',duration+'ms');
+    overlay.style.setProperty('--reward-duration','1000ms');overlay.classList.toggle('reward-restored',restored);
     amountNode.hidden=false;overlay.hidden=false;
     $('rewardAnnouncement').textContent='+'+yen(amount);
-    rewardTimer=setTimeout(()=>{
-      if(paint!==rewardPaint||quiz!==current||current.question.id!==questionId||epoch!==sessionEpoch)return;
-      rewardTimer=undefined;overlay.hidden=true;
-    },duration);
+  }
+  function beginResultDisplay(current=quiz) {
+    cancelResultAdvance();
+    if(!confirmedResult(current))return;
+    if(current.feedback.awardPoints)celebrateReward(current,current.feedback.awardPoints);else hideRewardVisual();
+    const surface=$('quizAdvanceSurface');
+    surface.setAttribute('aria-label',current.finished?'テスト結果を見る':'次の問題へ');surface.hidden=false;
+    const display={quiz:current,questionId:current.question.id,epoch:sessionEpoch,generation:resultGeneration,deadline:performance.now()+1000};
+    resultDisplay=display;
+    resultTimer=setTimeout(()=>{resultTimer=undefined;if(liveResultDisplay(display))nextQuestion(display);},1000);
+  }
+  function releaseResultPointer(event) {
+    const held=resultPointer;if(!held||event.pointerId!==held.id)return;
+    resultPointer=null;
+    if(!liveResultDisplay(held.display))return;
+    // Keep the old result surface through the native release/click sequence.
+    // A held gesture cannot cross the timeout and land on a new answer button.
+    clearTimeout(resultTimer);
+    resultTimer=setTimeout(()=>{resultTimer=undefined;if(liveResultDisplay(held.display))nextQuestion(held.display);},Math.max(80,held.display.deadline-performance.now()));
+  }
+  function advanceByTap(event) {
+    event.preventDefault();event.stopPropagation();
+    if(!liveResultDisplay(resultDisplay))return;
+    const tap=event.detail>0?{at:performance.now(),x:event.clientX,y:event.clientY}:null;
+    if(nextQuestion(resultDisplay)&&tap)lastAdvanceTap=tap;
+  }
+  function repeatsAdvanceTap(event) {
+    return event.detail>0&&lastAdvanceTap&&performance.now()-lastAdvanceTap.at<300&&
+      Math.hypot(event.clientX-lastAdvanceTap.x,event.clientY-lastAdvanceTap.y)<24;
   }
   function prepareSound() {
     try {
@@ -97,7 +133,7 @@
       } catch { /* Sound is optional when the browser cannot create audio. */ }
     },()=>{});
   }
-  document.addEventListener('visibilitychange',()=>{if(document.hidden){hideRewardVisual();if(soundContext?.state==='running'){try{void soundContext.suspend().catch(()=>{});}catch{}}}});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){pauseResultDisplay();if(soundContext?.state==='running'){try{void soundContext.suspend().catch(()=>{});}catch{}}}else if(confirmedResult())beginResultDisplay();});
   function setError(id,message='') {const node=$(id);node.textContent=message;node.hidden=!message;}
   function toast(message) {clearTimeout(toastTimer);$('toast').textContent=message;$('toast').hidden=false;toastTimer=setTimeout(()=>{$('toast').hidden=true;},3500);}
   function show(view,{scroll=true}={}) {
@@ -301,7 +337,7 @@
         if(!currentSetup())return;
         created={recorded:false,id:uuid(),total:questions.length,answeredCount:0,correctCount:0,quizPoints:0,question:questions[0],questions};
       }
-      quiz={...created,settings,pending:false,pendingAnswer:null,feedback:null,localFeedback:null,finished:false,sessionEpoch:epoch};startRetry=null;
+      quiz={...created,settings,pending:false,pendingAnswer:null,feedback:null,localFeedback:null,finished:false,sessionEpoch:epoch};startRetry=null;lastAdvanceTap=null;
       show('quiz');renderQuestion();
     } catch(error) {
       if(!currentSetup())return;
@@ -317,13 +353,14 @@
     $('questionNumber').textContent='No. '+question.number;
     $('questionInstruction').textContent=quiz.settings.direction==='english'?'英語を選んでください':'訳を選んでください';
     $('questionPrompt').textContent=question.prompt;$('questionPrompt').closest('.question-card').classList.toggle('english-prompt',quiz.settings.direction==='japanese');
-    question.choices.forEach((choice,index)=>{const button=element('button','choice-button');button.type='button';button.dataset.choiceId=choice.id;button.setAttribute('aria-pressed','false');button.append(element('span','choice-letter',String.fromCharCode(65+index)),element('span','choice-text',choice.text));button.addEventListener('click',()=>selectChoice(choice.id));fragment.append(button);});
-    $('questionChoices').replaceChildren(fragment);$('answerFeedback').hidden=true;$('quizNext').hidden=true;$('quizNext').disabled=false;$('answerRetry').hidden=true;setError('quizError');
+    question.choices.forEach((choice,index)=>{const button=element('button','choice-button');button.type='button';button.dataset.choiceId=choice.id;button.setAttribute('aria-pressed','false');button.append(element('span','choice-letter',String.fromCharCode(65+index)),element('span','choice-text',choice.text));button.addEventListener('click',event=>selectChoice(choice.id,event));fragment.append(button);});
+    $('questionChoices').replaceChildren(fragment);$('answerFeedback').hidden=true;$('answerRetry').hidden=true;setError('quizError');
     quiz.feedback=null;quiz.localFeedback=null;quiz.pendingAnswer=null;quiz.pendingGuestResult=null;quiz.soundPlayed=false;quiz.soundReady=null;clearRewardCelebration();
     requestAnimationFrame(()=>{if(activeView==='quiz')$('questionPrompt').focus({preventScroll:true});});
   }
-  function selectChoice(choiceId){
+  function selectChoice(choiceId,event){
     if(!quiz||quiz.pending||quiz.pendingAnswer||quiz.feedback||quiz.sessionEpoch!==sessionEpoch)return;
+    if(event?.detail>1||(event&&repeatsAdvanceTap(event)))return;
     if(!quiz.question.choices.some(choice=>choice.id===choiceId))return;
     for(const button of $('questionChoices').querySelectorAll('button')){const selected=button.dataset.choiceId===choiceId;button.classList.toggle('selected',selected);button.setAttribute('aria-pressed',String(selected));}
     quiz.soundReady=prepareSound();void answer(choiceId);
@@ -348,12 +385,11 @@
     if(!result.finished)questionShape(result.nextQuestion);
     quiz.feedback=result;quiz.answeredCount=result.answeredCount;quiz.correctCount=result.correctCount;quiz.quizPoints=result.quizPoints;quiz.finished=result.finished;
     renderAnswerFeedback(result);feedbackSound(quiz,result.correct);
-    if(result.awardPoints)celebrateReward(quiz,result.awardPoints);else clearRewardCelebration();
     $('quizPoints').textContent=yen(quiz.quizPoints);
     if(quiz.recorded){sessionTicket++;lifetimePoints=Math.max(lifetimePoints,result.totalPoints);renderIdentity();}
     $('quizCorrect').textContent=quiz.correctCount+'問 正解';$('quizProgress').value=quiz.answeredCount;
     $('quizMode').textContent=quiz.recorded?'ランキングに記録':'ゲスト';
-    $('quizNext').replaceChildren(document.createTextNode(result.finished?'結果を見る':'次の問題'));$('quizNext').hidden=false;$('quizNext').disabled=false;$('answerRetry').hidden=true;
+    $('answerRetry').hidden=true;beginResultDisplay();
     setError('quizError');
   }
   async function answer(choiceId,{retry=false}={}) {
@@ -366,7 +402,7 @@
     for(const button of $('questionChoices').querySelectorAll('button')){button.disabled=true;button.classList.toggle('selected',button.dataset.choiceId===choiceId);}
     if(current.recorded){
       current.localFeedback=materialFeedback(current,choiceId);
-      if(current.localFeedback){renderAnswerFeedback(current.localFeedback);feedbackSound(current,current.localFeedback.correct);$('quizNext').hidden=false;$('quizNext').disabled=true;$('quizNext').textContent='記録中…';}
+      if(current.localFeedback){renderAnswerFeedback(current.localFeedback);feedbackSound(current,current.localFeedback.correct);}
       $('quizMode').textContent='記録中…';
     }
     try {
@@ -384,14 +420,16 @@
       if(quiz!==current||current.sessionEpoch!==sessionEpoch)return;
       clearRewardCelebration();
       if(error.status===401){member=null;lifetimeCorrect=0;lifetimePoints=0;sessionKnown=true;sessionEpoch++;renderIdentity();}
-      $('quizMode').textContent=current.recorded?'記録未確認':'ゲスト';$('quizNext').hidden=true;
+      $('quizMode').textContent=current.recorded?'記録未確認':'ゲスト';
       setError('quizError',error.message+' 回答は保持しています。');$('answerRetry').hidden=error.status===401;
     } finally {current.pending=false;if(quiz===current)$('answerRetry').disabled=false;}
   }
-  function nextQuestion() {
-    if(!quiz?.feedback||quiz.pending||quiz.sessionEpoch!==sessionEpoch)return;
-    if(quiz.finished){showResult();return;}
+  function nextQuestion(display=resultDisplay) {
+    if(!liveResultDisplay(display)||quiz.pending)return false;
+    cancelResultAdvance();hideRewardVisual();
+    if(quiz.finished){showResult();return true;}
     quiz.question=quiz.feedback.nextQuestion;renderQuestion();window.scrollTo({top:0,behavior:'instant'});
+    return true;
   }
   function showResult() {
     if(!quiz)return;
@@ -400,7 +438,7 @@
     if(quiz.recorded)void refreshSession({notify:false});
   }
   function openQuit() {
-    clearRewardCelebration();
+    pauseResultDisplay();
     if(!quiz||quiz.finished){home();return;}
     $('quitDescription').textContent=quiz.recorded?(quiz.pendingAnswer&&!quiz.feedback?'回答の記録を確認できていません。':'回答済みの得点は記録されています。'):'ゲスト練習の途中経過は保存されません。';$('quitDialog').showModal();
   }
@@ -419,7 +457,7 @@
     finally {if(!preview&&ticket===rankingTickets[target])$('rankingRefresh').disabled=false;}
   }
   function setPinVisible(visible) {$('accountPin').type=visible?'text':'password';$('pinVisibility').textContent=visible?'隠す':'表示';$('pinVisibility').setAttribute('aria-pressed',String(visible));$('pinVisibility').setAttribute('aria-label',visible?'PINを隠す':'PINを表示');}
-  function openSettings() {setError('settingsError');$('settingsStatus').textContent='';renderIdentity();$('settingsDialog').showModal();}
+  function openSettings() {pauseResultDisplay();setError('settingsError');$('settingsStatus').textContent='';renderIdentity();$('settingsDialog').showModal();}
   async function login(event) {
     event.preventDefault();if(loginPending||logoutPending)return;setError('settingsError');$('settingsStatus').textContent='';
     const attendanceNumber=Number($('attendanceNumber').value),accountPin=$('accountPin').value;
@@ -450,13 +488,20 @@
   $('memoryPage').addEventListener('change',()=>{memoryPage=Number($('memoryPage').value);renderMemory();window.scrollTo({top:0,behavior:'instant'});});
   $('meaningsToggle').addEventListener('click',()=>{meaningsHidden=!meaningsHidden;renderMemory();});
   $('memorySheet').addEventListener('click',()=>{if(window.getSelection()?.toString())return;memoryNext({fromSheet:true});});
-  $('testForm').addEventListener('submit',startTest);$('quizNext').addEventListener('click',nextQuestion);$('answerRetry').addEventListener('click',()=>{if(quiz?.pendingAnswer)void answer(quiz.pendingAnswer.choiceId,{retry:true});});
-  $('quizQuit').addEventListener('click',openQuit);$('quitCancel').addEventListener('click',()=>$('quitDialog').close());$('quitConfirm').addEventListener('click',()=>{$('quitDialog').close();quiz=null;home();});
+  $('testForm').addEventListener('submit',startTest);$('answerRetry').addEventListener('click',()=>{if(quiz?.pendingAnswer)void answer(quiz.pendingAnswer.choiceId,{retry:true});});
+  $('quizAdvanceSurface').addEventListener('click',advanceByTap);
+  $('quizAdvanceSurface').addEventListener('pointerdown',event=>{if(event.button!==0||event.isPrimary===false||!liveResultDisplay(resultDisplay))return;clearTimeout(resultTimer);resultTimer=undefined;resultPointer={id:event.pointerId,display:resultDisplay};});
+  document.addEventListener('pointerup',releaseResultPointer,true);document.addEventListener('pointercancel',releaseResultPointer,true);
+  document.addEventListener('keydown',event=>{if(event.repeat||!['Enter',' '].includes(event.key)||!liveResultDisplay(resultDisplay)||['INPUT','SELECT','TEXTAREA'].includes(document.activeElement?.tagName)||document.activeElement?.closest('button'))return;event.preventDefault();nextQuestion(resultDisplay);});
+  $('quizQuit').addEventListener('click',openQuit);$('quitCancel').addEventListener('click',()=>$('quitDialog').close());$('quitConfirm').addEventListener('click',()=>{quiz=null;$('quitDialog').close();home();});
+  $('quitDialog').addEventListener('close',()=>{if(confirmedResult())beginResultDisplay();});
+  $('resultView').addEventListener('click',event=>{if(event.target.closest('button,a')&&repeatsAdvanceTap(event)){event.preventDefault();event.stopImmediatePropagation();}},true);
   $('testAgain').addEventListener('click',()=>{if(quiz)selectedBook=quiz.settings.book;selectBook(selectedBook);openSetup();});
   $('rankingOpen').addEventListener('click',openRanking);$('resultRanking').addEventListener('click',openRanking);$('rankingRefresh').addEventListener('click',()=>loadRanking());
   $('settingsOpen').addEventListener('click',openSettings);$('settingsClose').addEventListener('click',()=>$('settingsDialog').close());$('loginForm').addEventListener('submit',login);$('logoutButton').addEventListener('click',logout);$('pinVisibility').addEventListener('click',()=>setPinVisible($('accountPin').type==='password'));
-  $('sourcesOpen').addEventListener('click',event=>{event.preventDefault();$('sourcesDialog').showModal();});$('sourcesClose').addEventListener('click',()=>$('sourcesDialog').close());
-  $('settingsDialog').addEventListener('close',()=>{if(!loginPending){$('accountPin').value='';setPinVisible(false);}});
+  $('sourcesOpen').addEventListener('click',event=>{event.preventDefault();pauseResultDisplay();$('sourcesDialog').showModal();});$('sourcesClose').addEventListener('click',()=>$('sourcesDialog').close());
+  $('settingsDialog').addEventListener('close',()=>{if(!loginPending){$('accountPin').value='';setPinVisible(false);}if(confirmedResult())beginResultDisplay();});
+  $('sourcesDialog').addEventListener('close',()=>{if(confirmedResult())beginResultDisplay();});
   document.addEventListener('keydown',event=>{if(activeView!=='memorize'||document.querySelector('dialog[open]')||['INPUT','SELECT','TEXTAREA','BUTTON'].includes(document.activeElement?.tagName))return;if(event.key==='ArrowRight'){event.preventDefault();memoryNext({fromSheet:true});}if(event.key==='ArrowLeft'&&memoryPage>0){event.preventDefault();memoryPage--;renderMemory();window.scrollTo({top:0,behavior:'instant'});}});
   home();void refreshSession();
 })();
