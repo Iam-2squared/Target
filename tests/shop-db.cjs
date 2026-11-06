@@ -3,6 +3,7 @@
 const assert=require('node:assert/strict'),crypto=require('node:crypto'),fs=require('node:fs/promises'),path=require('node:path');
 const {Client,Pool}=require('pg');
 const {generateQuestions}=require('../server/questions.cjs');
+const catalog=['youth','sunglasses','night','love','goodnight','hang-in-there','can-you-hear','go','sleepy','screenshot','love-first','no-showoff','chuckle','red-face','whoa','secret','how-about-it'];
 const root=path.resolve(__dirname,'..'),source=new URL(process.env.DATABASE_URL||'');
 assert.equal(process.env.NODE_ENV,'test');assert(['localhost','127.0.0.1','[::1]'].includes(source.hostname));
 source.pathname='/target_wallet_test';
@@ -22,9 +23,9 @@ async function fingerprints(){return(await db.query(`SELECT md5(pg_get_functiond
   try{await admin.query('DROP DATABASE IF EXISTS target_wallet_test WITH (FORCE)');await admin.query('CREATE DATABASE target_wallet_test');}finally{await admin.end();}
   const files=(await fs.readdir(path.join(root,'supabase/migrations'))).filter(n=>/^\d+_.*\.sql$/.test(n)).sort(),newFile=files.find(n=>n.endsWith('_target_gacha_hundred_thousand.sql'));
   assert(newFile,'The generated100k price migration exists');
-  for(const filename of files.filter(n=>n!==newFile))await db.query(await fs.readFile(path.join(root,'supabase/migrations',filename),'utf8'));
+  for(const filename of files.filter(n=>n<newFile))await db.query(await fs.readFile(path.join(root,'supabase/migrations',filename),'utf8'));
   await db.query("INSERT INTO target_private.server_credentials(singleton,key_hash) VALUES(true,encode(sha256(convert_to($1,'UTF8')),'hex'))",[secret]);
-  await seed(a,500000);await seed(b,400000);await seed(c,100000);await seed(earner,99900);await seed(historical,250000);
+  await seed(a,500000);await seed(b,1800000);await seed(c,100000);await seed(earner,99900);await seed(historical,250000);
   const legacyRequest=uuid(),legacyDraw=await shop('draw',{...historical,requestId:legacyRequest});
   eq(legacyDraw.spent,10000);eq(legacyDraw.price,10000);
   const legacyRows=(await db.query('SELECT * FROM target_private.sticker_draws WHERE member_id=$1',[historical.memberId])).rows;
@@ -41,6 +42,7 @@ async function fingerprints(){return(await db.query(`SELECT md5(pg_get_functiond
     await blocker.query(await fs.readFile(path.join(root,'supabase/migrations',newFile),'utf8'));await blocker.query('COMMIT');oldFailure=await queued;
   }finally{await blocker.query('ROLLBACK');blocker.release();waiter.release();}
   eq(oldFailure?.code,'42501','An old in-flight10k draw cannot insert after100k activation');
+  for(const filename of files.filter(n=>n>newFile))await db.query(await fs.readFile(path.join(root,'supabase/migrations',filename),'utf8'));
   eq((await db.query('SELECT spent_points::int AS spent FROM target_private.profiles WHERE member_id=$1',[a.memberId])).rows[0].spent,0,'The rejected old body has no debit');
 
   eq(await fingerprints(),old,'Old quiz RPC and reward odds are unchanged');
@@ -49,43 +51,50 @@ async function fingerprints(){return(await db.query(`SELECT md5(pg_get_functiond
   eq((await db.query('SELECT count(*)::int AS n FROM target_private.sticker_draws')).rows[0].n,1,'No existing profile gets a free sticker');
   const oldReplay=await shop('draw',{...historical,requestId:legacyRequest});eq(oldReplay.cost,10000);eq(oldReplay.price,100000);eq(oldReplay.spent,10000);eq(oldReplay.balance,240000);
   const priorBalance=(await shop('wallet',a)).balance;
-  for(const expectedPrice of [undefined,10000]){const input={...a,requestId:uuid(),...(expectedPrice===undefined?{}:{expectedPrice})};eq((await shop('draw',input)).error.code,'PRICE_CHANGED');eq((await shop('wallet',a)).balance,priorBalance,'Old displayed prices never authorize100k');}
-  for(const expectedPrice of [null,'100000',0,99999])eq((await shop('draw',{...a,requestId:uuid(),expectedPrice})).error.code,'INVALID_REQUEST');
+  for(const expectedPrice of [undefined,10000]){const input={...a,requestId:uuid(),expectedCatalogVersion:2,...(expectedPrice===undefined?{}:{expectedPrice})};eq((await shop('draw',input)).error.code,'PRICE_CHANGED');eq((await shop('wallet',a)).balance,priorBalance,'Old displayed prices never authorize100k');}
+  for(const expectedPrice of [null,'100000',0,99999])eq((await shop('draw',{...a,requestId:uuid(),expectedPrice,expectedCatalogVersion:2})).error.code,'INVALID_REQUEST');
   const countsBefore=(await db.query('SELECT count(*)::int AS n FROM target_private.profiles')).rows[0].n;
   eq((await shop('wallet',null,'invalid-credential')).error.code,'RPC_FORBIDDEN');
   eq((await shop('draw',{memberId:uuid(),name:'不正',requestId:uuid()},'invalid-credential')).error.status,403);
   eq((await db.query('SELECT count(*)::int AS n FROM target_private.profiles')).rows[0].n,countsBefore,'Rejected credentials allocate no profiles');
   for(const body of [{...a,balance:100000},{...a,memberId:'bad'},{...a,name:null},{...a,stickerId:'youth'}])eq((await shop('wallet',body)).error.code,'INVALID_REQUEST');
-  const fresh=member('新規');eq(await shop('wallet',fresh),{balance:0,totalIncome:0,spent:0,price:100000,ownedStickers:[]});
-  eq((await shop('draw',{...earner,requestId:uuid(),expectedPrice:100000})).error.code,'INSUFFICIENT_BALANCE');
+  const fresh=member('新規');eq(await shop('wallet',fresh),{balance:0,totalIncome:0,spent:0,price:100000,catalogVersion:2,catalogSize:17,ownedStickers:[]});
+  eq((await shop('draw',{...earner,requestId:uuid(),expectedPrice:100000,expectedCatalogVersion:2})).error.code,'INSUFFICIENT_BALANCE');
   eq((await shop('wallet',earner)).spent,0,'Insufficient funds never debit');
-  const requestId=uuid(),same=await Promise.all([shop('draw',{...a,requestId,expectedPrice:100000}),shop('draw',{...a,requestId,expectedPrice:100000})]);
+  const requestId=uuid(),same=await Promise.all([shop('draw',{...a,requestId,expectedPrice:100000,expectedCatalogVersion:2}),shop('draw',{...a,requestId,expectedPrice:100000,expectedCatalogVersion:2})]);
   eq(same[0],same[1],'Concurrent retries preserve one result and one debit');
   eq(same[0].balance,400000);eq(same[0].totalIncome,500000);eq(same[0].spent,100000);eq(same[0].cost,100000);eq(same[0].ownedStickers.length,1);
   const rankingBefore=await rpc('ranking',{}),datesBefore=(await db.query('SELECT member_id,updated_at FROM target_private.profiles ORDER BY member_id')).rows;
-  const draws=await Promise.all(Array.from({length:5},()=>shop('draw',{...b,requestId:uuid(),expectedPrice:100000})));
-  eq(draws.filter(v=>!v.error).length,4);eq(draws.filter(v=>v.error?.code==='COLLECTION_COMPLETE').length,1);
-  const complete=await shop('wallet',b);eq(complete,{balance:0,totalIncome:400000,spent:400000,price:100000,ownedStickers:['youth','sunglasses','night','love']});
+  const draws=await Promise.all(Array.from({length:5},()=>shop('draw',{...b,requestId:uuid(),expectedPrice:100000,expectedCatalogVersion:2})));
+  eq(draws.filter(v=>!v.error).length,5);eq(new Set(draws.map(v=>v.stickerId)).size,5,'Concurrent draws use five distinct items from the expanded catalog');
+  for(let index=5;index<catalog.length;index++){
+    // Local synthetic fixture only: reset the member's draw bucket between
+    // batches to exercise all17 items without changing production rate limits.
+    if(index===8||index===16)await db.query('DELETE FROM target_private.rate_limits WHERE identifier=$1',['shop-draw:'+b.memberId]);
+    const next=await shop('draw',{...b,requestId:uuid(),expectedPrice:100000,expectedCatalogVersion:2});check(!next.error,'A remaining catalog item can be acquired');draws.push(next);
+  }
+  const complete=await shop('wallet',b);eq(complete,{balance:100000,totalIncome:1800000,spent:1700000,price:100000,catalogVersion:2,catalogSize:17,ownedStickers:catalog});
+  eq((await shop('draw',{...b,requestId:uuid(),expectedPrice:100000,expectedCatalogVersion:2})).error.code,'COLLECTION_COMPLETE');
   eq((await rpc('ranking',{})).ranking,rankingBefore.ranking,'Spending does not lower income or change ranking order');
   eq((await db.query('SELECT member_id,updated_at FROM target_private.profiles ORDER BY member_id')).rows,datesBefore,'Spending does not change ranking dates');
-  const races=await Promise.all([shop('draw',{...c,requestId:uuid(),expectedPrice:100000}),shop('draw',{...c,requestId:uuid(),expectedPrice:100000})]);
+  const races=await Promise.all([shop('draw',{...c,requestId:uuid(),expectedPrice:100000,expectedCatalogVersion:2}),shop('draw',{...c,requestId:uuid(),expectedPrice:100000,expectedCatalogVersion:2})]);
   eq(races.filter(v=>!v.error).length,1);eq(races.filter(v=>v.error?.code==='INSUFFICIENT_BALANCE').length,1);
   eq((await shop('wallet',c)).balance,0,'Concurrent clients cannot overspend');
   const questions=generateQuestions({book:'target1900',direction:'english',count:10,from:1,to:10,requestId:uuid()});
   const quiz=await rpc('start',{...earner,requestId:uuid(),book:'target1900',direction:'english',from:1,to:10,questions});check(!quiz.error,'Quiz still starts after wallet migration');
   const answerInput={...earner,quizId:quiz.quizId,questionId:questions[0].id,choiceId:questions[0].correctChoiceId,requestId:uuid()};
-  const competingRequest=uuid(),[answer,competingDraw]=await Promise.all([rpc('answer',answerInput),shop('draw',{...earner,requestId:competingRequest,expectedPrice:100000})]);
+  const competingRequest=uuid(),[answer,competingDraw]=await Promise.all([rpc('answer',answerInput),shop('draw',{...earner,requestId:competingRequest,expectedPrice:100000,expectedCatalogVersion:2})]);
   check(answer.correct&&[100,500,1000,10000,100000].includes(answer.awardPoints),'The authoritative answer RPC awards new income');
   const incomeAfter=99900+answer.awardPoints,walletAfter=await shop('wallet',earner);
   eq(walletAfter.totalIncome,incomeAfter);eq(walletAfter.balance+walletAfter.spent,incomeAfter);
-  if(competingDraw.error){eq(competingDraw.error.code,'INSUFFICIENT_BALANCE');const recovered=await shop('draw',{...earner,requestId:competingRequest,expectedPrice:100000});check(!recovered.error,'A failed insufficient attempt can succeed once income arrives');}
+  if(competingDraw.error){eq(competingDraw.error.code,'INSUFFICIENT_BALANCE');const recovered=await shop('draw',{...earner,requestId:competingRequest,expectedPrice:100000,expectedCatalogVersion:2});check(!recovered.error,'A failed insufficient attempt can succeed once income arrives');}
   eq((await shop('wallet',earner)).spent,100000,'Concurrent award and draw debit exactly once');eq(await rpc('answer',answerInput),answer,'Old answer replay remains unchanged after spending');
-  const first=draws.find(v=>!v.error);eq((await shop('draw',{...b,requestId:first.requestId,expectedPrice:100000})).stickerId,first.stickerId,'Replay works even after the collection becomes complete');
-  const mixed=await shop('draw',{...historical,requestId:uuid(),expectedPrice:100000});eq(mixed.spent,110000);eq(mixed.cost,100000);
+  const first=draws.find(v=>!v.error);eq((await shop('draw',{...b,requestId:first.requestId,expectedPrice:100000,expectedCatalogVersion:2})).stickerId,first.stickerId,'Replay works even after the collection becomes complete');
+  const mixed=await shop('draw',{...historical,requestId:uuid(),expectedPrice:100000,expectedCatalogVersion:2});eq(mixed.spent,110000);eq(mixed.cost,100000);
   const retained=await shop('draw',{...historical,requestId:legacyRequest,expectedPrice:10000});eq(retained.cost,10000);eq(retained.spent,110000);eq(retained.balance,140000);
   const quota=(await db.query('SELECT logical_bytes FROM target_private.system_state WHERE singleton')).rows[0].logical_bytes;
   await db.query('UPDATE target_private.system_state SET logical_bytes=104857600 WHERE singleton');
-  eq((await shop('draw',{...a,requestId:uuid(),expectedPrice:100000})).error.code,'CAPACITY_LIMIT');eq((await shop('wallet',a)).spent,100000,'Capacity failure keeps funds intact');
+  eq((await shop('draw',{...a,requestId:uuid(),expectedPrice:100000,expectedCatalogVersion:2})).error.code,'CAPACITY_LIMIT');eq((await shop('wallet',a)).spent,100000,'Capacity failure keeps funds intact');
   await db.query('UPDATE target_private.system_state SET logical_bytes=$1 WHERE singleton',[quota]);
   await assert.rejects(db.query('UPDATE target_private.profiles SET spent_points=total_points+10000 WHERE member_id=$1',[a.memberId]),e=>e.code==='23514');checks++;
   const access=(await db.query(`SELECT c.relrowsecurity,has_table_privilege('anon',c.oid,'SELECT') AS anon_read,
