@@ -222,8 +222,10 @@ dialog::backdrop { background: #1c273a55; }
 .pin-field .icon-button { min-width: 56px; }
 .identity-row { margin-bottom: 20px; }
 .identity-row strong { color: var(--ink); font-size: 18px; overflow-wrap: anywhere; }
-.settings-total { display: flex; justify-content: space-between; gap: 12px; padding: 16px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12px; margin-bottom: 16px; }
-.settings-total strong { color: var(--ink); font-size: 15px; }
+.settings-wallet { display: grid; gap: 12px; padding: 16px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin: 0 0 16px; font-size: 12px; }
+.settings-wallet>div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; min-width: 0; }
+.settings-wallet dt { color: var(--muted); }
+.settings-wallet dd { margin: 0; color: var(--ink); font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; text-align: right; }
 #settingsError, #settingsStatus:not(:empty) { margin-top: 12px; }
 .source-details { display: grid; gap: 20px; font-size: 12px; line-height: 1.8; }
 .quit-body { padding: 24px; }

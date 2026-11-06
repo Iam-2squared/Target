@@ -52,7 +52,7 @@
   letter-spacing: -.03em;
 }
 .target-jackpot-bundle::after {
-  content: '¥';
+  content: '轟';
   position: absolute;
   top: -4px;
   bottom: -10px;

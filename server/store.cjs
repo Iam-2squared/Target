@@ -17,7 +17,7 @@ function unpack(result) {
   return result;
 }
 
-async function rpc(action, input = {}) {
+async function runRpc(functionName, action, input = {}) {
   const config = getConfig();
   try {
     if (config.databaseUrl) {
@@ -27,13 +27,13 @@ async function rpc(action, input = {}) {
           statement_timeout: 15000, idleTimeoutMillis: 10000, application_name: 'target-test'});
         pool.on('error', () => {});
       }
-      const result = await pool.query('SELECT public.target_rpc($1,$2,$3::jsonb) AS result', [config.rpcSecret, action, JSON.stringify(input)]);
+      const result = await pool.query('SELECT public.'+functionName+'($1,$2,$3::jsonb) AS result', [config.rpcSecret, action, JSON.stringify(input)]);
       return unpack(result.rows[0]?.result);
     }
     const headers = {'Content-Type': 'application/json', apikey: config.publishableKey};
     // New sb_publishable_* keys belong only in apikey, never a JWT bearer header.
     if (config.publishableKey.split('.').length === 3) headers.Authorization = 'Bearer ' + config.publishableKey;
-    const response = await fetch(config.supabaseOrigin + '/rest/v1/rpc/target_rpc', {
+    const response = await fetch(config.supabaseOrigin + '/rest/v1/rpc/' + functionName, {
       method: 'POST', headers, body: JSON.stringify({p_secret: config.rpcSecret, p_action: action, p_input: input}),
       signal: AbortSignal.timeout(12000), redirect: 'error'
     });
@@ -56,4 +56,6 @@ async function closeStore() {
   if (previous) await previous.end();
 }
 
-module.exports = {rpc, closeStore};
+const rpc=(action,input={})=>runRpc('target_rpc',action,input);
+const shopRpc=(action,input={})=>runRpc('target_shop_rpc',action,input);
+module.exports = {rpc, shopRpc, closeStore};

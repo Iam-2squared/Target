@@ -3,6 +3,7 @@ const {HttpError} = require('./errors.cjs');
 const {getConfig, checkOrigin} = require('./config.cjs');
 const store = require('./store.cjs');
 const identity = require('./identity.cjs');
+const shop = require('./shop.cjs');
 const {validateQuizInput, generateQuestions} = require('./questions.cjs');
 
 const HEADERS = {
@@ -61,19 +62,27 @@ async function handler(req, res) {
     const route = url.pathname === '/api/index' ? url.searchParams.get('route') : null;
     const pathname = route ? '/api/' + route.replace(/^\/+/, '') : url.pathname;
     if (!['GET', 'POST'].includes(req.method)) throw new HttpError(405, 'この操作には対応していません。', 'METHOD');
+    const shopAction={'/api/integrations/kgs/wallet':'wallet','/api/integrations/kgs/gacha':'draw'}[pathname];
+    if(shopAction&&req.method==='POST'){
+      // Only the KGS service may assert an already authenticated class member.
+      // Authorize before parsing body, rate allocation or the Origin bypass.
+      shop.authorize(req,config);
+      return send(res,200,await shop.perform(shopAction,await readJson(req)));
+    }
     if (req.method === 'POST') checkOrigin(req, config);
 
     if (pathname === '/api/session' && req.method === 'GET') {
       const token = identity.sessionToken(req, config);
-      if (!token) return send(res, 200, {member: null, correctCount: 0, totalPoints: 0});
+      if (!token) return send(res, 200, {member: null, correctCount: 0, totalPoints: 0,...shop.guestWallet()});
       let member;
       try { member = await identity.requireMember(req, res, config); }
       catch (error) {
-        if (error instanceof HttpError && error.status === 401) return send(res, 200, {member: null, correctCount: 0, totalPoints: 0});
+        if (error instanceof HttpError && error.status === 401) return send(res, 200, {member: null, correctCount: 0, totalPoints: 0,...shop.guestWallet()});
         throw error;
       }
       const profile = await store.rpc('profile', {memberId: member.id, name: member.name});
-      return send(res, 200, {member: {name: member.name}, correctCount: profile.correctCount, totalPoints: profile.totalPoints});
+      const wallet=await shop.wallet(member);
+      return send(res, 200, {member: {name: member.name}, correctCount: profile.correctCount, totalPoints: wallet.totalIncome,...wallet});
     }
     if (pathname === '/api/ranking' && req.method === 'GET') return send(res, 200, await store.rpc('ranking'));
     if (pathname === '/api/login' && req.method === 'POST') {
@@ -89,8 +98,9 @@ async function handler(req, res) {
       const result = await identity.callIdentity('login', {attendanceNumber: number, accountPin: body.accountPin, attemptId}, config);
       body.accountPin = '';
       const profile = await store.rpc('profile', {memberId: result.member.id, name: result.member.name});
+      const wallet=await shop.wallet(result.member);
       identity.setSession(res, result.token, result.expiresAt, config);
-      return send(res, 200, {member: {name: result.member.name}, correctCount: profile.correctCount, totalPoints: profile.totalPoints});
+      return send(res, 200, {member: {name: result.member.name}, correctCount: profile.correctCount, totalPoints: wallet.totalIncome,...wallet});
     }
     if (pathname === '/api/logout' && req.method === 'POST') {
       const body = await readJson(req);

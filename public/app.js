@@ -8,7 +8,7 @@
   const views = ['home','memorize','setup','quiz','result','ranking'];
   const datasets = new Map(), datasetPromises = new Map();
   let selectedBook='target1900', activeView='home', member=null, lifetimeCorrect=0, lifetimePoints=0;
-  let sessionKnown=false, sessionEpoch=0, sessionTicket=0;
+  let sessionKnown=false, sessionEpoch=0, sessionTicket=0, walletBalance=0, walletKnown=false;
   const rankingTickets={homeRanking:0,ranking:0};
   const sectionRanges={target1900:{from:1,to:1},target1000:{from:1,to:1}};
   let memoryPage=0, memoryBook='target1900', meaningsHidden=false, memoryTicket=0;
@@ -38,7 +38,7 @@
     return result;
   }
   const validPoints=value=>Number.isSafeInteger(value)&&value>=0;
-  const yen=value=>value.toLocaleString('ja-JP')+'円';
+  const gou=value=>value.toLocaleString('ja-JP')+'轟';
   function guestAward() {
     const limit=0x100000000-(0x100000000%100);let value;
     do {value=crypto.getRandomValues(new Uint32Array(1))[0];} while(value>=limit);
@@ -72,12 +72,12 @@
     const restored=current.rewardCelebratedQuestionId===current.question.id;
     current.rewardCelebratedQuestionId=current.question.id;
     const amountNode=$('feedbackReward'),overlay=$('rewardCelebration');
-    amountNode.replaceChildren(element('span','reward-sign','+'),element('span','reward-number',amount.toLocaleString('ja-JP')),element('span','reward-unit','円'));
+    amountNode.replaceChildren(element('span','reward-sign','+'),element('span','reward-number',amount.toLocaleString('ja-JP')),element('span','reward-unit','轟'));
     overlay.dataset.tier=amount===10000?'jackpot':amount===1000?'bonus':'standard';
     overlay.style.setProperty('--reward-duration','1000ms');overlay.classList.toggle('reward-restored',restored);
     amountNode.hidden=false;overlay.hidden=false;
     if(amount===10000)window.TargetJackpotEffects?.show({restored});else window.TargetJackpotEffects?.hide();
-    $('rewardAnnouncement').textContent='+'+yen(amount);
+    $('rewardAnnouncement').textContent='+'+gou(amount);
   }
   function beginResultDisplay(current=quiz) {
     cancelResultAdvance();
@@ -210,28 +210,29 @@
   }
   function parseIdentity(data) {
     if(data.member!==null&&(!data.member||typeof data.member!=='object'||typeof data.member.name!=='string'||data.member.name.length>20))throw appError('アカウントの情報を確認できませんでした。');
-    if(!Number.isSafeInteger(data.correctCount)||data.correctCount<0||!validPoints(data.totalPoints))throw appError('得点を確認できませんでした。');
-    return {member:data.member===null?null:{name:data.member.name},correctCount:data.correctCount,totalPoints:data.totalPoints};
+    if(!Number.isSafeInteger(data.correctCount)||data.correctCount<0||!validPoints(data.totalPoints)||!validPoints(data.balance)||!validPoints(data.totalIncome)||!validPoints(data.spent)||data.totalIncome!==data.totalPoints||data.balance+data.spent!==data.totalIncome)throw appError('保有金額を確認できませんでした。');
+    return {member:data.member===null?null:{name:data.member.name},correctCount:data.correctCount,totalPoints:data.totalPoints,balance:data.balance};
   }
   function renderIdentity() {
     $('accountBadge').textContent=member?(member.name.trim()||'KGSアカウント'):(sessionKnown?'ゲスト':'接続未確認');
-    $('homeScore').textContent=member?yen(lifetimePoints):'';
+    $('homeScore').textContent=member?gou(lifetimePoints):'';
     $('loggedInSettings').hidden=!member;$('loginForm').hidden=!!member;
     $('identityName').textContent=member?.name||'';$('identityInitial').textContent=member?.name?.trim()?.slice(0,1)||'K';
-    $('settingsScore').textContent=yen(lifetimePoints);$('soundSetting').value=soundEnabled?'on':'off';
+    $('settingsBalance').textContent=walletKnown?gou(walletBalance):'—';$('settingsScore').textContent=walletKnown?gou(lifetimePoints):'—';$('soundSetting').value=soundEnabled?'on':'off';
     $('testMode').textContent=member?'ランキングに記録':'ゲスト（記録なし）';
     $('testStart').textContent=starting?'準備中…':'開始';
   }
-  async function refreshSession({notify=true}={}) {
+  async function refreshSession({notify=true,walletFeedback=false}={}) {
     const ticket=++sessionTicket,epoch=sessionEpoch;
     try {
       const identity=parseIdentity(await api('/session'));
       if(ticket!==sessionTicket||epoch!==sessionEpoch)return;
-      member=identity.member;lifetimeCorrect=identity.correctCount;lifetimePoints=identity.totalPoints;sessionKnown=true;
+      member=identity.member;lifetimeCorrect=identity.correctCount;lifetimePoints=identity.totalPoints;walletBalance=identity.balance;walletKnown=!!member;sessionKnown=true;
       $('connectionNotice').hidden=true;renderIdentity();
     } catch(error) {
       if(ticket!==sessionTicket||epoch!==sessionEpoch)return;
-      if(error.status===401){member=null;lifetimeCorrect=0;lifetimePoints=0;sessionKnown=true;}
+      if(error.status===401){member=null;lifetimeCorrect=0;lifetimePoints=0;walletBalance=0;walletKnown=false;sessionKnown=true;}
+      if(walletFeedback){walletKnown=false;if($('settingsDialog').open)setError('settingsError','保有金額を確認できませんでした。もう一度個人設定を開いてください。');}
       if(notify){$('connectionNotice').textContent='共有機能に接続できません。暗記とゲスト練習は利用できます。';$('connectionNotice').hidden=false;}
       renderIdentity();
     }
@@ -388,13 +389,13 @@
       show('quiz');renderQuestion();
     } catch(error) {
       if(!currentSetup())return;
-      if(error.status===401){member=null;lifetimeCorrect=0;lifetimePoints=0;sessionKnown=true;sessionEpoch++;renderIdentity();}
+      if(error.status===401){member=null;lifetimeCorrect=0;lifetimePoints=0;walletBalance=0;walletKnown=false;sessionKnown=true;sessionEpoch++;renderIdentity();}
       setError('setupError',error.message);
     } finally {starting=false;$('testStart').disabled=false;renderIdentity();}
   }
   function renderQuestion() {
     if(!quiz)return;const question=questionShape(quiz.question),fragment=document.createDocumentFragment();
-    $('questionPosition').textContent=(quiz.answeredCount+1)+' / '+quiz.total+'問';$('quizCorrect').textContent=quiz.correctCount+'問 正解';$('quizPoints').textContent=yen(quiz.quizPoints);
+    $('questionPosition').textContent=(quiz.answeredCount+1)+' / '+quiz.total+'問';$('quizCorrect').textContent=quiz.correctCount+'問 正解';$('quizPoints').textContent=gou(quiz.quizPoints);
     $('quizProgress').max=quiz.total;$('quizProgress').value=quiz.answeredCount;
     $('quizMode').textContent=quiz.recorded?'ランキングに記録':'ゲスト';
     $('questionNumber').textContent='No. '+question.number;
@@ -434,8 +435,8 @@
     if(!result.finished)questionShape(result.nextQuestion);
     quiz.feedback=result;quiz.answeredCount=result.answeredCount;quiz.correctCount=result.correctCount;quiz.quizPoints=result.quizPoints;quiz.finished=result.finished;
     renderAnswerFeedback(result);feedbackSound(quiz,result.correct);
-    $('quizPoints').textContent=yen(quiz.quizPoints);
-    if(quiz.recorded){sessionTicket++;lifetimePoints=Math.max(lifetimePoints,result.totalPoints);renderIdentity();}
+    $('quizPoints').textContent=gou(quiz.quizPoints);
+    if(quiz.recorded){sessionTicket++;lifetimePoints=Math.max(lifetimePoints,result.totalPoints);walletKnown=false;renderIdentity();if($('settingsDialog').open)void refreshSession({notify:false,walletFeedback:true});}
     $('quizCorrect').textContent=quiz.correctCount+'問 正解';$('quizProgress').value=quiz.answeredCount;
     $('quizMode').textContent=quiz.recorded?'ランキングに記録':'ゲスト';
     $('answerRetry').hidden=true;beginResultDisplay();
@@ -467,7 +468,7 @@
     } catch(error) {
       if(quiz!==current||current.sessionEpoch!==sessionEpoch)return;
       clearRewardCelebration();
-      if(error.status===401){member=null;lifetimeCorrect=0;lifetimePoints=0;sessionKnown=true;sessionEpoch++;renderIdentity();}
+      if(error.status===401){member=null;lifetimeCorrect=0;lifetimePoints=0;walletBalance=0;walletKnown=false;sessionKnown=true;sessionEpoch++;renderIdentity();}
       $('quizMode').textContent=current.recorded?'記録未確認':'ゲスト';
       setError('quizError',error.message+' 回答は保持しています。');$('answerRetry').hidden=error.status===401;
     } finally {current.pending=false;if(quiz===current)$('answerRetry').disabled=false;}
@@ -481,7 +482,7 @@
   }
   function showResult() {
     if(!quiz)return;
-    $('resultBook').textContent=books[quiz.settings.book].title;$('resultCorrect').textContent=String(quiz.correctCount);$('resultTotal').textContent='/ '+quiz.total+'問';$('resultPoints').textContent=yen(quiz.quizPoints);
+    $('resultBook').textContent=books[quiz.settings.book].title;$('resultCorrect').textContent=String(quiz.correctCount);$('resultTotal').textContent='/ '+quiz.total+'問';$('resultPoints').textContent=gou(quiz.quizPoints);
     $('resultMode').textContent=quiz.recorded?'ランキングに記録':'ゲスト（記録なし）';show('result');
     if(quiz.recorded)void refreshSession({notify:false});
   }
@@ -499,13 +500,13 @@
       const data=await api('/ranking');if(ticket!==rankingTickets[target])return;
       if(!Array.isArray(data.ranking)||data.ranking.length>1000||data.ranking.some(row=>!row||!Number.isSafeInteger(row.rank)||row.rank<1||typeof row.name!=='string'||row.name.length>20||!validPoints(row.totalPoints)))throw appError('ランキングの内容を確認できませんでした。');
       const fragment=document.createDocumentFragment();
-      for(const row of (preview?data.ranking.slice(0,10):data.ranking)){const item=element('li','ranking-row'),score=element('span','ranking-score',row.totalPoints.toLocaleString('ja-JP'));score.append(element('small','', '円'));item.append(element('span','ranking-place',row.rank),element('span','ranking-name',row.name.trim()||'名前未設定'),score);fragment.append(item);}
+      for(const row of (preview?data.ranking.slice(0,10):data.ranking)){const item=element('li','ranking-row'),score=element('span','ranking-score',row.totalPoints.toLocaleString('ja-JP'));score.append(element('small','', '轟'));item.append(element('span','ranking-place',row.rank),element('span','ranking-name',row.name.trim()||'名前未設定'),score);fragment.append(item);}
       $(target+'List').replaceChildren(fragment);$(target+'Status').textContent=data.ranking.length?'':'まだテストの記録はありません。';
     } catch(error) {if(ticket===rankingTickets[target]){$(target+'Status').textContent='';setError(target+'Error',error.message);}}
     finally {if(!preview&&ticket===rankingTickets[target])$('rankingRefresh').disabled=false;}
   }
   function setPinVisible(visible) {$('accountPin').type=visible?'text':'password';$('pinVisibility').textContent=visible?'隠す':'表示';$('pinVisibility').setAttribute('aria-pressed',String(visible));$('pinVisibility').setAttribute('aria-label',visible?'PINを隠す':'PINを表示');}
-  function openSettings() {pauseResultDisplay();setError('settingsError');$('settingsStatus').textContent='';renderIdentity();$('settingsDialog').showModal();}
+  function openSettings() {pauseResultDisplay();setError('settingsError');$('settingsStatus').textContent='';walletKnown=false;renderIdentity();$('settingsDialog').showModal();void refreshSession({notify:false,walletFeedback:true});}
   async function login(event) {
     event.preventDefault();if(loginPending||logoutPending)return;setError('settingsError');$('settingsStatus').textContent='';
     const attendanceNumber=Number($('attendanceNumber').value),accountPin=$('accountPin').value;
@@ -513,14 +514,14 @@
     loginPending=true;for(const id of ['attendanceNumber','accountPin','pinVisibility','loginButton'])$(id).disabled=true;$('loginButton').textContent='ログイン中…';
     try {
       const identity=parseIdentity(await api('/login',{attendanceNumber,accountPin}));if(!identity.member)throw appError('ログイン情報を確認できませんでした。');
-      clearRewardCelebration();sessionEpoch++;sessionTicket++;member=identity.member;lifetimeCorrect=identity.correctCount;lifetimePoints=identity.totalPoints;sessionKnown=true;$('accountPin').value='';$('attendanceNumber').value='';setPinVisible(false);$('connectionNotice').hidden=true;renderIdentity();$('settingsStatus').textContent='ログインしました。';
+      clearRewardCelebration();sessionEpoch++;sessionTicket++;member=identity.member;lifetimeCorrect=identity.correctCount;lifetimePoints=identity.totalPoints;walletBalance=identity.balance;walletKnown=!!member;sessionKnown=true;$('accountPin').value='';$('attendanceNumber').value='';setPinVisible(false);$('connectionNotice').hidden=true;renderIdentity();$('settingsStatus').textContent='ログインしました。';
     } catch(error){setError('settingsError',error.message);}
     finally{loginPending=false;for(const id of ['attendanceNumber','accountPin','pinVisibility','loginButton'])$(id).disabled=false;$('loginButton').textContent='ログイン';if(!$('settingsDialog').open){$('accountPin').value='';setPinVisible(false);}}
   }
   async function logout() {
     if(loginPending||logoutPending)return;logoutPending=true;$('logoutButton').disabled=true;setError('settingsError');$('settingsStatus').textContent='';
     try {
-      await api('/logout',{});clearRewardCelebration();sessionEpoch++;sessionTicket++;member=null;lifetimeCorrect=0;lifetimePoints=0;sessionKnown=true;$('accountPin').value='';$('attendanceNumber').value='';setPinVisible(false);renderIdentity();$('settingsStatus').textContent='ログアウトしました。';
+      await api('/logout',{});clearRewardCelebration();sessionEpoch++;sessionTicket++;member=null;lifetimeCorrect=0;lifetimePoints=0;walletBalance=0;walletKnown=false;sessionKnown=true;$('accountPin').value='';$('attendanceNumber').value='';setPinVisible(false);renderIdentity();$('settingsStatus').textContent='ログアウトしました。';
       if(activeView==='quiz'&&quiz?.recorded){quiz=null;home();}
     } catch(error){setError('settingsError',error.message);}
     finally{logoutPending=false;$('logoutButton').disabled=false;}

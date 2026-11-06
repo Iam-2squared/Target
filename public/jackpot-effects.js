@@ -28,7 +28,7 @@
     for (let index = 0; index < 20; index++) {
       const bundle = document.createElement('span');
       bundle.className = 'target-jackpot-bundle';
-      bundle.textContent = '¥';
+      bundle.textContent = '轟';
       // Stagger four waves over five lanes. Fixed cosmetic values keep the
       // animation independent from the server's reward draw and its retries.
       const wave = Math.floor(index / 5);
