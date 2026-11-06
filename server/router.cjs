@@ -65,15 +65,15 @@ async function handler(req, res) {
 
     if (pathname === '/api/session' && req.method === 'GET') {
       const token = identity.sessionToken(req, config);
-      if (!token) return send(res, 200, {member: null, correctCount: 0});
+      if (!token) return send(res, 200, {member: null, correctCount: 0, totalPoints: 0});
       let member;
       try { member = await identity.requireMember(req, res, config); }
       catch (error) {
-        if (error instanceof HttpError && error.status === 401) return send(res, 200, {member: null, correctCount: 0});
+        if (error instanceof HttpError && error.status === 401) return send(res, 200, {member: null, correctCount: 0, totalPoints: 0});
         throw error;
       }
       const profile = await store.rpc('profile', {memberId: member.id, name: member.name});
-      return send(res, 200, {member: {name: member.name}, correctCount: profile.correctCount});
+      return send(res, 200, {member: {name: member.name}, correctCount: profile.correctCount, totalPoints: profile.totalPoints});
     }
     if (pathname === '/api/ranking' && req.method === 'GET') return send(res, 200, await store.rpc('ranking'));
     if (pathname === '/api/login' && req.method === 'POST') {
@@ -90,7 +90,7 @@ async function handler(req, res) {
       body.accountPin = '';
       const profile = await store.rpc('profile', {memberId: result.member.id, name: result.member.name});
       identity.setSession(res, result.token, result.expiresAt, config);
-      return send(res, 200, {member: {name: result.member.name}, correctCount: profile.correctCount});
+      return send(res, 200, {member: {name: result.member.name}, correctCount: profile.correctCount, totalPoints: profile.totalPoints});
     }
     if (pathname === '/api/logout' && req.method === 'POST') {
       const body = await readJson(req);

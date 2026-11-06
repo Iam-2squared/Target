@@ -23,7 +23,7 @@ const pinA=pin(),pinB=pin(),pinNew=pin(),pinWrong=pin(),pinRate=pin(),pinSpecial
 const redact=value=>{let text=String(value);for(const value of secretSet)text=text.split(value).join('[credential]');return text;};
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const processes=new Map(),serverLogs=new Map(),results=[],runtimeErrors=[];
-let checks=0,browser,Admin,KgsA,KgsB,A,B,Guest,memberA,memberB,materialFeedbackMs=null,guestHundredPreparationMs=null;
+let checks=0,browser,Admin,KgsA,KgsB,A,B,Guest,memberA,memberB,materialFeedbackMs=null,guestHundredPreparationMs=null,pointsA=0,pointsB=0;
 const reportDir=path.join(root,'test-results');
 function ok(value,label){checks++;assert(value,label);}
 function eq(value,expected,label){checks++;assert.deepEqual(value,expected,label);}
@@ -68,10 +68,20 @@ async function stop(kind){const child=processes.get(kind);if(child&&child.exitCo
 async function register(context,number,name,accountPin,loginCode=code){const result=await kgs(context,'/api/login',{code:loginCode,attendanceNumber:number,accountPin,register:true});await kgs(context,'/api/profile',{name});return result.member;}
 function book(name){return require(path.join(root,'data',name+'.json'));}
 function correctChoice(question,bookName,direction){const entry=book(bookName)[question.number-1];eq(question.prompt,entry[direction==='english'?'japanese':'english'],'Question uses its actual numbered material');eq(question.choices.length,4);eq(new Set(question.choices.map(c=>c.id)).size,4);eq(new Set(question.choices.map(c=>c.text.normalize('NFKC').trim().toLowerCase())).size,4,'Every displayed choice is unique');const choice=question.choices.find(c=>c.text===entry[direction==='english'?'english':'japanese']);ok(choice,'One option contains the authoritative answer');return choice;}
-async function begin(context,bookName='target1900',direction='english',from=1,to=20,count=10){return target(context,'/api/quiz/start',{book:bookName,direction,count,from,to,requestId:uuid()});}
+async function begin(context,bookName='target1900',direction='english',from=1,to=20,count=10){const result=await target(context,'/api/quiz/start',{book:bookName,direction,count,from,to,requestId:uuid()});eq(result.quizPoints,0,'A new quiz begins with no points');return result;}
 async function submit(context,quiz,question,choice,requestId=uuid()){return target(context,'/api/quiz/answer',{quizId:quiz.quizId,questionId:question.id,choiceId:choice.id,requestId});}
 async function layout(page,width,label){await page.setViewportSize({width,height:900});ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),label+' has no horizontal overflow at '+width);await page.screenshot({path:path.join(reportDir,label+'-'+width+'.png'),fullPage:true});}
-async function openPage(context){const page=await context.newPage();page.on('pageerror',error=>runtimeErrors.push(error.message));await page.goto(targetBase,{waitUntil:'networkidle'});return page;}
+async function openPage(context,{audio=false}={}){const page=await context.newPage();if(audio)await page.addInitScript(()=>{
+  window.__audioStarts=[];const parameter=()=>({value:0,setValueAtTime(value){this.value=value;},exponentialRampToValueAtTime(value){this.value=value;},linearRampToValueAtTime(value){this.value=value;},setTargetAtTime(value){this.value=value;},cancelScheduledValues(){}});
+  class ProbeContext{constructor(){this.state='running';this.currentTime=0;this.destination={};}resume(){this.state='running';return Promise.resolve();}createGain(){return{gain:parameter(),connect(){},disconnect(){}};}createOscillator(){const node={frequency:parameter(),type:'sine',connect(){},disconnect(){},start(){window.__audioStarts.push({frequency:node.frequency.value,type:node.type});},stop(){},addEventListener(){}};return node;}}
+  window.AudioContext=ProbeContext;window.webkitAudioContext=ProbeContext;
+});page.on('pageerror',error=>runtimeErrors.push(error.message));await page.goto(targetBase,{waitUntil:'networkidle'});return page;}
+function reward(result,quizBefore,lifetimeBefore,correct=result.correct){
+  eq(result.correct,correct);ok(Number.isSafeInteger(result.awardPoints),'A reward is an integer');ok(correct?[100,1000,10000].includes(result.awardPoints):result.awardPoints===0,'Only correct answers receive an allowed reward');
+  eq(result.quizPoints,quizBefore+result.awardPoints,'The quiz total contains this reward once');eq(result.totalPoints,lifetimeBefore+result.awardPoints,'The lifetime total contains this reward once');
+  return result.awardPoints;
+}
+const displayedPoints=text=>Number(text.replace(/[^0-9]/g,''));
 
 (async()=>{let failure;try{
   await fs.mkdir(reportDir,{recursive:true});
@@ -85,6 +95,12 @@ async function openPage(context){const page=await context.newPage();page.on('pag
   Admin=await makeContext();KgsA=await makeContext();KgsB=await makeContext();A=await makeContext();B=await makeContext();Guest=await makeContext();
   await kgs(Admin,'/api/admin/login',{secret:process.env.KGS_ADMIN_SECRET});await kgs(Admin,'/api/admin/code',{code});
   memberA=await register(KgsA,1,'練習する人A',pinA);memberB=await register(KgsB,2,'練習する人B',pinB);
+
+  await scenario('Reward mapping allocates exactly one, ten and eighty-nine of a hundred outcomes',async()=>{
+    const mapped=(await targetDb.query('SELECT target_private.reward_points_for_roll(roll) AS amount,count(*)::int AS outcomes FROM generate_series(0,99) roll GROUP BY amount ORDER BY amount')).rows;
+    eq(mapped,[{amount:100,outcomes:89},{amount:1000,outcomes:10},{amount:10000,outcomes:1}],'Each integer roll has precisely the requested probability');
+    const invalid=(await targetDb.query('SELECT target_private.reward_points_for_roll(-1) AS low,target_private.reward_points_for_roll(100) AS high,target_private.reward_points_for_roll(NULL) AS missing')).rows[0];eq(invalid,{low:null,high:null,missing:null});
+  });
 
   await scenario('KGS bridge limits identity disclosure and rejects class-session reuse',async()=>{
     await kgs(Guest,'/api/integrations/target/login',{attendanceNumber:1,accountPin:pinA,attemptId:opaque()},404);
@@ -100,7 +116,7 @@ async function openPage(context){const page=await context.newPage();page.on('pag
   });
 
   await scenario('Target guest access, input validation and missing configuration fail safely',async()=>{
-    const session=await target(Guest,'/api/session');eq(session.member,null);eq(session.correctCount,0);eq((await target(Guest,'/api/ranking')).ranking,[]);
+    const session=await target(Guest,'/api/session');eq(session.member,null);eq(session.correctCount,0);eq(session.totalPoints,0);eq((await target(Guest,'/api/ranking')).ranking,[]);
     await target(Guest,'/api/quiz/start',{book:'target1900',direction:'english',count:10,from:1,to:10,requestId:uuid()},401);
     await target(Guest,'/api/login',{attendanceNumber:1,accountPin:pinA},403,{Origin:'https://unrelated.invalid'});
     await target(Guest,'/api/login',{attendanceNumber:1,accountPin:pinWrong},401);
@@ -184,13 +200,16 @@ async function openPage(context){const page=await context.newPage();page.on('pag
       if(count===100)await page.evaluate(()=>{document.getElementById('testStart').addEventListener('click',()=>{const began=performance.now(),observer=new MutationObserver(()=>{if(!document.getElementById('quizView').hidden){window.__guestPrepareMs=performance.now()-began;observer.disconnect();}});observer.observe(document.getElementById('quizView'),{attributes:true,attributeFilter:['hidden']});},{capture:true,once:true});});
       await page.locator('#testStart').click();eq(await page.locator('#questionPosition').innerText(),'1 / '+count+'問');
       if(count===100){guestHundredPreparationMs=await page.evaluate(()=>window.__guestPrepareMs);ok(Number.isFinite(guestHundredPreparationMs),'The real guest100 preparation duration is measured');}
+      let guestCorrect=0,guestPoints=0;
       for(let i=0;i<count;i++){
         await page.locator('#questionChoices button').first().waitFor();eq(await page.locator('#questionChoices button').count(),4);eq(new Set(await page.locator('#questionChoices button').allTextContents()).size,4);
         await page.locator('#questionChoices button').first().click();await page.locator('#answerFeedback').waitFor({state:'visible'});
         eq(await page.locator('#questionChoices button').first().getAttribute('aria-pressed'),'true');
+        const correct=await page.locator('#feedbackTitle').innerText()==='正解';if(correct){guestCorrect++;const amount=displayedPoints(await page.locator('#feedbackReward').innerText());ok([100,1000,10000].includes(amount),'Guest correct answers use the same virtual reward amounts');guestPoints+=amount;}else ok(!await page.locator('#feedbackReward').isVisible(),'Wrong guest answers give no reward');
+        eq(displayedPoints(await page.locator('#quizPoints').innerText()),guestPoints,'Guest quiz points contain each local award once');
         eq(await page.locator('#quizSubmit').count(),0,'Guest practice needs no separate Answer button');await page.locator('#quizNext').click();
       }
-      await page.locator('#resultView').waitFor({state:'visible'});eq(await page.locator('#resultTotal').innerText(),'/ '+count+'問');ok((await page.locator('#resultMode').innerText()).includes('ゲスト'),'Guest results clearly identify their scope');await page.locator('#resultView [data-home]').click();
+      await page.locator('#resultView').waitFor({state:'visible'});eq(await page.locator('#resultTotal').innerText(),'/ '+count+'問');eq(Number(await page.locator('#resultCorrect').innerText()),guestCorrect);eq(displayedPoints(await page.locator('#resultPoints').innerText()),guestPoints);ok((await page.locator('#resultMode').innerText()).includes('ゲスト'),'Guest results clearly identify their scope');await page.locator('#resultView [data-home]').click();
     }
     eq(scored,[],'Intentional guest practice never fabricates cloud scores');eq((await target(Guest,'/api/ranking')).ranking,[]);await page.close();
   });
@@ -199,7 +218,7 @@ async function openPage(context){const page=await context.newPage();page.on('pag
     const page=await openPage(A);await page.locator('#settingsOpen').click();await page.locator('#attendanceNumber').fill('1');await page.locator('#accountPin').fill(pinA);
     await page.locator('#pinVisibility').click();eq(await page.locator('#accountPin').getAttribute('type'),'text');await page.locator('#pinVisibility').click();eq(await page.locator('#accountPin').getAttribute('type'),'password');
     const signed=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/login');await page.locator('#loginButton').click();eq((await signed).status(),200);await page.locator('#identityName').waitFor({state:'visible'});
-    eq(await page.locator('#accountPin').inputValue(),'');const session=await target(A,'/api/session');eq(session.member,{name:'練習する人A'});eq(session.correctCount,0);
+    eq(await page.locator('#accountPin').inputValue(),'');const session=await target(A,'/api/session');eq(session.member,{name:'練習する人A'});eq(session.correctCount,0);eq(session.totalPoints,0);
     const cookies=await A.cookies(targetBase);ok(cookies.some(c=>c.httpOnly&&c.sameSite==='Strict'),'Target session is HttpOnly and SameSite Strict');
     const storage=await page.evaluate(()=>JSON.stringify({local:Object.fromEntries(Object.entries(localStorage)),session:Object.fromEntries(Object.entries(sessionStorage)),cookies:document.cookie}));for(const value of [pinA,integrationSecret,rpcSecret,cookieSecret])ok(!storage.includes(value),'No login credential lives in browser-readable storage');
     await page.close();await target(B,'/api/login',{attendanceNumber:2,accountPin:pinB});
@@ -207,39 +226,39 @@ async function openPage(context){const page=await context.newPage();page.on('pag
 
   await scenario('Authoritative grading and concurrent answer retries award one score only',async()=>{
     const quiz=await begin(A,'target1900','english',1,10),question=quiz.question,choice=correctChoice(question,'target1900','english'),requestId=uuid();
-    const [first,second]=await Promise.all([submit(A,quiz,question,choice,requestId),submit(A,quiz,question,choice,requestId)]);eq(first,second,'Retry returns the same accepted outcome');eq(first.correct,true);eq(first.correctCount,1);eq(first.answeredCount,1);eq((await target(A,'/api/session')).correctCount,1);
+    const [first,second]=await Promise.all([submit(A,quiz,question,choice,requestId),submit(A,quiz,question,choice,requestId)]);eq(first,second,'Retry returns the same accepted outcome');eq(first.correct,true);eq(first.correctCount,1);eq(first.answeredCount,1);pointsA+=reward(first,0,pointsA,true);eq((await target(A,'/api/session')).correctCount,1);eq((await target(A,'/api/session')).totalPoints,pointsA);const accepted=(await targetDb.query('SELECT award_points,response FROM target_private.answers WHERE quiz_id=$1 AND question_id=$2',[quiz.quizId,question.id])).rows;eq(accepted.length,1);eq(Number(accepted[0].award_points),first.awardPoints);eq(accepted[0].response,first);
     await target(A,'/api/quiz/answer',{quizId:quiz.quizId,questionId:question.id,choiceId:question.choices.find(c=>c.id!==choice.id).id,requestId:uuid()},409);
-    let result=first;for(let n=1;n<10;n++){const next=result.nextQuestion;ok(next,'Next question is issued after the accepted answer');const option=correctChoice(next,'target1900','english');result=await submit(A,quiz,next,option);eq(result.correct,true);}
-    eq(result.finished,true);eq(result.nextQuestion,null);eq(result.correctCount,10);eq((await target(A,'/api/session')).correctCount,10);
+    let result=first;for(let n=1;n<10;n++){const next=result.nextQuestion;ok(next,'Next question is issued after the accepted answer');const option=correctChoice(next,'target1900','english'),before=result.quizPoints;result=await submit(A,quiz,next,option);pointsA+=reward(result,before,pointsA,true);}
+    eq(result.finished,true);eq(result.nextQuestion,null);eq(result.correctCount,10);eq(result.quizPoints,pointsA);eq((await target(A,'/api/session')).correctCount,10);eq((await target(A,'/api/session')).totalPoints,pointsA);
   });
 
   await scenario('Reverse-direction idioms grade a wrong answer without increasing the total',async()=>{
-    const quiz=await begin(A,'target1000','japanese',1,10),correct=correctChoice(quiz.question,'target1000','japanese');const wrong=quiz.question.choices.find(c=>c.id!==correct.id);const result=await submit(A,quiz,quiz.question,wrong);eq(result.correct,false);eq(result.correctChoiceId,correct.id);eq(result.correctText,correct.text);eq(result.correctCount,0);eq((await target(A,'/api/session')).correctCount,10);
+    const quiz=await begin(A,'target1000','japanese',1,10),correct=correctChoice(quiz.question,'target1000','japanese');const wrong=quiz.question.choices.find(c=>c.id!==correct.id);const result=await submit(A,quiz,quiz.question,wrong);eq(result.correct,false);eq(result.correctChoiceId,correct.id);eq(result.correctText,correct.text);eq(result.correctCount,0);reward(result,0,pointsA,false);eq((await target(A,'/api/session')).correctCount,10);eq((await target(A,'/api/session')).totalPoints,pointsA);
     await target(B,'/api/quiz/answer',{quizId:quiz.quizId,questionId:result.nextQuestion.id,choiceId:result.nextQuestion.choices[0].id,requestId:uuid()},404);
-    await target(A,'/api/quiz/start',{book:'target1000',direction:'japanese',count:10,from:1,to:10,requestId:uuid(),correctCount:1000},400);
+    await target(A,'/api/quiz/start',{book:'target1000',direction:'japanese',count:10,from:1,to:10,requestId:uuid(),correctCount:1000},400);await target(A,'/api/quiz/answer',{quizId:quiz.quizId,questionId:result.nextQuestion.id,choiceId:result.nextQuestion.choices[0].id,requestId:uuid(),awardPoints:10000},400);await target(A,'/api/quiz/answer',{quizId:quiz.quizId,questionId:result.nextQuestion.id,choiceId:result.nextQuestion.choices[0].id,requestId:uuid(),rewardRoll:0},400);
   });
 
   await scenario('Independent clients share a names-only ranking with stable account ownership',async()=>{
-    const quiz=await begin(B,'target1000','english',21,30),answer=correctChoice(quiz.question,'target1000','english');await submit(B,quiz,quiz.question,answer);
-    const ranking=(await target(Guest,'/api/ranking')).ranking;eq(ranking.map(r=>r.correctCount),[10,1]);eq(ranking.map(r=>r.name),['練習する人A','練習する人B']);for(const row of ranking)eq(Object.keys(row).sort(),['rank','name','correctCount'].sort());ok(!JSON.stringify(ranking).includes(memberA.id)&&!JSON.stringify(ranking).includes(memberB.id),'Stable member IDs never appear in the public ranking');
-    const another=await makeContext();await target(another,'/api/login',{attendanceNumber:1,accountPin:pinA});eq((await target(another,'/api/session')).correctCount,10,'The same account retains its score on another device');
-    await kgs(KgsA,'/api/profile',{name:'名前を変えた人A'});eq((await target(A,'/api/session')).member,{name:'名前を変えた人A'});eq((await target(Guest,'/api/ranking')).ranking.map(r=>r.name),['名前を変えた人A','練習する人B']);await another.close();
+    const quiz=await begin(B,'target1000','english',21,30),answer=correctChoice(quiz.question,'target1000','english'),result=await submit(B,quiz,quiz.question,answer);pointsB+=reward(result,0,pointsB,true);
+    const ranking=(await target(Guest,'/api/ranking')).ranking;eq(ranking.length,2);eq([...ranking.map(r=>r.correctCount)].sort((a,b)=>b-a),[10,1]);eq(new Set(ranking.map(r=>r.name)),new Set(['練習する人A','練習する人B']));eq(ranking.map(r=>r.totalPoints),[pointsA,pointsB].sort((a,b)=>b-a),'Ranking orders by cumulative points rather than correct answers');for(const row of ranking)eq(Object.keys(row).sort(),['rank','name','correctCount','totalPoints'].sort());ok(!JSON.stringify(ranking).includes(memberA.id)&&!JSON.stringify(ranking).includes(memberB.id),'Stable member IDs never appear in the public ranking');
+    const another=await makeContext();await target(another,'/api/login',{attendanceNumber:1,accountPin:pinA});eq((await target(another,'/api/session')).correctCount,10,'The same account retains its correct count on another device');eq((await target(another,'/api/session')).totalPoints,pointsA,'The same account retains cumulative points on another device');
+    await kgs(KgsA,'/api/profile',{name:'名前を変えた人A'});eq((await target(A,'/api/session')).member,{name:'名前を変えた人A'});eq(new Set((await target(Guest,'/api/ranking')).ranking.map(r=>r.name)),new Set(['名前を変えた人A','練習する人B']));eq((await target(A,'/api/session')).totalPoints,pointsA);await another.close();
   });
 
   await scenario('Scores and sessions survive a Target HTTP server restart',async()=>{
-    await stop('target');await start('target');eq((await target(A,'/api/session')).correctCount,10);eq((await target(B,'/api/session')).correctCount,1);eq((await target(Guest,'/api/ranking')).ranking.map(r=>r.correctCount),[10,1]);
+    await stop('target');await start('target');eq((await target(A,'/api/session')).correctCount,10);eq((await target(B,'/api/session')).correctCount,1);eq((await target(Guest,'/api/ranking')).ranking.map(r=>r.totalPoints),[pointsA,pointsB].sort((a,b)=>b-a));eq((await target(A,'/api/session')).totalPoints,pointsA);eq((await target(B,'/api/session')).totalPoints,pointsB);
   });
 
   await scenario('A dropped answer request keeps the selected answer for one real retry',async()=>{
-    const page=await openPage(A);await page.locator('#testOpen').click();await page.locator('#testStart').click();await page.locator('#questionChoices button').first().waitFor();
+    const page=await openPage(A,{audio:true});await page.locator('#testOpen').click();await page.locator('#testStart').click();await page.locator('#questionChoices button').first().waitFor();
     const number=Number((await page.locator('#questionNumber').innerText()).match(/No\. (\d+)/)[1]);
     const correct=book('target1900')[number-1].english,choices=await page.locator('#questionChoices .choice-text').allTextContents(),wrong=choices.findIndex(text=>text!==correct);
     const before=Number((await targetDb.query('SELECT count(*)::int AS n FROM target_private.answers')).rows[0].n),requests=[];
     let failNext=true;await page.route('**/api/quiz/answer',async route=>{requests.push(JSON.parse(route.request().postData()));if(failNext){failNext=false;await route.abort('failed');}else await route.continue();});
-    const prompt=await page.locator('#questionPrompt').innerText();await page.locator('#questionChoices button').nth(wrong).click();await page.locator('#answerRetry').waitFor({state:'visible'});eq(requests.length,1,'One choice tap sends exactly one answer');
+    const prompt=await page.locator('#questionPrompt').innerText();await page.locator('#questionChoices button').nth(wrong).click();await page.locator('#answerRetry').waitFor({state:'visible'});eq(requests.length,1,'One choice tap sends exactly one answer');await page.waitForFunction(()=>window.__audioStarts.length>0);const soundStarts=await page.evaluate(()=>window.__audioStarts.length);ok(soundStarts>0,'Wrong-answer feedback schedules a short cue from its tap');
     eq(await page.locator('#questionPrompt').innerText(),prompt,'A failed transmission cannot advance the question');
     eq(Number((await targetDb.query('SELECT count(*)::int AS n FROM target_private.answers')).rows[0].n),before,'The aborted request has not awarded a score');
-    await page.locator('#answerRetry').click();await page.waitForFunction(()=>!document.getElementById('quizNext').disabled);eq(await page.locator('#feedbackTitle').innerText(),'不正解');eq(requests.length,2);eq(requests[0],requests[1],'Retry reuses the exact answer and request ID');
+    await page.locator('#answerRetry').click();await page.waitForFunction(()=>!document.getElementById('quizNext').disabled);eq(await page.locator('#feedbackTitle').innerText(),'不正解');eq(requests.length,2);eq(requests[0],requests[1],'Retry reuses the exact answer and request ID');eq(await page.evaluate(()=>window.__audioStarts.length),soundStarts,'Retry never schedules the feedback cue again');eq((await target(A,'/api/session')).totalPoints,pointsA);ok(!await page.locator('#feedbackReward').isVisible(),'Wrong answers cannot show a reward after retry');
     eq(Number((await targetDb.query('SELECT count(*)::int AS n FROM target_private.answers')).rows[0].n),before+1);eq((await target(A,'/api/session')).correctCount,10);await page.close();
   });
 
@@ -262,12 +281,12 @@ async function openPage(context){const page=await context.newPage();page.on('pag
       await register(classContext,number,name,accountPin,codeChanged);await target(context,'/api/login',{attendanceNumber:number,accountPin});
       for(const cookie of await context.cookies(targetBase))remember(cookie.value);
       const quiz=await begin(context,bookName,direction,from,to,100);eq(quiz.total,100);eq(quiz.correctCount,0);
-      const seen=new Set();let result={nextQuestion:quiz.question};
+      const seen=new Set();let result={nextQuestion:quiz.question},quizPoints=0;
       for(let index=0;index<100;index++){
         const question=result.nextQuestion;ok(question.number>=from&&question.number<=to,'Every question stays within selected sections');ok(!seen.has(question.number),'Question numbers never repeat');seen.add(question.number);
-        result=await submit(context,quiz,question,correctChoice(question,bookName,direction));eq(result.answeredCount,index+1);eq(result.correctCount,index+1);
+        result=await submit(context,quiz,question,correctChoice(question,bookName,direction));quizPoints+=reward(result,quizPoints,quizPoints,true);eq(result.answeredCount,index+1);eq(result.correctCount,index+1);
       }
-      eq(seen.size,100);eq(result.finished,true);eq(result.nextQuestion,null);eq((await target(context,'/api/session')).correctCount,100);
+      eq(seen.size,100);eq(result.finished,true);eq(result.nextQuestion,null);eq((await target(context,'/api/session')).correctCount,100);eq((await target(context,'/api/session')).totalPoints,quizPoints);const ledger=(await targetDb.query('SELECT sum(award_points)::text AS points FROM target_private.answers WHERE quiz_id=$1',[quiz.quizId])).rows[0];eq(Number(ledger.points),quizPoints,'One hundred persisted awards equal the confirmed quiz and lifetime totals');
       const fifty=await begin(context,bookName,direction,1,500,50);eq(fifty.total,50);
       const stored=(await targetDb.query('SELECT questions FROM target_private.quizzes WHERE id=$1',[fifty.quizId])).rows[0].questions;
       eq(stored.length,50);eq(new Set(stored.map(question=>question.number)).size,50);ok(stored.every(question=>question.number>=1&&question.number<=500),'A multi-section range is retained on the server');
@@ -277,11 +296,33 @@ async function openPage(context){const page=await context.newPage();page.on('pag
     }
   });
 
+  await scenario('An old zero-point answer replays safely and only new correct answers earn rewards',async()=>{
+    const classContext=await makeContext(),context=await makeContext(),accountPin=pin(),legacyMember=await register(classContext,7,'旧記録確認F',accountPin,codeChanged);await target(context,'/api/login',{attendanceNumber:7,accountPin});
+    const quiz=await begin(context,'target1900','english',1,100,10),question=quiz.question,choice=correctChoice(question,'target1900','english'),requestId=uuid();
+    const next=(await targetDb.query('SELECT target_private.public_question(questions->1) AS next FROM target_private.quizzes WHERE id=$1',[quiz.quizId])).rows[0].next;
+    const oldResponse={correct:true,correctChoiceId:choice.id,correctText:choice.text,answeredCount:1,correctCount:1,total:10,finished:false,nextQuestion:next},bytes=Buffer.byteLength(JSON.stringify(oldResponse))+256;
+    const client=await targetDb.connect();try{await client.query('BEGIN');await client.query('INSERT INTO target_private.answers(quiz_id,member_id,question_id,choice_id,request_id,request_ids,response,charged_bytes) VALUES($1,$2,$3,$4,$5,ARRAY[$5::uuid],$6::jsonb,$7)',[quiz.quizId,legacyMember.id,question.id,choice.id,requestId,JSON.stringify(oldResponse),bytes]);await client.query('UPDATE target_private.quizzes SET answered_count=1,correct_count=1 WHERE id=$1',[quiz.quizId]);await client.query('UPDATE target_private.profiles SET answered_count=1,correct_count=1 WHERE member_id=$1',[legacyMember.id]);await client.query('UPDATE target_private.system_state SET answer_count=answer_count+1,logical_bytes=logical_bytes+$1 WHERE singleton',[bytes]);await client.query('COMMIT');}catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
+    const replay=await submit(context,quiz,question,choice,requestId);eq(replay,{...oldResponse,awardPoints:0,quizPoints:0,totalPoints:0},'Historical responses gain zero-valued fields without inventing rewards');eq((await target(context,'/api/session')).correctCount,1);eq((await target(context,'/api/session')).totalPoints,0);
+    const earned=await submit(context,quiz,next,correctChoice(next,'target1900','english'));reward(earned,0,0,true);eq(earned.correctCount,2);eq((await target(context,'/api/session')).totalPoints,earned.awardPoints);
+    eq(await submit(context,quiz,question,choice,requestId),replay,'Historical replay remains its accepted snapshot');eq((await target(context,'/api/session')).totalPoints,earned.awardPoints,'Historical retries never reset new earned points');eq((await targetDb.query('SELECT award_points FROM target_private.answers WHERE quiz_id=$1 AND question_id=$2',[quiz.quizId,question.id])).rows[0].award_points,0);
+    await classContext.close();await context.close();
+  });
+
+  await scenario('A finished recorded test shows its correct count and earned points even without available audio',async()=>{
+    const classContext=await makeContext(),context=await makeContext(),accountPin=pin();await register(classContext,8,'結果確認G',accountPin,codeChanged);await target(context,'/api/login',{attendanceNumber:8,accountPin});
+    const page=await context.newPage();await page.addInitScript(()=>{class UnavailableAudio{constructor(){throw Error('Audio unavailable in this browser');}}window.AudioContext=UnavailableAudio;window.webkitAudioContext=UnavailableAudio;});page.on('pageerror',error=>runtimeErrors.push(error.message));await page.goto(targetBase,{waitUntil:'networkidle'});await page.locator('#testOpen').click();await page.locator('#questionCount').selectOption('10');await page.locator('#testStart').click();let earned=0,correctCount=0;
+    for(let index=0;index<10;index++){
+      await page.locator('#questionChoices button').first().waitFor();const number=Number((await page.locator('#questionNumber').innerText()).match(/No\. (\d+)/)[1]),texts=await page.locator('#questionChoices .choice-text').allTextContents(),correct=texts.indexOf(book('target1900')[number-1].english);ok(correct>=0);const selected=index<8?correct:(correct+1)%4;
+      await page.locator('#questionChoices button').nth(selected).click();await page.waitForFunction(()=>!document.getElementById('quizNext').hidden&&!document.getElementById('quizNext').disabled);if(index<8){correctCount++;const amount=displayedPoints(await page.locator('#feedbackReward').innerText());ok([100,1000,10000].includes(amount));earned+=amount;}else ok(!await page.locator('#feedbackReward').isVisible());eq(displayedPoints(await page.locator('#quizPoints').innerText()),earned);await page.locator('#quizNext').click();
+    }
+    await page.locator('#resultView').waitFor({state:'visible'});eq(Number(await page.locator('#resultCorrect').innerText()),correctCount);eq(correctCount,8);eq(await page.locator('#resultTotal').innerText(),'/ 10問');eq(displayedPoints(await page.locator('#resultPoints').innerText()),earned);ok((await page.locator('#resultPoints').innerText()).includes('円'));const session=await target(context,'/api/session');eq(session.correctCount,8);eq(session.totalPoints,earned);for(const width of [320,375,390,430,1280])await layout(page,width,'reward-result');await page.close();await classContext.close();await context.close();
+  });
+
   await scenario('One choice tap gives immediate material feedback while the server confirms the score',async()=>{
     const classContext=await makeContext(),context=await makeContext(),accountPin=pin();
     await register(classContext,6,'回答操作確認E',accountPin,codeChanged);await target(context,'/api/login',{attendanceNumber:6,accountPin});
     for(const cookie of await context.cookies(targetBase))remember(cookie.value);
-    const page=await openPage(context),starts=[],answers=[];
+    const page=await openPage(context,{audio:true}),starts=[],answers=[];
     page.on('request',request=>{const route=new URL(request.url()).pathname;if(route==='/api/quiz/start')starts.push(JSON.parse(request.postData()));if(route==='/api/quiz/answer')answers.push(JSON.parse(request.postData()));});
     await page.locator('#homeSectionFrom').selectOption('1');await page.locator('#homeSectionTo').selectOption('5');await page.locator('#testOpen').click();
     eq(await page.locator('#rangeFrom').inputValue(),'1');eq(await page.locator('#rangeTo').inputValue(),'5');await page.locator('#questionCount').selectOption('100');await page.locator('#testStart').click();await page.locator('#questionChoices button').first().waitFor();
@@ -302,21 +343,22 @@ async function openPage(context){const page=await context.newPage();page.on('pag
       await page.locator('#questionChoices button').nth(correct).click();await page.locator('#answerFeedback').waitFor({state:'visible',timeout:1500});
       eq(await page.locator('#feedbackTitle').innerText(),'正解');eq(await page.locator('#questionChoices button').nth(correct).getAttribute('aria-pressed'),'true');eq(await page.locator('#questionChoices button').nth(wrong).getAttribute('aria-pressed'),'false');
       const hint=await page.evaluate(()=>window.__hintMs);materialFeedbackMs=hint;ok(Number.isFinite(hint)&&hint<200,'One choice tap shows material-backed feedback before the held HTTP response');
-      await accepted;eq(await page.locator('#quizCorrect').innerText(),'0問 正解','The confirmed score does not change before server acknowledgement');ok(await page.locator('#quizNext').isDisabled(),'Next waits for an accepted authoritative result');ok((await page.locator('#quizMode').innerText()).includes('記録中'));
-      await page.locator('#questionChoices button').evaluateAll(buttons=>{for(const button of buttons)button.dispatchEvent(new MouseEvent('click',{bubbles:true}));buttons[0].dispatchEvent(new MouseEvent('click',{bubbles:true}));});eq(answers.length,1,'Repeated or other choice taps cannot send another answer while confirmation is pending');
+      await accepted;eq(displayedPoints(await page.locator('#quizPoints').innerText()),0,'Unconfirmed rewards cannot affect the displayed quiz total');ok(!await page.locator('#feedbackReward').isVisible(),'The random reward stays hidden until acknowledged');await page.waitForFunction(()=>window.__audioStarts.length>0);const cueCount=await page.evaluate(()=>window.__audioStarts.length);eq(cueCount,2,'The correct cue schedules exactly two short tones');eq(await page.evaluate(()=>window.__audioStarts.map(tone=>tone.frequency)),[1046.5,1318.5]);eq(await page.locator('#quizCorrect').innerText(),'0問 正解','The confirmed score does not change before server acknowledgement');ok(await page.locator('#quizNext').isDisabled(),'Next waits for an accepted authoritative result');ok((await page.locator('#quizMode').innerText()).includes('記録中'));
+      await page.locator('#questionChoices button').evaluateAll(buttons=>{for(const button of buttons)button.dispatchEvent(new MouseEvent('click',{bubbles:true}));buttons[0].dispatchEvent(new MouseEvent('click',{bubbles:true}));});eq(answers.length,1,'Repeated or other choice taps cannot send another answer while confirmation is pending');eq(await page.evaluate(()=>window.__audioStarts.length),cueCount,'Repeated choices cannot repeat the feedback sound');
       eq(await page.locator('#questionChoices button').nth(correct).getAttribute('aria-pressed'),'true','Repeated taps cannot replace the submitted selection');
     }finally{release();}
-    await page.waitForFunction(()=>!document.getElementById('quizNext').disabled);eq(await page.locator('#quizCorrect').innerText(),'1問 正解');eq((await target(context,'/api/session')).correctCount,1);
+    await page.waitForFunction(()=>!document.getElementById('quizNext').disabled);eq(await page.locator('#quizCorrect').innerText(),'1問 正解');eq((await target(context,'/api/session')).correctCount,1);const confirmedPoints=(await target(context,'/api/session')).totalPoints;ok([100,1000,10000].includes(confirmedPoints));eq(displayedPoints(await page.locator('#quizPoints').innerText()),confirmedPoints);eq(displayedPoints(await page.locator('#feedbackReward').innerText()),confirmedPoints);eq(await page.evaluate(()=>window.__audioStarts.length),2,'The confirmed reply does not repeat the material-feedback sound');
     await page.unroute('**/api/quiz/answer');await page.locator('#quizNext').click();ok(!await page.locator('#answerFeedback').isVisible());eq(await page.locator('#questionChoices button[aria-pressed="true"]').count(),0,'The next question clears the old selection');eq(await page.locator('#questionChoices button:enabled').count(),4,'The next question is immediately ready for one tap');
+    const nextNumber=Number((await page.locator('#questionNumber').innerText()).match(/No\. (\d+)/)[1]),nextTexts=await page.locator('#questionChoices .choice-text').allTextContents(),nextWrong=nextTexts.findIndex(text=>text!==book('target1900')[nextNumber-1].english);await page.locator('#questionChoices button').nth(nextWrong).click();await page.waitForFunction(()=>!document.getElementById('quizNext').disabled);eq(await page.locator('#feedbackTitle').innerText(),'不正解');await page.waitForFunction(()=>window.__audioStarts.length===4);eq(await page.evaluate(()=>window.__audioStarts.slice(2).map(tone=>tone.frequency)),[293.66,220],'Wrong-answer cue has a distinct lower descending pitch');eq((await target(context,'/api/session')).totalPoints,confirmedPoints,'A wrong second question does not increase the cumulative total');
     await page.close();await context.close();await classContext.close();
   });
 
   await scenario('Home still shows only the leading ten ranks and its ranking button opens every participant',async()=>{
-    const fixtures=Array.from({length:11},(_,index)=>({id:uuid(),name:'順位確認'+(index+1),score:20+index}));
+    const fixtures=Array.from({length:11},(_,index)=>({id:uuid(),name:'順位確認'+(index+1),score:20+index,points:20000-index*100}));
     try{
-      for(const fixture of fixtures)await targetDb.query('INSERT INTO target_private.profiles(member_id,name,correct_count,answered_count) VALUES($1,$2,$3,$3)',[fixture.id,fixture.name,fixture.score]);
+      for(const fixture of fixtures)await targetDb.query('INSERT INTO target_private.profiles(member_id,name,correct_count,answered_count,total_points) VALUES($1,$2,$3,$3,$4)',[fixture.id,fixture.name,fixture.score,fixture.points]);
       const expected=(await target(Guest,'/api/ranking')).ranking,page=await openPage(Guest);await page.waitForFunction(()=>document.getElementById('homeRankingStatus').textContent!=='読み込み中…');
-      eq(await page.locator('#homeRankingList > li').count(),10);eq(await page.locator('#homeRankingList .ranking-name').allTextContents(),expected.slice(0,10).map(row=>row.name));
+      eq(await page.locator('#homeRankingList > li').count(),10);eq(await page.locator('#homeRankingList .ranking-name').allTextContents(),expected.slice(0,10).map(row=>row.name));eq(await page.locator('#homeRankingList .ranking-score').allTextContents(),expected.slice(0,10).map(row=>row.totalPoints.toLocaleString('ja-JP')+'円'));const fixtureRows=expected.filter(row=>fixtures.some(fixture=>fixture.name===row.name));eq(fixtureRows.map(row=>row.name),fixtures.map(fixture=>fixture.name),'Higher points rank above higher correct-count fixtures');
       await page.locator('#rankingOpen').click();await page.waitForFunction(()=>!document.getElementById('rankingRefresh').disabled);eq(await page.locator('#rankingList > li').count(),expected.length);await page.close();
     }finally{await targetDb.query('DELETE FROM target_private.profiles WHERE member_id=ANY($1::uuid[])',[fixtures.map(fixture=>fixture.id)]);}
   });
