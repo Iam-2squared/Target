@@ -40,11 +40,18 @@
           <span class="book-copy"><strong>英熟語 Target 1000</strong></span>
         </button>
       </div>
-      <div class="home-section-heading"><span id="homeSectionLabel">Section</span><div class="section-actions"><button id="masteryOpen" class="text-button" type="button">定着率</button><button id="reviewOpen" class="text-button" type="button">解き直し</button></div></div>
+      <div class="home-section-heading"><span id="homeSectionLabel">Section</span><div class="section-actions"><button id="masteryOpen" class="text-button" type="button">定着率</button></div></div>
       <fieldset class="home-sections" aria-labelledby="homeSectionLabel"><div class="range-fields"><label><span class="sr-only">最初のSection</span><select id="homeSectionFrom" aria-label="最初のSection"></select></label><span aria-hidden="true">〜</span><label><span class="sr-only">最後のSection</span><select id="homeSectionTo" aria-label="最後のSection"></select></label></div></fieldset>
       <div class="study-actions">
         <button class="action-card" type="button" id="memorizeOpen">暗記</button>
         <button class="action-card" type="button" id="testOpen">テスト</button>
+      </div>
+      <div class="home-review" aria-labelledby="homeReviewLabel">
+        <p id="homeReviewLabel" class="muted">現在のミス</p>
+        <p id="homeReviewCount" class="home-review-count" aria-live="polite">—</p>
+        <p id="homeReviewStatus" class="muted" role="status"></p>
+        <button id="homeReviewRetry" class="text-button" type="button" hidden>再読み込み</button>
+        <button id="reviewOpen" class="secondary-button wide" type="button">解き直し</button>
       </div>
       <button id="rankingOpen" class="ranking-link" type="button"><strong>ランキング</strong><span id="homeScore" class="muted"></span></button>
       <p id="homeRankingStatus" class="muted ranking-status" role="status"></p>
@@ -66,7 +73,7 @@
       <p id="reviewNotice" class="muted review-notice" hidden></p><button type="button" id="reviewLogin" class="secondary-button wide" hidden>ログイン</button>
       <form id="testForm" class="setup-form">
         <fieldset class="direction-field"><legend>解答</legend><div class="direction-options"><label><input type="radio" name="direction" value="english" checked><span><strong>英語</strong></span></label><label><input type="radio" name="direction" value="japanese"><span><strong>訳</strong></span></label></div></fieldset>
-        <fieldset><legend>Section</legend><div class="range-fields"><label><span class="sr-only">最初のSection</span><select id="rangeFrom" aria-label="最初のSection"></select></label><span aria-hidden="true">〜</span><label><span class="sr-only">最後のSection</span><select id="rangeTo" aria-label="最後のSection"></select></label></div></fieldset>
+        <fieldset id="testSectionRange"><legend>Section</legend><div class="range-fields"><label><span class="sr-only">最初のSection</span><select id="rangeFrom" aria-label="最初のSection"></select></label><span aria-hidden="true">〜</span><label><span class="sr-only">最後のSection</span><select id="rangeTo" aria-label="最後のSection"></select></label></div></fieldset>
         <label class="count-field">問題数<select id="questionCount"><option value="10">10問</option><option value="50">50問</option><option value="100">100問</option></select></label>
         <p id="testMode" class="mode-note"></p><p id="setupError" class="error-message" role="alert" hidden></p>
         <button type="submit" id="testStart" class="primary-button wide">開始</button>

@@ -40,6 +40,10 @@ strong { font-weight: 600; }
 .section-actions { display: flex; gap: 6px; }
 .section-actions .text-button { color: var(--ink); padding-inline: 8px; font-weight: 550; }
 .home-sections { margin-top: 2px; }
+.home-review { margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--line); }
+.home-review-count { margin-top: 2px; color: var(--ink); font-size: 28px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.home-review>p.muted { font-size: 13px; }
+.home-review #reviewOpen { margin-top: 10px; font-size: 16px; }
 .mastery-list { list-style: none; margin: 10px 0 0; padding: 0; }
 .mastery-row { padding: 16px 0; border-bottom: 1px solid var(--line); }
 .mastery-row-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
