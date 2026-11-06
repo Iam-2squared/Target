@@ -14,7 +14,7 @@
   let memoryPage=0, memoryBook='target1900', meaningsHidden=false, memoryTicket=0;
   let memoryPages=[], memoryLayoutKey='', memoryLayoutFrame=0,memorySelectionKey='',memoryRange={from:1,to:100};
   let quiz=null, startRetry=null, starting=false, loginPending=false, logoutPending=false;
-  let toastTimer, soundContext;
+  let toastTimer, soundContext, rewardTimer, rewardPaint=0;
 
   function element(tag,className,text) {
     const node=document.createElement(tag);
@@ -42,18 +42,31 @@
     do {value=crypto.getRandomValues(new Uint32Array(1))[0];} while(value>=limit);
     const roll=value%100;return roll===0?10000:roll<=5?1000:100;
   }
+  function hideRewardVisual() {
+    clearTimeout(rewardTimer);rewardTimer=undefined;rewardPaint++;
+    $('rewardCelebration').hidden=true;
+  }
   function clearRewardCelebration() {
-    $('rewardCelebration').hidden=true;delete $('rewardCelebration').dataset.tier;
+    hideRewardVisual();delete $('rewardCelebration').dataset.tier;
+    $('rewardCelebration').style.removeProperty('--reward-duration');
     $('feedbackReward').replaceChildren();$('feedbackReward').hidden=true;$('rewardAnnouncement').textContent='';
   }
   function celebrateReward(current,amount) {
-    if(!amount||activeView!=='quiz'||$('quitDialog').open||current.rewardCelebratedQuestionId===current.question.id)return;
+    if(!amount||activeView!=='quiz'||document.hidden||$('quitDialog').open||current.rewardCelebratedQuestionId===current.question.id)return;
     current.rewardCelebratedQuestionId=current.question.id;
-    const amountNode=$('feedbackReward');
+    hideRewardVisual();
+    const amountNode=$('feedbackReward'),overlay=$('rewardCelebration');
+    const duration=amount===10000?650:amount===1000?500:380;
+    const paint=rewardPaint,questionId=current.question.id,epoch=current.sessionEpoch;
     amountNode.replaceChildren(element('span','reward-sign','+'),element('span','reward-number',amount.toLocaleString('ja-JP')),element('span','reward-unit','円'));
-    $('rewardCelebration').dataset.tier=amount===10000?'jackpot':amount===1000?'bonus':'standard';
-    amountNode.hidden=false;$('rewardCelebration').hidden=false;
+    overlay.dataset.tier=amount===10000?'jackpot':amount===1000?'bonus':'standard';
+    overlay.style.setProperty('--reward-duration',duration+'ms');
+    amountNode.hidden=false;overlay.hidden=false;
     $('rewardAnnouncement').textContent='+'+yen(amount);
+    rewardTimer=setTimeout(()=>{
+      if(paint!==rewardPaint||quiz!==current||current.question.id!==questionId||epoch!==sessionEpoch)return;
+      rewardTimer=undefined;overlay.hidden=true;
+    },duration);
   }
   function prepareSound() {
     try {
@@ -84,7 +97,7 @@
       } catch { /* Sound is optional when the browser cannot create audio. */ }
     },()=>{});
   }
-  document.addEventListener('visibilitychange',()=>{if(document.hidden&&soundContext?.state==='running'){try{void soundContext.suspend().catch(()=>{});}catch{}}});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){hideRewardVisual();if(soundContext?.state==='running'){try{void soundContext.suspend().catch(()=>{});}catch{}}}});
   function setError(id,message='') {const node=$(id);node.textContent=message;node.hidden=!message;}
   function toast(message) {clearTimeout(toastTimer);$('toast').textContent=message;$('toast').hidden=false;toastTimer=setTimeout(()=>{$('toast').hidden=true;},3500);}
   function show(view,{scroll=true}={}) {
