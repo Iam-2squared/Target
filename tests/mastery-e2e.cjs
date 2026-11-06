@@ -13,6 +13,8 @@ const secrets=new Set([process.env.KGS_ADMIN_SECRET,process.env.KGS_SESSION_SECR
 const rpcSecret=secret(opaque()),cookieSecret=secret(opaque()),integrationSecret=secret(opaque()),code=secret(crypto.randomInt(0,1000000).toString().padStart(6,'0'));
 const pins=Array.from({length:3},()=>secret(String(crypto.randomInt(6000,9999))));
 const redact=x=>{let s=String(x);for(const value of secrets)s=s.split(value).join('[credential]');return s;};
+const uuidValue=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
+const textLeaves=x=>typeof x==='string'?[x]:x&&typeof x==='object'?Object.values(x).flatMap(textLeaves):[];
 const reportDir=path.join(root,'test-results'),processes=new Map(),logs=new Map(),contexts=[],results=[],errors=[];
 let browser,checks=0,failure,storageDir,originalOdds;
 const ok=(x,label)=>{checks++;assert(x,label);},eq=(a,b,label)=>{checks++;assert.deepEqual(a,b,label);};
@@ -21,7 +23,11 @@ async function context(){const c=await browser.newContext({viewport:{width:390,h
 async function request(c,base,route,body,status=200,extraHeaders={}){
   const r=await c.request.fetch(base+route,{method:body===undefined?'GET':'POST',headers:{Origin:base,'Content-Type':'application/json',...extraHeaders},...(body===undefined?{}:{data:body}),timeout:25000});
   const data=await r.json();eq(r.status(),status,route+' '+(data.error?.code||'ok'));ok(/no-store/.test(r.headers()['cache-control']||''),'Private responses are no-store.');
-  for(const value of secrets)ok(!JSON.stringify(data).includes(value),'The response contains no server credential.');return data;
+  // Random four-digit PINs can occur by chance inside legitimate random UUIDs.
+  // Inspect short credentials in response text, excluding complete UUID tokens;
+  // long server credentials must still be absent from the entire serialized DTO.
+  const serialized=JSON.stringify(data),copy=textLeaves(data).filter(text=>!uuidValue.test(text));
+  for(const value of secrets)ok(value.length<16?copy.every(text=>!text.includes(value)):!serialized.includes(value),'The response contains no server credential.');return data;
 }
 const target=(c,route,body,status=200,headers={})=>request(c,targetBase,route,body,status,headers);
 const kgs=(c,route,body,status=200,headers={})=>request(c,kgsBase,route,body,status,headers);
@@ -68,9 +74,14 @@ try{
     const ordinary=await mastery(A);
     eq(await target(A,'/api/mastery?book=target1900&route=mastery'),ordinary,'Vercel routing metadata preserves the authenticated mastery response.');
     eq(await target(A,'/api/index?route=mastery&book=target1900'),ordinary,'The internal rewrite entry reaches the same private mastery data.');
+    eq(await target(A,'/api/mastery?book=target1900&route=mastery&path=mastery'),ordinary,'Matching Vercel catch-all path metadata preserves private mastery.');
+    eq(await target(A,'/api/index?route=mastery&book=target1900&path=mastery'),ordinary,'The internal rewrite accepts matching catch-all path metadata.');
     await target(A,'/api/mastery?book=target1900&route=mastery&route=mastery',undefined,400);
     await target(A,'/api/index?route=mastery&book=target1900&route=mastery',undefined,400);
     await target(A,'/api/mastery?book=target1900&route=ranking',undefined,400);
+    await target(A,'/api/mastery?book=target1900&route=mastery&path=mastery&path=mastery',undefined,400);
+    await target(A,'/api/index?route=mastery&book=target1900&path=mastery&path=mastery',undefined,400);
+    await target(A,'/api/mastery?book=target1900&route=mastery&path=ranking',undefined,400);
   });
 
   await scenario('Two consecutive correct answers persist across devices and directions; replay cannot learn twice',async()=>{

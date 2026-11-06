@@ -42,7 +42,9 @@ test('Mastery HTTP route accepts both Vercel rewrite URL shapes and still requir
    '/api/mastery?book=target1900&route=mastery',
    '/api/mastery?route=mastery&book=target1000',
    '/api/index?route=mastery&book=target1900',
-   '/api/index?book=target1000&route=mastery'
+   '/api/index?book=target1000&route=mastery',
+   '/api/mastery?book=target1900&route=mastery&path=mastery',
+   '/api/index?route=mastery&book=target1000&path=mastery'
   ]){
    const result=await request(port,url);
    assert.equal(result.status,401,url);assert.equal(result.body.error.code,'AUTHENTICATION_REQUIRED',url);
@@ -56,7 +58,11 @@ test('Mastery HTTP route accepts both Vercel rewrite URL shapes and still requir
    ['/api/mastery?route=mastery',{route:'mastery',book:'target1000'}],
    ['/api/mastery?book=target1900',{route:'mastery',book:'target1900'}],
    ['/api/mastery?book=target1000&route=mastery',{route:'mastery',book:'target1000'}],
-   ['/api/index?route=mastery&book=target1900',{route:['mastery'],book:['target1900']}]
+   ['/api/index?route=mastery&book=target1900',{route:['mastery'],book:['target1900']}],
+   ['/api/mastery?book=target1900&route=mastery&path=mastery',{route:'mastery',book:'target1900',path:'mastery'}],
+   ['/api/index?route=mastery',{route:'mastery',book:'target1000',path:'mastery'}],
+   ['/api/mastery',{route:'mastery',book:'target1900',path:['mastery']}],
+   ['/api/mastery?book=target1900&path=mastery',{route:'mastery',book:'target1900',path:'mastery'}]
   ]){
    const result=await request(port,url,query);
    assert.equal(result.status,401,url+' with helper');assert.equal(result.body.error.code,'AUTHENTICATION_REQUIRED');
@@ -75,7 +81,13 @@ test('Mastery HTTP route accepts both Vercel rewrite URL shapes and still requir
    ['/api/mastery',[]],
    ['/api/mastery','forged-helper'],
    ['/api/mastery?book=target1900&book=target1900',{book:'target1900'}],
-   ['/api/index?route=mastery&route=mastery',{route:'mastery',book:'target1900'}]
+   ['/api/index?route=mastery&route=mastery',{route:'mastery',book:'target1900'}],
+   ['/api/mastery?book=target1900&path=ranking',{route:'mastery',book:'target1900',path:'mastery'}],
+   ['/api/mastery?book=target1900&path=mastery',{route:'mastery',book:'target1900',path:'ranking'}],
+   ['/api/mastery?book=target1900',{route:'mastery',book:'target1900',path:['mastery','mastery']}],
+   ['/api/index?route=mastery',{route:'mastery',book:'target1900',path:'ranking'}],
+   ['/api/mastery?book=target1900&path=mastery&path=mastery',{route:'mastery',book:'target1900',path:'mastery'}],
+   ['/api/mastery?book=target1900',{route:'mastery',book:'target1900',path:{forged:'mastery'}}]
   ]){
    const result=await request(port,url,query);
    assert.equal(result.status,400,url+' with invalid helper');assert.equal(result.body.error.code,'INVALID_BOOK');
@@ -95,7 +107,10 @@ test('Mastery HTTP route accepts both Vercel rewrite URL shapes and still requir
    '/api/mastery?book=target1900&route=mastery&route=mastery',
    '/api/index?route=mastery&book=target1900&unexpected=value',
    '/api/index?route=mastery&book=target1900&book=target1000',
-   '/api/index?route=mastery&book=target1900&route=ranking'
+   '/api/index?route=mastery&book=target1900&route=ranking',
+   '/api/mastery?book=target1900&path=ranking',
+   '/api/mastery?book=target1900&path=',
+   '/api/mastery?book=target1900&path=mastery&path=mastery'
   ]){
    const result=await request(port,url);
    assert.equal(result.status,400,url);assert.equal(result.body.error.code,'INVALID_BOOK',url);
