@@ -130,7 +130,7 @@
     if(soundPlayers)return soundPlayers;
     try{
       if(typeof window.Audio!=='function')return null;
-      const players={correct:new Audio('/audio/correct.wav'),wrong:new Audio('/audio/wrong.wav')};
+      const players={correct:new Audio('/audio/correct.mp3'),wrong:new Audio('/audio/wrong.mp3')};
       for(const player of Object.values(players)){player.preload='auto';player.volume=.85;player.loop=false;player.load();}
       soundPlayers=players;return players;
     }catch{return null;}

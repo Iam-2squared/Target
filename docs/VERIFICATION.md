@@ -133,3 +133,14 @@ TargetのDBは東京（ap-northeast-1）で、従来のVercel関数はiad1でし
 - private対応関数の移行は実PostgreSQLで26検証成功。既存行・再送・ACL・RPCの不変と、境界・NULLを確認。クラウドでは旧本文MD5を照合して適用し、新本文は`14989dbca460f48d1724cb53bdd164d5`、RPCは`8849b2be657654a20c5da3b06b28f021`のままです。ロールバック検証で100回答・99正解、2／15／83・再送額・累計・ランキング順を確認し、検証プロフィールは0件でした。
 
 公開配信とネイティブ音声の確認はPRに記録します。実機Safari・端末の消音状態・実際の聴音は未検証で、波形検証・ブラウザの再生イベントとは区別します。仕様参考：[HTMLMediaElement.play](https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/play)、[AudioSession.type](https://developer.mozilla.org/en-US/docs/Web/API/AudioSession/type)。KGS・依存・課金・保護設定は変更していません。
+
+## 提供されたDing Dong／Buzzerへの差し替え
+
+2026-11-06、提供ZIPのShort版を再エンコードせずに採用し、旧WAVと生成スクリプトを削除しました。正解はDing Dong、不正解はBuzzerです。同一オリジンのMP3へ接続し、ローカルHTTPのMIMEを`audio/mpeg`にしました。既存の出典画面にOtoLogic／CC BY 4.0を表示しています。元ファイル・ハッシュ・長さは[効果音](SOUND_ASSETS.md)へ記録しました。
+
+- `npm test`：16件成功。音源の3件はアップロードの固定SHA-256、ID3制作者情報、MP3フレーム、別音源であることを検証する内容へ更新しました。
+- `npm run build`、`node --check public/app.js`、`node --check scripts/dev.cjs`、`node --check tests/e2e.cjs`、`git diff --check`：成功。ビルド後のMP3は元の配信ソースとバイト一致し、旧WAVは配信されません。
+- `NODE_ENV=test node --env-file=<非公開のローカルテスト設定> /workspace/scratch/target-uploaded-sounds-focus.cjs`：更新したE2Eの音声シナリオを集中実行し、実HTTP・新規ローカルPostgreSQL・独立Chromiumで1シナリオ／114検証成功。ネイティブMP3のデコード・再生、音あり時の最後までの試聴、正解／不正解の同期再生、1秒の自動進行・途中タップでの停止、音なし・リロード後の保持・再生拒否・保存領域不在を確認しました。最初の実行はテスト用DB起動前の`ECONNREFUSED`で失敗し、コンテナ起動・接続準備完了後に成功しました。今回は全26シナリオの再実行結果ではありません。
+- `ffmpeg`で両MP3の実デコードと非無音を確認。提供ZIP内の選択ファイルと完全一致し、合計33,783 bytesです。1秒より長い正解音は末尾の余韻で、最初の1秒に音声エネルギーの97.28%があり、不正解音は約0.3秒で鳴り終わります。
+
+設定・1秒進行・確率・得点・API・クラウドDB・依存は変更していません。公開URLでの配信一致と実音声確認はPRへ追記します。実機iPhone Safariでの聴音は未検証です。課金・保護設定・KGSの本番データも変更していません。
