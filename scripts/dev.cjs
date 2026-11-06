@@ -5,7 +5,7 @@ const path=require('node:path');
 const {handler}=require('../server/router.cjs');
 const root=path.resolve(__dirname,'../dist');
 const config=require('../vercel.json');
-const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.webmanifest':'application/manifest+json','.svg':'image/svg+xml','.png':'image/png'};
+const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.webmanifest':'application/manifest+json','.svg':'image/svg+xml','.png':'image/png','.wav':'audio/wav'};
 http.createServer(async(req,res)=>{
   if(req.url.split('?')[0].startsWith('/api/'))return handler(req,res);
   for(const h of config.headers[0].headers)res.setHeader(h.key,h.value);

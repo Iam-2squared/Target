@@ -14,7 +14,9 @@
   let memoryPage=0, memoryBook='target1900', meaningsHidden=false, memoryTicket=0;
   let memoryPages=[], memoryLayoutKey='', memoryLayoutFrame=0,memorySelectionKey='',memoryRange={from:1,to:100};
   let quiz=null, startRetry=null, starting=false, loginPending=false, logoutPending=false;
-  let toastTimer, soundContext, resultTimer, resultGeneration=0, resultDisplay=null, resultPointer=null, lastAdvanceTap=null;
+  const SOUND_KEY='target-sound-enabled';
+  let soundEnabled=readSoundSetting(),soundPlayers,soundGeneration=0,activeSound=null,soundSessionLease=null;
+  let toastTimer, resultTimer, resultGeneration=0, resultDisplay=null, resultPointer=null, lastAdvanceTap=null;
 
   function element(tag,className,text) {
     const node=document.createElement(tag);
@@ -40,9 +42,10 @@
   function guestAward() {
     const limit=0x100000000-(0x100000000%100);let value;
     do {value=crypto.getRandomValues(new Uint32Array(1))[0];} while(value>=limit);
-    const roll=value%100;return roll===0?10000:roll<=5?1000:100;
+    const roll=value%100;return roll<=1?10000:roll<=16?1000:100;
   }
   function hideRewardVisual() {
+    window.TargetJackpotEffects?.hide();
     $('rewardCelebration').hidden=true;
   }
   function cancelResultAdvance() {
@@ -57,7 +60,7 @@
     return !!display&&resultDisplay===display&&display.generation===resultGeneration&&
       confirmedResult(display.quiz)&&display.quiz.question.id===display.questionId&&display.epoch===sessionEpoch;
   }
-  function pauseResultDisplay() {cancelResultAdvance();hideRewardVisual();}
+  function pauseResultDisplay() {cancelResultAdvance();hideRewardVisual();stopSound();}
   function clearRewardCelebration() {
     pauseResultDisplay();delete $('rewardCelebration').dataset.tier;
     $('rewardCelebration').style.removeProperty('--reward-duration');
@@ -73,6 +76,7 @@
     overlay.dataset.tier=amount===10000?'jackpot':amount===1000?'bonus':'standard';
     overlay.style.setProperty('--reward-duration','1000ms');overlay.classList.toggle('reward-restored',restored);
     amountNode.hidden=false;overlay.hidden=false;
+    if(amount===10000)window.TargetJackpotEffects?.show({restored});else window.TargetJackpotEffects?.hide();
     $('rewardAnnouncement').textContent='+'+yen(amount);
   }
   function beginResultDisplay(current=quiz) {
@@ -104,36 +108,79 @@
     return event.detail>0&&lastAdvanceTap&&performance.now()-lastAdvanceTap.at<300&&
       Math.hypot(event.clientX-lastAdvanceTap.x,event.clientY-lastAdvanceTap.y)<24;
   }
+  function readSoundSetting() {
+    try{return localStorage.getItem(SOUND_KEY)!=='false';}catch{return true;}
+  }
+  function releaseSoundSession(lease=soundSessionLease) {
+    if(!lease||soundSessionLease!==lease)return;
+    soundSessionLease=null;
+    try{if(lease.owned&&lease.session.type==='playback')lease.session.type=lease.previous;}catch{}
+  }
+  function claimSoundSession() {
+    try{
+      const session=navigator.audioSession;
+      if(!session||typeof session.type!=='string')return null;
+      const previous=session.type;
+      if(previous!=='playback')session.type='playback';
+      return soundSessionLease={session,previous,owned:previous!=='playback'&&session.type==='playback'};
+    }catch{return null;}
+  }
   function prepareSound() {
-    try {
-      const Audio=window.AudioContext||window.webkitAudioContext;
-      if(!Audio)return Promise.resolve(null);
-      if(!soundContext||soundContext.state==='closed')soundContext=new Audio();
-      const context=soundContext;
-      return Promise.resolve(context.state==='running'?undefined:context.resume()).then(()=>context.state==='running'?context:null,()=>null);
-    } catch {return Promise.resolve(null);}
+    if(!soundEnabled)return null;
+    if(soundPlayers)return soundPlayers;
+    try{
+      if(typeof window.Audio!=='function')return null;
+      const players={correct:new Audio('/audio/correct.wav'),wrong:new Audio('/audio/wrong.wav')};
+      for(const player of Object.values(players)){player.preload='auto';player.volume=.85;player.loop=false;player.load();}
+      soundPlayers=players;return players;
+    }catch{return null;}
+  }
+  function stopSound() {
+    soundGeneration++;
+    const previous=activeSound;activeSound=null;
+    if(previous)for(const [event,handler] of previous.listeners)previous.player.removeEventListener(event,handler);
+    if(soundPlayers)for(const player of Object.values(soundPlayers)){try{player.pause();player.currentTime=0;}catch{}}
+    releaseSoundSession();
+  }
+  function playSoundCue(kind,current=null) {
+    if(!soundEnabled||document.hidden)return;
+    if(current&&(quiz!==current||current.sessionEpoch!==sessionEpoch||activeView!=='quiz'))return;
+    const players=prepareSound();if(!players)return;
+    stopSound();
+    const player=players[kind],token=soundGeneration,questionId=current?.question.id,epoch=sessionEpoch;
+    const lease=claimSoundSession();
+    const finish=event=>{
+      if(activeSound?.token!==token||activeSound.player!==player)return;
+      if(event?.type==='ended'&&!player.ended)return;
+      if(event?.type==='pause'&&!player.paused)return;
+      for(const [name,handler] of activeSound.listeners)player.removeEventListener(name,handler);
+      activeSound=null;releaseSoundSession(lease);
+    };
+    const listeners=[['ended',finish],['error',finish],['pause',finish]];
+    activeSound={player,token,listeners};for(const [name,handler] of listeners)player.addEventListener(name,handler);
+    try{
+      if(player.error)player.load();
+      player.muted=false;player.volume=.85;player.currentTime=0;
+      // Keep play() itself in the answer/settings user gesture, not a resume()
+      // promise chain. Loading or blocked audio never holds grading or timers.
+      const playing=player.play();
+      void Promise.resolve(playing).then(()=>{
+        if(activeSound?.token!==token){if(activeSound?.player!==player)try{player.pause();}catch{}return;}
+        if(!soundEnabled||document.hidden||epoch!==sessionEpoch||(current&&(quiz!==current||current.question.id!==questionId||activeView!=='quiz')))stopSound();
+      },()=>finish());
+    }catch{finish();}
   }
   function feedbackSound(current,correct) {
     if(current.soundPlayed)return;current.soundPlayed=true;
-    const questionId=current.question.id,epoch=current.sessionEpoch;
-    void Promise.resolve(current.soundReady).then(context=>{
-      if(!context||quiz!==current||current.question.id!==questionId||epoch!==sessionEpoch||activeView!=='quiz'||document.hidden)return;
-      try {
-        const start=context.currentTime;
-        const tones=correct?[[1046.5,0,.085],[1318.5,.075,.13]]:[[293.66,0,.085],[220,.065,.095]];
-        for(const [frequency,offset,duration] of tones){
-          const oscillator=context.createOscillator(),gain=context.createGain(),at=start+offset;
-          oscillator.type=correct?'sine':'triangle';oscillator.frequency.setValueAtTime(frequency,at);
-          gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(correct ? .085 : .055,at+.006);
-          gain.gain.exponentialRampToValueAtTime(.0001,at+duration);
-          oscillator.connect(gain);gain.connect(context.destination);
-          oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};
-          oscillator.start(at);oscillator.stop(at+duration+.015);
-        }
-      } catch { /* Sound is optional when the browser cannot create audio. */ }
-    },()=>{});
+    playSoundCue(correct?'correct':'wrong',current);
   }
-  document.addEventListener('visibilitychange',()=>{if(document.hidden){pauseResultDisplay();if(soundContext?.state==='running'){try{void soundContext.suspend().catch(()=>{});}catch{}}}else if(confirmedResult())beginResultDisplay();});
+  function setSoundEnabled(enabled,{preview=false,persist=true}={}) {
+    soundEnabled=enabled;$('soundSetting').value=enabled?'on':'off';
+    if(persist)try{localStorage.setItem(SOUND_KEY,String(enabled));}catch{}
+    if(!enabled)stopSound();else if(preview)playSoundCue('correct');
+  }
+  window.addEventListener('storage',event=>{if(event.key===SOUND_KEY)setSoundEnabled(event.newValue!=='false',{persist:false});});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)pauseResultDisplay();else if(confirmedResult())beginResultDisplay();});
   function setError(id,message='') {const node=$(id);node.textContent=message;node.hidden=!message;}
   function toast(message) {clearTimeout(toastTimer);$('toast').textContent=message;$('toast').hidden=false;toastTimer=setTimeout(()=>{$('toast').hidden=true;},3500);}
   function show(view,{scroll=true}={}) {
@@ -171,7 +218,7 @@
     $('homeScore').textContent=member?yen(lifetimePoints):'';
     $('loggedInSettings').hidden=!member;$('loginForm').hidden=!!member;
     $('identityName').textContent=member?.name||'';$('identityInitial').textContent=member?.name?.trim()?.slice(0,1)||'K';
-    $('settingsScore').textContent=yen(lifetimePoints);
+    $('settingsScore').textContent=yen(lifetimePoints);$('soundSetting').value=soundEnabled?'on':'off';
     $('testMode').textContent=member?'ランキングに記録':'ゲスト（記録なし）';
     $('testStart').textContent=starting?'準備中…':'開始';
   }
@@ -294,7 +341,7 @@
   document.fonts?.ready.then(()=>{memoryLayoutKey='';queueMemoryLayout();});
   function openSetup() {
     $('setupBook').textContent=books[selectedBook].title;
-    renderSectionControls();void dataset(selectedBook).catch(()=>{});
+    renderSectionControls();prepareSound();void dataset(selectedBook).catch(()=>{});
     setError('setupError');startRetry=null;renderIdentity();show('setup');
   }
   function questionShape(question) {
@@ -323,7 +370,7 @@
     const settings={book:selectedBook,direction,count,from,to},key=JSON.stringify(settings),epoch=sessionEpoch;
     if(!startRetry||startRetry.key!==key)startRetry={key,requestId:uuid()};
     const attempt=startRetry,currentSetup=()=>epoch===sessionEpoch&&activeView==='setup'&&startRetry===attempt;
-    starting=true;$('testStart').disabled=true;renderIdentity();
+    starting=true;prepareSound();$('testStart').disabled=true;renderIdentity();
     try {
       let created;
       if(member){
@@ -355,7 +402,7 @@
     $('questionPrompt').textContent=question.prompt;$('questionPrompt').closest('.question-card').classList.toggle('english-prompt',quiz.settings.direction==='japanese');
     question.choices.forEach((choice,index)=>{const button=element('button','choice-button');button.type='button';button.dataset.choiceId=choice.id;button.setAttribute('aria-pressed','false');button.append(element('span','choice-letter',String.fromCharCode(65+index)),element('span','choice-text',choice.text));button.addEventListener('click',event=>selectChoice(choice.id,event));fragment.append(button);});
     $('questionChoices').replaceChildren(fragment);$('answerFeedback').hidden=true;$('answerRetry').hidden=true;setError('quizError');
-    quiz.feedback=null;quiz.localFeedback=null;quiz.pendingAnswer=null;quiz.pendingGuestResult=null;quiz.soundPlayed=false;quiz.soundReady=null;clearRewardCelebration();
+    quiz.feedback=null;quiz.localFeedback=null;quiz.pendingAnswer=null;quiz.pendingGuestResult=null;quiz.soundPlayed=false;clearRewardCelebration();
     requestAnimationFrame(()=>{if(activeView==='quiz')$('questionPrompt').focus({preventScroll:true});});
   }
   function selectChoice(choiceId,event){
@@ -363,7 +410,9 @@
     if(event?.detail>1||(event&&repeatsAdvanceTap(event)))return;
     if(!quiz.question.choices.some(choice=>choice.id===choiceId))return;
     for(const button of $('questionChoices').querySelectorAll('button')){const selected=button.dataset.choiceId===choiceId;button.classList.toggle('selected',selected);button.setAttribute('aria-pressed',String(selected));}
-    quiz.soundReady=prepareSound();void answer(choiceId);
+    const known=quiz.recorded?materialFeedback(quiz,choiceId):{correct:choiceId===quiz.question.correctChoiceId};
+    if(known)feedbackSound(quiz,known.correct);
+    void answer(choiceId);
   }
   function materialFeedback(current,choiceId){
     const row=datasets.get(current.settings.book)?.[current.question.number-1];if(!row)return null;
@@ -397,7 +446,6 @@
     if(current.pendingAnswer&&!retry)return;
     if(!current.question.choices.some(choice=>choice.id===choiceId))return;
     if(!current.pendingAnswer)current.pendingAnswer={quizId:current.id,questionId:current.question.id,choiceId,requestId:uuid()};
-    if(retry&&!current.soundPlayed)current.soundReady=prepareSound();
     current.pending=true;$('answerRetry').disabled=true;setError('quizError');
     for(const button of $('questionChoices').querySelectorAll('button')){button.disabled=true;button.classList.toggle('selected',button.dataset.choiceId===choiceId);}
     if(current.recorded){
@@ -426,7 +474,7 @@
   }
   function nextQuestion(display=resultDisplay) {
     if(!liveResultDisplay(display)||quiz.pending)return false;
-    cancelResultAdvance();hideRewardVisual();
+    cancelResultAdvance();hideRewardVisual();stopSound();
     if(quiz.finished){showResult();return true;}
     quiz.question=quiz.feedback.nextQuestion;renderQuestion();window.scrollTo({top:0,behavior:'instant'});
     return true;
@@ -498,6 +546,7 @@
   $('resultView').addEventListener('click',event=>{if(event.target.closest('button,a')&&repeatsAdvanceTap(event)){event.preventDefault();event.stopImmediatePropagation();}},true);
   $('testAgain').addEventListener('click',()=>{if(quiz)selectedBook=quiz.settings.book;selectBook(selectedBook);openSetup();});
   $('rankingOpen').addEventListener('click',openRanking);$('resultRanking').addEventListener('click',openRanking);$('rankingRefresh').addEventListener('click',()=>loadRanking());
+  $('soundSetting').addEventListener('change',()=>setSoundEnabled($('soundSetting').value==='on',{preview:true}));
   $('settingsOpen').addEventListener('click',openSettings);$('settingsClose').addEventListener('click',()=>$('settingsDialog').close());$('loginForm').addEventListener('submit',login);$('logoutButton').addEventListener('click',logout);$('pinVisibility').addEventListener('click',()=>setPinVisible($('accountPin').type==='password'));
   $('sourcesOpen').addEventListener('click',event=>{event.preventDefault();pauseResultDisplay();$('sourcesDialog').showModal();});$('sourcesClose').addEventListener('click',()=>$('sourcesDialog').close());
   $('settingsDialog').addEventListener('close',()=>{if(!loginPending){$('accountPin').value='';setPinVisible(false);}if(confirmedResult())beginResultDisplay();});
