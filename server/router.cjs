@@ -97,8 +97,12 @@ async function handler(req, res) {
     if (pathname === '/api/ranking' && req.method === 'GET') return send(res, 200, await store.rpc('ranking'));
     if (pathname === '/api/mastery' && req.method === 'GET') {
       const book = url.searchParams.get('book');
+      const internalRoutes = url.searchParams.getAll('route');
+      // Vercel may preserve /api/mastery in req.url while adding the rewrite's
+      // route=mastery query. Accept only that exact optional routing metadata.
       if (!['target1900', 'target1000'].includes(book) || url.searchParams.getAll('book').length !== 1 ||
-          [...url.searchParams.keys()].some(key => key !== 'book' && !(url.pathname === '/api/index' && key === 'route'))) {
+          internalRoutes.length > 1 || (internalRoutes.length === 1 && internalRoutes[0] !== 'mastery') ||
+          [...url.searchParams.keys()].some(key => key !== 'book' && key !== 'route')) {
         throw new HttpError(400, '教材を選んでください。', 'INVALID_BOOK');
       }
       const member = await identity.requireMember(req, res, config);

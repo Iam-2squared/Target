@@ -65,6 +65,12 @@ try{
     await target(A,'/api/mastery?book=other',undefined,400);await target(A,'/api/quiz/review/start',{...settings(),memberId:memberB.id},400);
     await target(A,'/api/quiz/review/start',settings(),403,{Origin:'https://untrusted.invalid'});
     for(const[book,total]of[['target1900',19],['target1000',10]]){const m=await mastery(A,book);eq(m.book,book);eq(m.sections.length,total);eq(m.reviewNumbers,[]);for(let i=0;i<total;i++)eq(m.sections[i],{section:i+1,from:i*100+1,to:(i+1)*100,total:100,mastered:0,percent:0,reviewCount:0});}
+    const ordinary=await mastery(A);
+    eq(await target(A,'/api/mastery?book=target1900&route=mastery'),ordinary,'Vercel routing metadata preserves the authenticated mastery response.');
+    eq(await target(A,'/api/index?route=mastery&book=target1900'),ordinary,'The internal rewrite entry reaches the same private mastery data.');
+    await target(A,'/api/mastery?book=target1900&route=mastery&route=mastery',undefined,400);
+    await target(A,'/api/index?route=mastery&book=target1900&route=mastery',undefined,400);
+    await target(A,'/api/mastery?book=target1900&route=ranking',undefined,400);
   });
 
   await scenario('Two consecutive correct answers persist across devices and directions; replay cannot learn twice',async()=>{
