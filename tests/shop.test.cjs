@@ -28,9 +28,33 @@ test('wallet response requires coherent bounded income, spend and permanent owne
   ])assert.throws(()=>shop.validateWallet({...wallet(),...changed}),error=>error.status===503);
 });
 test('draw acknowledgement must match the requested purchase and include its permanently owned result',()=>{
-  const requestId=id(),draw={...wallet(),requestId,stickerId:'night'};
+  const requestId=id(),draw={...wallet(),requestId,stickerId:'night',cost:10000};
   assert.deepEqual(shop.validateWallet(draw,{requestId}),draw);
   for(const changed of [{requestId:id()},{stickerId:'sunglasses'},{stickerId:'https://example.com/photo'}]){
     assert.throws(()=>shop.validateWallet({...draw,...changed},{requestId}),error=>error.status===503);
   }
+});
+
+test('100k price preserves all coherent mixtures of old and new immutable purchase costs',()=>{
+  assert.equal(shop.PRICE,100000);
+  for(let count=0;count<=4;count++)for(let high=0;high<=count;high++){
+    const spent=high*100000+(count-high)*10000;
+    const value={balance:500000-spent,totalIncome:500000,spent,price:100000,ownedStickers:shop.STICKERS.slice(0,count)};
+    assert.deepEqual(shop.validateWallet(value),value);
+  }
+  for(const spent of [10000,20000,90000,190000,300000]){
+    const value={balance:500000-spent,totalIncome:500000,spent,price:100000,ownedStickers:['youth','night']};
+    if([20000,110000,200000].includes(spent))continue;
+    assert.throws(()=>shop.validateWallet(value),error=>error.status===503);
+  }
+});
+test('acknowledged purchase prices are exact and legacy receipts can retain their original cost',()=>{
+  const member={memberId:id(),name:'表示名'},requestId=id();
+  for(const expectedPrice of [10000,100000])assert.equal(shop.parseInput('draw',{...member,requestId,expectedPrice}).expectedPrice,expectedPrice);
+  for(const expectedPrice of [null,undefined,'100000',0,100,99999])assert.throws(()=>shop.parseInput('draw',{...member,requestId,expectedPrice}),error=>error.status===400);
+  const old={...wallet(),price:100000,requestId,stickerId:'night',cost:10000};
+  assert.deepEqual(shop.validateWallet(old,{requestId}),old);
+  for(const cost of [0,100,'100000',null,100000])assert.throws(()=>shop.validateWallet({...old,cost},{requestId}),error=>error.status===503);
+  const missing={...old};delete missing.cost;assert.throws(()=>shop.validateWallet(missing,{requestId}),error=>error.status===503);
+  assert.equal(shop.validateWallet({...missing,price:10000},{requestId}).cost,10000);
 });

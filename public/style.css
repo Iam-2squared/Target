@@ -36,7 +36,22 @@ strong { font-weight: 600; }
 .book-card[aria-pressed=true] { border-color: var(--ink); background: #f3f5f6; }
 .book-copy strong { font-size: 20px; color: var(--ink); }
 .study-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 22px; }
-.home-sections { margin-top: 22px; }
+.home-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 17px; font-size: 13px; font-weight: 550; }
+.section-actions { display: flex; gap: 6px; }
+.section-actions .text-button { color: var(--ink); padding-inline: 8px; font-weight: 550; }
+.home-sections { margin-top: 2px; }
+.mastery-list { list-style: none; margin: 10px 0 0; padding: 0; }
+.mastery-row { padding: 16px 0; border-bottom: 1px solid var(--line); }
+.mastery-row-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.mastery-section { color: var(--ink); font-size: 16px; }
+.mastery-percent { color: #315b7b; font-size: 23px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.mastery-count { display: block; margin-bottom: 9px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.mastery-row progress { height: 5px; }
+.mastery-row progress::-webkit-progress-value { background: #8baeb8; }
+.mastery-row progress::-moz-progress-bar { background: #8baeb8; }
+#masteryStatus:not(:empty), #masteryError { margin-bottom: 14px; }
+.review-notice { margin-bottom: 16px; }
+#reviewLogin { margin: 0 0 20px; }
 .action-card { min-height: 54px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); font-size: 17px; font-weight: 600; }
 .ranking-link { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; margin-top: 26px; padding: 19px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); text-align: left; }
 .ranking-link strong { font-size: 15px; }

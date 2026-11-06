@@ -22,15 +22,23 @@ async function rows(){return(await db.query('SELECT member_id,name,total_points,
 (async()=>{
  try{
   const adminURL=new URL(source.href);adminURL.pathname='/postgres';const admin=new Client({connectionString:adminURL.href});await admin.connect();try{await admin.query('DROP DATABASE IF EXISTS target_bonus_test WITH (FORCE)');await admin.query('CREATE DATABASE target_bonus_test');}finally{await admin.end();}
-  for(const file of(await fs.readdir(path.join(root,'supabase/migrations'))).filter(n=>/^\d+_.*\.sql$/.test(n)&&n!==migration).sort())await db.query(await fs.readFile(path.join(root,'supabase/migrations',file),'utf8'));
+  const migrations=(await fs.readdir(path.join(root,'supabase/migrations'))).filter(n=>/^\d+_.*\.sql$/.test(n)).sort();
+  // Build the actual pre-bonus database first. Later migrations may depend on
+  // the bonus RPC, and must not be applied out of chronological order.
+  for(const file of migrations.filter(n=>n<migration))await db.query(await fs.readFile(path.join(root,'supabase/migrations',file),'utf8'));
   await db.query("INSERT INTO target_private.server_credentials(singleton,key_hash) VALUES(true,encode(sha256(convert_to($1,'UTF8')),'hex'))",[secret]);
   await db.query('INSERT INTO target_private.profiles(member_id,name,total_points,correct_count,answered_count) VALUES($1,$2,100000,10,10)',[a.memberId,a.name]);
   const oldShop=await definition('public.target_shop_rpc(text,text,jsonb)'),oldOdds=await definition('target_private.reward_points_for_roll(integer)');
-  const purchase=await shop('draw',{...a,requestId:uuid()});ok(!purchase.error,'Historical purchase succeeds');
+  const purchaseRequest=uuid(),purchase=await shop('draw',{...a,requestId:purchaseRequest});ok(!purchase.error,'Historical purchase succeeds');
   await forceAward(100);const legacyQuiz=await start(a),legacyInput=answer(a,legacyQuiz,0),legacyReceipt=await rpc('answer',legacyInput);await db.query(oldOdds);
   const before=await rows(),answersBefore=(await db.query('SELECT * FROM target_private.answers ORDER BY quiz_id,question_id')).rows,drawsBefore=(await db.query('SELECT * FROM target_private.sticker_draws ORDER BY member_id,request_id')).rows;
   phase='migration';await db.query(await fs.readFile(path.join(root,'supabase/migrations',migration),'utf8'));
   eq(await rows(),before,'Migration preserves income, counts, spending and ranking dates');eq((await db.query('SELECT * FROM target_private.answers ORDER BY quiz_id,question_id')).rows,answersBefore,'Historical answers are untouched');eq((await db.query('SELECT * FROM target_private.sticker_draws ORDER BY member_id,request_id')).rows,drawsBefore,'Historical purchases are untouched');eq(await definition('public.target_shop_rpc(text,text,jsonb)'),oldShop,'Wallet RPC is unchanged');
+  // Exercise the bonus against today's complete schema after independently
+  // proving that its own migration did not rewrite historical state.
+  for(const file of migrations.filter(n=>n>migration))await db.query(await fs.readFile(path.join(root,'supabase/migrations',file),'utf8'));
+  const currentWallet=await shop('wallet',a);eq(currentWallet.price,100000,'Latest schema advertises100k for new purchases');
+  const historicalReplay=await shop('draw',{...a,requestId:purchaseRequest,expectedPrice:10000});eq(historicalReplay.cost,10000,'A historical purchase retains its original10k cost');eq(historicalReplay.spent,10000,'Replaying an old purchase never adds spending');
   const normalOdds=await definition('target_private.reward_points_for_roll(integer)');
   const map=(await db.query('SELECT roll,target_private.reward_points_for_roll(roll) AS award FROM generate_series(0,99) roll ORDER BY roll')).rows;
   eq(map.map(r=>r.award),Array.from({length:100},(_,roll)=>roll===0?100000:roll<=2?10000:roll<=17?1000:100),'Exactly 1/2/15/82 of a hundred outcomes');
@@ -57,7 +65,7 @@ async function rows(){return(await db.query('SELECT member_id,name,total_points,
   const expired=await queued;eq(expired.awardPoints,100,'A request queued before expiry uses acceptance time after the lock');eq(expired.bonus,null);eq((await profile(a)).bonus,null);
   eq(await rpc('answer',firstInput),first,'An expired receipt still does not restart the timer');eq((await profile(a)).bonus,null);
   phase='second jackpot';await forceAward(100000);const second=await rpc('answer',answer(a,quiz,4));eq(second.awardPoints,100000);ok(second.bonus.id!==first.bonus.id,'A later jackpot gets a distinct event');ok(Date.parse(second.bonus.startedAt)>=Date.parse(first.bonus.endsAt));eq(await rpc('answer',firstInput),first);eq((await profile(a)).bonus,second.bonus,'Old receipt cannot overwrite a newer window');
-  const beforeWallet=await shop('wallet',a),newDraw=uuid(),[paid,drew]=await Promise.all([rpc('answer',answer(a,quiz,5)),shop('draw',{...a,requestId:newDraw})]);eq(paid.awardPoints,500);ok(!drew.error,'Purchasing still works while earning bonus income');const afterWallet=await shop('wallet',a);eq(afterWallet.totalIncome,beforeWallet.totalIncome+500);eq(afterWallet.spent,beforeWallet.spent+10000);eq(afterWallet.balance,afterWallet.totalIncome-afterWallet.spent);eq((await profile(a)).bonus,second.bonus);
+  const beforeWallet=await shop('wallet',a),newDraw=uuid(),[paid,drew]=await Promise.all([rpc('answer',answer(a,quiz,5)),shop('draw',{...a,requestId:newDraw,expectedPrice:100000})]);eq(paid.awardPoints,500);ok(!drew.error,'Purchasing still works while earning bonus income');eq(drew.cost,100000,'The concurrent new draw uses the acknowledged100k price');const afterWallet=await shop('wallet',a);eq(afterWallet.totalIncome,beforeWallet.totalIncome+500);eq(afterWallet.spent,beforeWallet.spent+100000);eq(afterWallet.balance,afterWallet.totalIncome-afterWallet.spent);eq((await profile(a)).bonus,second.bonus);
   phase='constraints and ACL';
   await assert.rejects(db.query('UPDATE target_private.profiles SET bonus_ends_at=bonus_ends_at+interval \'1 second\' WHERE member_id=$1',[a.memberId]),e=>e.code==='23514');checks++;
   await assert.rejects(db.query('UPDATE target_private.profiles SET spent_points=total_points+10000 WHERE member_id=$1',[a.memberId]),e=>e.code==='23514');checks++;

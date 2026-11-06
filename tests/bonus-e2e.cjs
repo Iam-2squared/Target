@@ -89,7 +89,7 @@ try{
     const values=await Promise.all([target(A,'/api/quiz/answer',x),target(A2,'/api/quiz/answer',y)]);for(const v of values){eq(v.awardPoints,500);eq(v.bonus,firstReply.bonus);}eq((await target(A,'/api/session')).totalIncome,101000);
     const wrong=values[0].nextQuestion,wrongChoice=wrong.choices.find(c=>c.id!==correct(wrong).id);apiReplyA=await target(A,'/api/quiz/answer',answerInput(aQuiz,wrong,wrongChoice));eq(apiReplyA.awardPoints,0);eq(apiReplyA.bonus,firstReply.bonus);
     const q=await begin(B),b=await target(B,'/api/quiz/answer',answerInput(q,q.question,correct(q.question)));eq(b.awardPoints,100000);ok(b.bonus.id!==firstReply.bonus.id,'Different accounts have separate bonus IDs.');
-    const purchase=await kgs(KgsA,'/api/shop/gacha',{requestId:uuid()});eq(purchase.totalIncome,101000);eq(purchase.spent,10000);eq(purchase.balance,91000,'Study rewards remain spendable without reducing gross income.');
+    const purchase=await kgs(KgsA,'/api/shop/gacha',{requestId:uuid(),expectedPrice:100000});eq(purchase.totalIncome,101000);eq(purchase.spent,100000);eq(purchase.balance,1000,'Study rewards remain spendable at the acknowledged100k price without reducing gross income.');
   });
 
   await scenario('Native 100,000 music continues through automatic and early advances, then expires near the full clip',async()=>{

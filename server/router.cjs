@@ -95,6 +95,15 @@ async function handler(req, res) {
       return send(res, 200, {member: {name: member.name}, correctCount: profile.correctCount, totalPoints: wallet.totalIncome,bonus:profile.bonus??null,...wallet});
     }
     if (pathname === '/api/ranking' && req.method === 'GET') return send(res, 200, await store.rpc('ranking'));
+    if (pathname === '/api/mastery' && req.method === 'GET') {
+      const book = url.searchParams.get('book');
+      if (!['target1900', 'target1000'].includes(book) || url.searchParams.getAll('book').length !== 1 ||
+          [...url.searchParams.keys()].some(key => key !== 'book' && !(url.pathname === '/api/index' && key === 'route'))) {
+        throw new HttpError(400, '教材を選んでください。', 'INVALID_BOOK');
+      }
+      const member = await identity.requireMember(req, res, config);
+      return send(res, 200, await store.rpc('mastery', {memberId: member.id, name: member.name, book}));
+    }
     if (pathname === '/api/login' && req.method === 'POST') {
       const body = await readJson(req);
       const number = typeof body.attendanceNumber === 'number' ? body.attendanceNumber :
@@ -126,6 +135,19 @@ async function handler(req, res) {
       const questions = generateQuestions(body);
       return send(res, 200, await store.rpc('start', {memberId: member.id, name: member.name,
         requestId: body.requestId, book: body.book, direction: body.direction, from: body.from, to: body.to, questions}));
+    }
+    if (pathname === '/api/quiz/review/start' && req.method === 'POST') {
+      const body = validateQuizInput(await readJson(req));
+      const member = await identity.requireMember(req, res, config);
+      const input = {memberId: member.id, name: member.name, requestId: body.requestId,
+        book: body.book, direction: body.direction, from: body.from, to: body.to, count: body.count};
+      // Resolve a prior start before looking at today's pool: its last word may
+      // already be mastered on another device. Candidate IDs never come from UI.
+      const candidate = await store.rpc('review_start', input);
+      if (candidate.quizId) return send(res, 200, candidate);
+      if (!Array.isArray(candidate.reviewNumbers)) throw new HttpError(503, '解き直しの対象を確認できませんでした。', 'REVIEW_UNAVAILABLE');
+      const questions = generateQuestions(body, candidate.reviewNumbers);
+      return send(res, 200, await store.rpc('review_start', {...input, questions}));
     }
     if (pathname === '/api/quiz/answer' && req.method === 'POST') {
       const body = await readJson(req);

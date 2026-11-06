@@ -45,10 +45,20 @@ function validateQuizInput(body) {
   return body;
 }
 
-function generateQuestions(input) {
+function generateQuestions(input, reviewNumbers) {
   const body = validateQuizInput(input);
   const rows = loadBook(body.book);
-  const eligible = shuffle(rows.slice(body.from - 1, body.to)).slice(0, body.count);
+  let pool = rows.slice(body.from - 1, body.to);
+  if (reviewNumbers !== undefined) {
+    if (!Array.isArray(reviewNumbers) || reviewNumbers.length > BOOKS[body.book].size ||
+        reviewNumbers.some(n => !Number.isSafeInteger(n) || n < body.from || n > body.to) ||
+        new Set(reviewNumbers).size !== reviewNumbers.length) {
+      throw new HttpError(503, '解き直しの対象を確認できませんでした。', 'REVIEW_UNAVAILABLE');
+    }
+    const selected = new Set(reviewNumbers);
+    pool = pool.filter(row => selected.has(row.number));
+  }
+  const eligible = shuffle(pool).slice(0, body.count);
   const answerKey = body.direction === 'english' ? 'english' : 'japanese';
   const promptKey = body.direction === 'english' ? 'japanese' : 'english';
   return eligible.map(row => {

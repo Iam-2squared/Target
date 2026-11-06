@@ -5,12 +5,13 @@
     target1900: {title:'Target 1900',kind:'英単語',total:1900},
     target1000: {title:'英熟語Target 1000',kind:'英熟語',total:1000}
   };
-  const views = ['home','memorize','setup','quiz','result','ranking'];
+  const views = ['home','memorize','setup','quiz','result','ranking','mastery'];
   const datasets = new Map(), datasetPromises = new Map();
   let selectedBook='target1900', activeView='home', member=null, lifetimeCorrect=0, lifetimePoints=0;
   let sessionKnown=false, sessionEpoch=0, sessionTicket=0, walletBalance=0, walletKnown=false;
   const rankingTickets={homeRanking:0,ranking:0};
   const sectionRanges={target1900:{from:1,to:1},target1000:{from:1,to:1}};
+  let masteryTicket=0,setupMode='normal';
   let memoryPage=0, memoryBook='target1900', meaningsHidden=false, memoryTicket=0;
   let memoryPages=[], memoryLayoutKey='', memoryLayoutFrame=0,memorySelectionKey='',memoryRange={from:1,to:100};
   let quiz=null, startRetry=null, starting=false, loginPending=false, logoutPending=false;
@@ -199,9 +200,9 @@
     document.body.dataset.view=view;
     for(const id of views)$(id+'View').hidden=id!==view;
     if(scroll)window.scrollTo({top:0,behavior:'instant'});
-    document.title=view==='home'?'Target':({memorize:'暗記',setup:'テスト',quiz:'テスト',result:'テスト結果',ranking:'ランキング'}[view]+' | Target');
+    document.title=view==='home'?'Target':({memorize:'暗記',setup:setupMode==='review'?'解き直し':'テスト',quiz:'テスト',result:'テスト結果',ranking:'ランキング',mastery:'定着率'}[view]+' | Target');
   }
-  function home() {memoryTicket++;show('home');renderIdentity();renderSectionControls();void loadRanking('homeRanking');}
+  function home() {memoryTicket++;clearMastery();show('home');renderIdentity();renderSectionControls();void loadRanking('homeRanking');}
   function goHome() {if(activeView==='quiz'&&quiz&&!quiz.finished){openQuit();return;}home();}
   function appError(message,code='',status=0) {const error=new Error(message);error.code=code;error.status=status;return error;}
   async function api(path,body) {
@@ -241,19 +242,29 @@
     $('settingsBalance').textContent=walletKnown?gou(walletBalance):'—';$('settingsScore').textContent=walletKnown?gou(lifetimePoints):'—';$('soundSetting').value=soundEnabled?'on':'off';
     $('testMode').textContent=member?'ランキングに記録':'ゲスト（記録なし）';
     $('testStart').textContent=starting?'準備中…':'開始';
+    $('testStart').disabled=starting||(setupMode==='review'&&!member);
+    $('reviewNotice').hidden=setupMode!=='review';$('reviewLogin').hidden=setupMode!=='review'||!!member;
+    $('reviewNotice').textContent=member?'間違えた後、まだ定着していない単語を出題します。':'解き直しにはログインが必要です。';
+    $('masteryLogin').hidden=!!member;
   }
   async function refreshSession({notify=true,walletFeedback=false}={}) {
     const ticket=++sessionTicket,epoch=sessionEpoch;
     try {
       const identity=parseIdentity(await api('/session'));
       if(ticket!==sessionTicket||epoch!==sessionEpoch)return;
-      if(!!member!==!!identity.member)bonus.reset();
+      const changed=!!member!==!!identity.member;
+      if(changed)bonus.reset();
+      // The session cookie may have changed in another tab even when both
+      // identities are logged in. Never retain one account's rendered mastery
+      // through a fresh server session check or apply its outstanding request.
+      clearMastery();
       member=identity.member;lifetimeCorrect=identity.correctCount;lifetimePoints=identity.totalPoints;walletBalance=identity.balance;walletKnown=!!member;sessionKnown=true;
       if(member)bonus.update(identity.bonus,identity.timing);
       $('connectionNotice').hidden=true;renderIdentity();
+      if(activeView==='mastery')void loadMastery();
     } catch(error) {
       if(ticket!==sessionTicket||epoch!==sessionEpoch)return;
-      if(error.status===401){bonus.reset();member=null;lifetimeCorrect=0;lifetimePoints=0;walletBalance=0;walletKnown=false;sessionKnown=true;}
+      if(error.status===401){bonus.reset();clearMastery();member=null;lifetimeCorrect=0;lifetimePoints=0;walletBalance=0;walletKnown=false;sessionKnown=true;}
       if(walletFeedback){walletKnown=false;if($('settingsDialog').open)setError('settingsError','保有金額を確認できませんでした。もう一度個人設定を開いてください。');}
       if(notify){$('connectionNotice').textContent='共有機能に接続できません。暗記とゲスト練習は利用できます。';$('connectionNotice').hidden=false;}
       renderIdentity();
@@ -276,7 +287,7 @@
   function selectBook(book) {
     if(!Object.hasOwn(books,book))return;selectedBook=book;
     for(const button of document.querySelectorAll('[data-book]'))button.setAttribute('aria-pressed',String(button.dataset.book===book));
-    startRetry=null;renderSectionControls();
+    clearMastery();startRetry=null;renderSectionControls();
   }
   function selectedWordRange(book=selectedBook){
     const range=sectionRanges[book];return {from:(range.from-1)*100+1,to:Math.min(range.to*100,books[book].total)};
@@ -294,6 +305,45 @@
     const range=sectionRanges[selectedBook];range[part]=section;
     if(range.from>range.to)range[part==='from'?'to':'from']=section;
     startRetry=null;renderSectionControls();
+  }
+  function clearMastery(){
+    masteryTicket++;$('masteryList').replaceChildren();$('masteryStatus').textContent='';setError('masteryError');
+    $('masteryRefresh').disabled=false;
+  }
+  function openMastery(){
+    clearMastery();$('masteryBook').textContent=books[selectedBook].title;show('mastery');void loadMastery();
+  }
+  function masteryRows(data,book){
+    const total=books[book].total,sectionCount=Math.ceil(total/100);
+    if(data.book!==book||!Array.isArray(data.sections)||data.sections.length!==sectionCount||!Array.isArray(data.reviewNumbers)||data.reviewNumbers.length>total||data.reviewNumbers.some((number,index)=>!Number.isSafeInteger(number)||number<1||number>total||(index>0&&number<=data.reviewNumbers[index-1])))throw appError('定着率の内容を確認できませんでした。もう一度お試しください。');
+    for(let index=0;index<sectionCount;index++){
+      const row=data.sections[index],from=index*100+1,to=Math.min(from+99,total),size=to-from+1;
+      if(!row||row.section!==index+1||row.from!==from||row.to!==to||row.total!==size||!Number.isSafeInteger(row.mastered)||row.mastered<0||row.mastered>size||row.percent!==Math.floor(row.mastered*100/size)||!Number.isSafeInteger(row.reviewCount)||row.reviewCount<0||row.reviewCount>size-row.mastered||row.reviewCount!==data.reviewNumbers.filter(number=>number>=from&&number<=to).length)throw appError('定着率の内容を確認できませんでした。もう一度お試しください。');
+    }
+    return data.sections;
+  }
+  async function loadMastery(){
+    const ticket=++masteryTicket,epoch=sessionEpoch,book=selectedBook;
+    const current=()=>ticket===masteryTicket&&epoch===sessionEpoch&&activeView==='mastery'&&book===selectedBook;
+    $('masteryBook').textContent=books[book].title;$('masteryList').replaceChildren();setError('masteryError');
+    $('masteryLogin').hidden=!!member;$('masteryRefresh').disabled=false;
+    if(!member){$('masteryStatus').textContent='ログインして定着率を確認できます。';return;}
+    $('masteryStatus').textContent='読み込み中…';$('masteryRefresh').disabled=true;
+    try{
+      const data=await api('/mastery?book='+encodeURIComponent(book));if(!current())return;
+      const fragment=document.createDocumentFragment();
+      for(const row of masteryRows(data,book)){
+        const item=element('li','mastery-row'),heading=element('div','mastery-row-heading'),progress=element('progress');
+        item.dataset.section=String(row.section);heading.append(element('strong','mastery-section','Section '+row.section),element('span','mastery-percent',row.percent+'%'));
+        progress.max=row.total;progress.value=row.mastered;progress.setAttribute('aria-label','Section '+row.section+'の定着率 '+row.percent+'%');
+        item.append(heading,element('span','mastery-count',row.mastered+' / '+row.total),progress);fragment.append(item);
+      }
+      $('masteryList').replaceChildren(fragment);$('masteryStatus').textContent='2回連続で正解すると定着します。';
+    }catch(error){
+      if(!current())return;
+      if(error.status===401){bonus.reset();clearMastery();member=null;lifetimeCorrect=0;lifetimePoints=0;walletBalance=0;walletKnown=false;sessionKnown=true;sessionEpoch++;sessionTicket++;renderIdentity();$('masteryStatus').textContent='ログインして定着率を確認できます。';}
+      else{$('masteryStatus').textContent='';setError('masteryError',error.message);}
+    }finally{if(current())$('masteryRefresh').disabled=false;}
   }
   async function openMemory() {
     const book=selectedBook,ticket=++memoryTicket,range=selectedWordRange(book),key=book+':'+range.from+':'+range.to;
@@ -362,7 +412,8 @@
   if(typeof ResizeObserver==='function')new ResizeObserver(queueMemoryLayout).observe($('memorySheet'));
   window.addEventListener('resize',queueMemoryLayout);
   document.fonts?.ready.then(()=>{memoryLayoutKey='';queueMemoryLayout();});
-  function openSetup() {
+  function openSetup({review=false}={}) {
+    setupMode=review?'review':'normal';clearMastery();$('setupTitle').textContent=review?'解き直し':'テスト';
     $('setupBook').textContent=books[selectedBook].title;
     renderSectionControls();prepareSound();if(soundEnabled)bonus.prepare();void dataset(selectedBook).catch(()=>{});
     setError('setupError');startRetry=null;renderIdentity();show('setup');
@@ -390,7 +441,8 @@
     event.preventDefault();if(starting)return;setError('setupError');
     const {from,to}=selectedWordRange(),count=Number($('questionCount').value),direction=document.querySelector('input[name=direction]:checked')?.value;
     if(!Number.isSafeInteger(from)||!Number.isSafeInteger(to)||from<1||to<from||to>books[selectedBook].total||![10,50,100].includes(count)||!['english','japanese'].includes(direction)){setError('setupError','出題範囲と問題数を確認してください。');return;}
-    const settings={book:selectedBook,direction,count,from,to},key=JSON.stringify(settings),epoch=sessionEpoch;
+    const review=setupMode==='review';if(review&&!member){setError('setupError','解き直しにはログインが必要です。');return;}
+    const settings={book:selectedBook,direction,count,from,to},key=JSON.stringify({...settings,review}),epoch=sessionEpoch;
     if(!startRetry||startRetry.key!==key)startRetry={key,requestId:uuid()};
     const attempt=startRetry,currentSetup=()=>epoch===sessionEpoch&&activeView==='setup'&&startRetry===attempt;
     starting=true;prepareSound();$('testStart').disabled=true;renderIdentity();
@@ -398,7 +450,7 @@
       let created;
       if(member){
         void dataset(settings.book).catch(()=>{});
-        const data=await api('/quiz/start',{...settings,requestId:attempt.requestId});
+        const data=await api(review?'/quiz/review/start':'/quiz/start',{...settings,requestId:attempt.requestId});
         if(!currentSetup())return;
         if(typeof data.quizId!=='string'||!data.quizId||!Number.isSafeInteger(data.total)||data.total<1||data.total>count||data.answeredCount!==0||data.correctCount!==0||data.quizPoints!==0)throw appError('テストの準備結果を確認できませんでした。');
         bonus.update(checkedBonus(data.bonus),data.__timing);
@@ -408,12 +460,12 @@
         if(!currentSetup())return;
         created={recorded:false,id:uuid(),total:questions.length,answeredCount:0,correctCount:0,quizPoints:0,question:questions[0],questions};
       }
-      quiz={...created,settings,pending:false,pendingAnswer:null,feedback:null,localFeedback:null,finished:false,sessionEpoch:epoch};startRetry=null;lastAdvanceTap=null;
+      quiz={...created,settings:{...settings,review},pending:false,pendingAnswer:null,feedback:null,localFeedback:null,finished:false,sessionEpoch:epoch};startRetry=null;lastAdvanceTap=null;
       show('quiz');renderQuestion();
     } catch(error) {
       if(!currentSetup())return;
-      if(error.status===401){bonus.reset();member=null;lifetimeCorrect=0;lifetimePoints=0;walletBalance=0;walletKnown=false;sessionKnown=true;sessionEpoch++;renderIdentity();}
-      setError('setupError',error.message);
+      if(error.status===401){bonus.reset();clearMastery();member=null;lifetimeCorrect=0;lifetimePoints=0;walletBalance=0;walletKnown=false;sessionKnown=true;sessionEpoch++;renderIdentity();}
+      setError('setupError',error.code==='REVIEW_EMPTY'?'解き直す単語はありません。':error.message);
     } finally {starting=false;$('testStart').disabled=false;renderIdentity();}
   }
   function renderQuestion() {
@@ -461,7 +513,7 @@
     quiz.feedback=result;quiz.answeredCount=result.answeredCount;quiz.correctCount=result.correctCount;quiz.quizPoints=result.quizPoints;quiz.finished=result.finished;
     renderAnswerFeedback(result);feedbackSound(quiz,result.correct);
     $('quizPoints').textContent=gou(quiz.quizPoints);
-    if(quiz.recorded){sessionTicket++;lifetimePoints=Math.max(lifetimePoints,result.totalPoints);walletKnown=false;renderIdentity();if($('settingsDialog').open)void refreshSession({notify:false,walletFeedback:true});}
+    if(quiz.recorded){clearMastery();sessionTicket++;lifetimePoints=Math.max(lifetimePoints,result.totalPoints);walletKnown=false;renderIdentity();if($('settingsDialog').open)void refreshSession({notify:false,walletFeedback:true});}
     $('quizCorrect').textContent=quiz.correctCount+'問 正解';$('quizProgress').value=quiz.answeredCount;
     $('quizMode').textContent=quiz.recorded?'ランキングに記録':'ゲスト';
     $('answerRetry').hidden=true;beginResultDisplay();
@@ -494,7 +546,7 @@
     } catch(error) {
       if(quiz!==current||current.sessionEpoch!==sessionEpoch)return;
       clearRewardCelebration();
-      if(error.status===401){bonus.reset();member=null;lifetimeCorrect=0;lifetimePoints=0;walletBalance=0;walletKnown=false;sessionKnown=true;sessionEpoch++;renderIdentity();}
+      if(error.status===401){bonus.reset();clearMastery();member=null;lifetimeCorrect=0;lifetimePoints=0;walletBalance=0;walletKnown=false;sessionKnown=true;sessionEpoch++;renderIdentity();}
       $('quizMode').textContent=current.recorded?'記録未確認':'ゲスト';
       setError('quizError',error.message+' 回答は保持しています。');$('answerRetry').hidden=error.status===401;
     } finally {current.pending=false;if(quiz===current)$('answerRetry').disabled=false;}
@@ -510,6 +562,7 @@
     if(!quiz)return;
     $('resultBook').textContent=books[quiz.settings.book].title;$('resultCorrect').textContent=String(quiz.correctCount);$('resultTotal').textContent='/ '+quiz.total+'問';$('resultPoints').textContent=gou(quiz.quizPoints);
     $('resultMode').textContent=quiz.recorded?'ランキングに記録':'ゲスト（記録なし）';show('result');
+    $('testAgain').textContent=quiz.settings.review?'もう一度解き直し':'もう一度テスト';
     if(quiz.recorded)void refreshSession({notify:false});
   }
   function openQuit() {
@@ -540,14 +593,16 @@
     loginPending=true;for(const id of ['attendanceNumber','accountPin','pinVisibility','loginButton'])$(id).disabled=true;$('loginButton').textContent='ログイン中…';
     try {
       const identity=parseIdentity(await api('/login',{attendanceNumber,accountPin}));if(!identity.member)throw appError('ログイン情報を確認できませんでした。');
-      clearRewardCelebration();bonus.reset();sessionEpoch++;sessionTicket++;member=identity.member;lifetimeCorrect=identity.correctCount;lifetimePoints=identity.totalPoints;walletBalance=identity.balance;walletKnown=!!member;sessionKnown=true;bonus.update(identity.bonus,identity.timing);$('accountPin').value='';$('attendanceNumber').value='';setPinVisible(false);$('connectionNotice').hidden=true;renderIdentity();$('settingsStatus').textContent='ログインしました。';
+      clearRewardCelebration();bonus.reset();clearMastery();sessionEpoch++;sessionTicket++;member=identity.member;lifetimeCorrect=identity.correctCount;lifetimePoints=identity.totalPoints;walletBalance=identity.balance;walletKnown=!!member;sessionKnown=true;bonus.update(identity.bonus,identity.timing);$('accountPin').value='';$('attendanceNumber').value='';setPinVisible(false);$('connectionNotice').hidden=true;renderIdentity();$('settingsStatus').textContent='ログインしました。';
+      if(activeView==='mastery')void loadMastery();
     } catch(error){setError('settingsError',error.message);}
     finally{loginPending=false;for(const id of ['attendanceNumber','accountPin','pinVisibility','loginButton'])$(id).disabled=false;$('loginButton').textContent='ログイン';if(!$('settingsDialog').open){$('accountPin').value='';setPinVisible(false);}}
   }
   async function logout() {
     if(loginPending||logoutPending)return;logoutPending=true;$('logoutButton').disabled=true;setError('settingsError');$('settingsStatus').textContent='';
     try {
-      await api('/logout',{});clearRewardCelebration();bonus.reset();sessionEpoch++;sessionTicket++;member=null;lifetimeCorrect=0;lifetimePoints=0;walletBalance=0;walletKnown=false;sessionKnown=true;$('accountPin').value='';$('attendanceNumber').value='';setPinVisible(false);renderIdentity();$('settingsStatus').textContent='ログアウトしました。';
+      await api('/logout',{});clearRewardCelebration();bonus.reset();clearMastery();sessionEpoch++;sessionTicket++;member=null;lifetimeCorrect=0;lifetimePoints=0;walletBalance=0;walletKnown=false;sessionKnown=true;$('accountPin').value='';$('attendanceNumber').value='';setPinVisible(false);renderIdentity();$('settingsStatus').textContent='ログアウトしました。';
+      if(activeView==='mastery')void loadMastery();
       if(activeView==='quiz'&&quiz?.recorded){quiz=null;home();}
     } catch(error){setError('settingsError',error.message);}
     finally{logoutPending=false;$('logoutButton').disabled=false;}
@@ -571,7 +626,10 @@
   $('quizQuit').addEventListener('click',openQuit);$('quitCancel').addEventListener('click',()=>$('quitDialog').close());$('quitConfirm').addEventListener('click',()=>{quiz=null;$('quitDialog').close();home();});
   $('quitDialog').addEventListener('close',()=>{if(confirmedResult())beginResultDisplay();});
   $('resultView').addEventListener('click',event=>{if(event.target.closest('button,a')&&repeatsAdvanceTap(event)){event.preventDefault();event.stopImmediatePropagation();}},true);
-  $('testAgain').addEventListener('click',()=>{if(quiz)selectedBook=quiz.settings.book;selectBook(selectedBook);openSetup();});
+  $('testAgain').addEventListener('click',()=>{if(quiz)selectedBook=quiz.settings.book;selectBook(selectedBook);openSetup({review:!!quiz?.settings.review});});
+  $('masteryOpen').addEventListener('click',openMastery);$('masteryRefresh').addEventListener('click',()=>void loadMastery());
+  $('reviewOpen').addEventListener('click',()=>openSetup({review:true}));
+  $('masteryLogin').addEventListener('click',openSettings);$('reviewLogin').addEventListener('click',openSettings);
   $('rankingOpen').addEventListener('click',openRanking);$('resultRanking').addEventListener('click',openRanking);$('rankingRefresh').addEventListener('click',()=>loadRanking());
   $('soundSetting').addEventListener('change',()=>setSoundEnabled($('soundSetting').value==='on',{preview:true}));
   $('settingsOpen').addEventListener('click',openSettings);$('settingsClose').addEventListener('click',()=>$('settingsDialog').close());$('loginForm').addEventListener('submit',login);$('logoutButton').addEventListener('click',logout);$('pinVisibility').addEventListener('click',()=>setPinVisible($('accountPin').type==='password'));
