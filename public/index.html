@@ -71,8 +71,20 @@
       <div class="view-toolbar"><button class="back-button" id="quizQuit" type="button">終了する</button><span id="quizMode" class="account-badge"></span></div>
       <div class="quiz-progress"><span id="questionPosition"></span><span id="quizCorrect"></span><strong id="quizPoints" aria-label="今回の合計点数">0円</strong></div><progress id="quizProgress" max="10" value="0" aria-label="テストの進み具合"></progress>
       <div class="question-card"><p id="questionNumber" class="eyebrow"></p><p id="questionInstruction" class="sr-only"></p><h1 id="questionPrompt" tabindex="-1"></h1></div>
-      <div id="questionChoices" class="choices" role="group" aria-label="4つの選択肢"></div>
-      <div id="answerFeedback" class="answer-feedback" role="status" hidden><strong id="feedbackTitle"></strong><span id="feedbackAnswer"></span><strong id="feedbackReward" class="feedback-reward" hidden></strong></div>
+      <div class="choice-stage">
+        <div id="questionChoices" class="choices" role="group" aria-label="4つの選択肢"></div>
+        <div id="rewardCelebration" class="reward-celebration" aria-hidden="true" hidden>
+          <div class="reward-halo"></div>
+          <div class="reward-confetti"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="reward-card">
+            <div class="reward-seal"><span>¥</span></div>
+            <span class="reward-star reward-star-one"></span><span class="reward-star reward-star-two"></span><span class="reward-star reward-star-three"></span>
+            <strong id="feedbackReward" class="feedback-reward" hidden></strong>
+            <span class="reward-card-line"></span>
+          </div>
+        </div>
+      </div>
+      <div id="answerFeedback" class="answer-feedback" role="status" hidden><strong id="feedbackTitle"></strong><span id="feedbackAnswer"></span><span id="rewardAnnouncement" class="sr-only"></span></div>
       <p id="quizError" class="error-message" role="alert" hidden></p><button id="answerRetry" class="text-button" type="button" hidden>同じ回答を再送する</button>
       <div class="quiz-actions"><button id="quizNext" class="primary-button wide" type="button" hidden>次の問題</button></div>
     </section>
