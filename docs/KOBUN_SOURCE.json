@@ -1,0 +1,93 @@
+{
+  "title": "重要古文単語一覧400 暗記プリント",
+  "publisher": "ロジカル記憶（原プリント表記：NOVITA［ノビータ］）",
+  "pageUrl": "https://logicalmemory.jp/707/",
+  "retrievedDate": "2026-11-07",
+  "rowCount": 400,
+  "idPrefix": "k400",
+  "dataFile": "data/kobun400.json",
+  "datasetSha256": "cb580ce60ea05ac23eab069e9533dd0c65bb8a8750af624e2e937ee8259a6b93",
+  "sheets": [
+    {
+      "from": 1,
+      "to": 50,
+      "url": "https://logicalmemory.jp/wp-content/uploads/2014/07/重要古文単語一覧400_暗記プリント-001.jpg",
+      "sha256": "9bf667d18b6b635f5939fb065a46bdca10bfdafdd680ca860f6e5ae2b20547be",
+      "bytes": 736564
+    },
+    {
+      "from": 51,
+      "to": 100,
+      "url": "https://logicalmemory.jp/wp-content/uploads/2014/07/重要古文単語一覧400_暗記プリント-002.jpg",
+      "sha256": "7a12d0eadbcb328d3a9767304f05d7575f1653be081824ada545044c7adefd66",
+      "bytes": 727475
+    },
+    {
+      "from": 101,
+      "to": 150,
+      "url": "https://logicalmemory.jp/wp-content/uploads/2014/07/重要古文単語一覧400_暗記プリント-003.jpg",
+      "sha256": "e63dc2a8fe7b9d9a0cd9a8d095e5c6c0e3808990438de9c8186c742dc1966a52",
+      "bytes": 686354
+    },
+    {
+      "from": 151,
+      "to": 200,
+      "url": "https://logicalmemory.jp/wp-content/uploads/2014/07/重要古文単語一覧400_暗記プリント-004.jpg",
+      "sha256": "961c8b08ece2cb914bbded930221c95c77f46afe885aaeebb0664468d1a13693",
+      "bytes": 642655
+    },
+    {
+      "from": 201,
+      "to": 250,
+      "url": "https://logicalmemory.jp/wp-content/uploads/2014/07/重要古文単語一覧400_暗記プリント-005.jpg",
+      "sha256": "051c67471436ce7bdd92b088053593093f0ffb9d563908b443547d5d475a5b18",
+      "bytes": 698849
+    },
+    {
+      "from": 251,
+      "to": 300,
+      "url": "https://logicalmemory.jp/wp-content/uploads/2014/07/重要古文単語一覧400_暗記プリント-006.jpg",
+      "sha256": "ea2cfac3a47d388792c29ea8dc278a11fd2a8ca272dc1ee047fba7350039fd27",
+      "bytes": 743211
+    },
+    {
+      "from": 301,
+      "to": 350,
+      "url": "https://logicalmemory.jp/wp-content/uploads/2014/07/重要古文単語一覧400_暗記プリント-007.jpg",
+      "sha256": "382a41384de35d505049cfcce9a125ec075abf3121fb10cd8d219f28311cb9d2",
+      "bytes": 762198
+    },
+    {
+      "from": 351,
+      "to": 400,
+      "url": "https://logicalmemory.jp/wp-content/uploads/2014/07/重要古文単語一覧400_暗記プリント-008.jpg",
+      "sha256": "a405f0bdc83d736e98711f0c30851d78aeca8cc4e9ad37ecae5d381111c4fed8",
+      "bytes": 749761
+    }
+  ],
+  "method": "Original high-resolution sheets were downloaded and manually transcribed, then visually checked. OCR was not accepted as final text.",
+  "normalization": [
+    "Wave-dash variants are consistently U+301C (〜) to avoid visually identical but byte-distinct quiz choices.",
+    "Parentheses in Japanese glosses use fullwidth forms.",
+    "Numbering, order, headwords, meanings, source spelling and missing terminal punctuation are otherwise preserved."
+  ],
+  "attachmentCompleteness": "User provided pages1-4and6-8; missing201-250was read from page5 of the same linked original collection.",
+  "sourceQuirks": [
+    {
+      "number": 7,
+      "text": "姿。顔つき。子。",
+      "note": "Printed source includes 子; kept without guessing a replacement."
+    },
+    {
+      "number": 246,
+      "text": "困る。値やむ。苦しむ。",
+      "note": "Printed source reads 値やむ; kept as printed rather than silently changing to a guessed correction."
+    },
+    {
+      "number": 259,
+      "text": "群がる。集さわぐ。",
+      "note": "Printed source reads 集さわぐ; kept as printed."
+    }
+  ],
+  "duplicateHeadwords": []
+}

@@ -1,0 +1,92 @@
+/* Generic game-banknote bundles. The confirmed amount remains in front. */
+.target-jackpot-rain {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+  pointer-events: none;
+  contain: paint;
+}
+.target-jackpot-rain[hidden] { display: none !important; }
+.target-jackpot-rain * { pointer-events: none; }
+.target-jackpot-bundle {
+  position: absolute;
+  top: 0;
+  left: calc(var(--bill-x) * 1%);
+  display: block;
+  width: var(--bill-size);
+  height: calc(var(--bill-size) * .48);
+  box-sizing: border-box;
+  padding-left: 10px;
+  border: 2px solid #829774;
+  border-radius: 4px;
+  background:
+    radial-gradient(ellipse at 23% 50%, #f5f4d2 0 21%, #8b9e7759 22% 24%, transparent 25%),
+    repeating-linear-gradient(140deg, #ffffff16 0 2px, transparent 2px 5px),
+    linear-gradient(135deg, #fff4cd, #c4cfab 62%, #e6e9bf);
+  box-shadow:
+    0 2px 0 #e4e5c5,
+    0 3px 0 #81946d,
+    0 5px 0 #f5efd0,
+    0 6px 0 #92a17a,
+    0 8px 0 #dfdfba,
+    0 10px 15px #28321c35;
+  color: #587851;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: calc(var(--bill-size) * .25);
+  font-weight: 700;
+  line-height: calc(var(--bill-size) * .44);
+  text-shadow: 0 1px 0 #fff9;
+  opacity: 0;
+  animation: target-jackpot-fall 780ms var(--bill-delay) cubic-bezier(.3,.24,.64,.88) both;
+}
+.target-jackpot-bundle::before {
+  content: '10,000';
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  border-top: 1px solid #82977480;
+  padding-top: 1px;
+  color: #667d50;
+  font: 700 8px/1 Georgia, serif;
+  letter-spacing: -.03em;
+}
+.target-jackpot-bundle::after {
+  content: '轟';
+  position: absolute;
+  top: -4px;
+  bottom: -10px;
+  left: 42%;
+  width: 18%;
+  display: grid;
+  place-items: center;
+  border: 1px solid #d0ae78;
+  background: linear-gradient(90deg, #e9d0a1, #fff4d4 45%, #efd4a1);
+  box-shadow: 1px 0 3px #5a57252e;
+  color: #b58b51;
+  font: 700 11px/1 Georgia, serif;
+}
+@keyframes target-jackpot-fall {
+  0% {
+    opacity: 0;
+    transform: translate3d(-50%, -110px, 0) rotate(var(--bill-start-turn));
+  }
+  6% { opacity: .98; }
+  82% { opacity: .98; }
+  100% {
+    opacity: 0;
+    transform: translate3d(calc(-50% + var(--bill-drift)), calc(100dvh + 130px), 0) rotate(var(--bill-end-turn));
+  }
+}
+@media (max-width: 374px) {
+  .target-jackpot-bundle {
+    width: calc(var(--bill-size) * .88);
+    height: calc(var(--bill-size) * .43);
+    font-size: calc(var(--bill-size) * .22);
+    line-height: calc(var(--bill-size) * .39);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .target-jackpot-rain { display: none !important; }
+  .target-jackpot-bundle { animation: none !important; }
+}

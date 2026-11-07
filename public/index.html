@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#fcfbf8">
+  <meta name="apple-mobile-web-app-title" content="暗記">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="description" content="英単語1900・英熟語1000・古文単語400の暗記と4択テスト。">
+  <title>暗記</title>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/app.webmanifest">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/jackpot-effects.css">
+  <link rel="stylesheet" href="/bonus-time.css">
+  <script src="/jackpot-effects.js" defer></script>
+  <script src="/bonus-time.js" defer></script>
+  <script src="/app.js" defer></script>
+</head>
+<body data-view="home">
+
+<div class="app-shell">
+  <header class="app-header">
+    <button class="brand" id="brandHome" type="button" aria-label="暗記 ホーム">
+      <span class="brand-copy"><strong>暗記</strong></span>
+    </button>
+    <span class="account-badge" id="accountBadge">接続中…</span>
+    <button type="button" class="text-button" id="settingsOpen" aria-label="個人設定">設定</button>
+  </header>
+  <main id="main">
+    <section id="homeView" class="view" aria-labelledby="homeTitle">
+      <h1 id="homeTitle" class="sr-only">暗記</h1>
+      <p id="connectionNotice" class="notice" role="status" hidden></p>
+      <label class="book-selection" for="bookSelect"><span class="sr-only">教材を選ぶ</span><select id="bookSelect" aria-label="教材を選ぶ"><option value="target1900">Target 1900</option><option value="target1000">英熟語 Target 1000</option><option value="kobun400">古文単語</option></select></label>
+      <div class="home-section-heading"><span id="homeSectionLabel">Section</span></div>
+      <fieldset class="home-sections" aria-labelledby="homeSectionLabel"><div class="range-fields"><label><span class="sr-only">最初のSection</span><select id="homeSectionFrom" aria-label="最初のSection"></select></label><span aria-hidden="true">〜</span><label><span class="sr-only">最後のSection</span><select id="homeSectionTo" aria-label="最後のSection"></select></label></div></fieldset>
+      <div class="study-actions">
+        <button class="action-card" type="button" id="memorizeOpen">暗記</button>
+        <button class="action-card" type="button" id="testOpen">テスト</button>
+      </div>
+      <div class="home-mastery" aria-labelledby="homeMasteryLabel">
+        <strong id="homeMasteryLabel">定着率</strong>
+        <button id="masteryOpen" class="secondary-button" type="button" aria-label="定着率を確認">確認</button>
+      </div>
+      <div class="home-review" aria-labelledby="homeReviewLabel">
+        <div class="home-review-heading"><p id="homeReviewLabel" class="muted">現在のミス</p><small id="homeReviewHint" class="muted">2回以上正解でクリア</small></div>
+        <p id="homeReviewCount" class="home-review-count" aria-live="polite">—</p>
+        <p id="homeReviewStatus" class="muted" role="status"></p>
+        <button id="homeReviewRetry" class="text-button" type="button" hidden>再読み込み</button>
+        <button id="reviewOpen" class="secondary-button wide" type="button">解き直し</button>
+      </div>
+      <button id="rankingOpen" class="ranking-link" type="button"><strong>ランキングTop10</strong><span id="homeScore" class="muted"></span></button>
+      <p id="homeRankingStatus" class="muted ranking-status" role="status"></p>
+      <p id="homeRankingError" class="error-message" role="alert" hidden></p>
+      <ol id="homeRankingList" class="ranking-list home-ranking-list" aria-label="合計点数ランキング 上位10人"></ol>
+    </section>
+
+    <section id="memorizeView" class="view" aria-labelledby="memorizeTitle" hidden>
+      <div class="view-toolbar"><button class="back-button" data-home type="button">ホーム</button><button id="meaningsToggle" class="text-button" type="button" aria-pressed="false">訳を隠す</button></div>
+      <div class="section-heading"><div><p class="sr-only" id="memorizeBook"></p><h1 id="memorizeTitle">暗記</h1></div><span class="page-label" id="memorizeRange"></span></div>
+      <p id="memorizeError" class="error-message" role="alert" hidden></p>
+      <div id="memorySheet" class="memory-sheet" aria-label="暗記する単語"></div>
+      <div class="page-navigation"><button id="memoryPrevious" class="icon-button outlined" type="button" aria-label="前のページ">前へ</button><label class="page-jump"><span class="sr-only">暗記ページ</span><select id="memoryPage" aria-label="暗記ページ"></select><span id="memoryPageTotal"></span></label><button id="memoryNext" class="primary-button" type="button">次へ</button></div>
+    </section>
+
+    <section id="setupView" class="view" aria-labelledby="setupTitle" hidden>
+      <div class="view-toolbar"><button class="back-button" data-home type="button">ホーム</button></div>
+      <div class="section-heading"><div><p class="sr-only" id="setupBook"></p><h1 id="setupTitle">テスト</h1></div></div>
+      <p id="reviewNotice" class="muted review-notice" hidden></p><button type="button" id="reviewLogin" class="secondary-button wide" hidden>ログイン</button>
+      <form id="testForm" class="setup-form">
+        <fieldset class="direction-field"><legend>解答</legend><div class="direction-options"><label><input type="radio" name="direction" value="english" checked><span><strong id="directionWordLabel">英語</strong></span></label><label><input type="radio" name="direction" value="japanese"><span><strong id="directionMeaningLabel">訳</strong></span></label></div></fieldset>
+        <fieldset id="testSectionRange"><legend>Section</legend><div class="range-fields"><label><span class="sr-only">最初のSection</span><select id="rangeFrom" aria-label="最初のSection"></select></label><span aria-hidden="true">〜</span><label><span class="sr-only">最後のSection</span><select id="rangeTo" aria-label="最後のSection"></select></label></div></fieldset>
+        <label class="count-field">問題数<select id="questionCount"><option value="10">10問</option><option value="50">50問</option><option value="100">100問</option></select></label>
+        <p id="testMode" class="mode-note"></p><p id="setupError" class="error-message" role="alert" hidden></p>
+        <button type="submit" id="testStart" class="primary-button wide">開始</button>
+      </form>
+    </section>
+
+    <section id="quizView" class="view" aria-labelledby="questionPrompt" hidden>
+      <div class="view-toolbar"><button class="back-button" id="quizQuit" type="button">終了する</button><span id="quizMode" class="account-badge"></span></div>
+      <div class="quiz-progress"><span id="questionPosition"></span><span id="quizCorrect"></span><strong id="quizPoints" aria-label="今回の合計点数">0轟</strong></div><progress id="quizProgress" max="10" value="0" aria-label="テストの進み具合"></progress>
+      <div class="question-card"><p id="questionNumber" class="eyebrow"></p><p id="questionInstruction" class="sr-only"></p><h1 id="questionPrompt" tabindex="-1"></h1></div>
+      <div class="choice-stage">
+        <div id="questionChoices" class="choices" role="group" aria-label="4つの選択肢"></div>
+        <div id="rewardCelebration" class="reward-celebration" aria-hidden="true" hidden>
+          <div class="reward-rays"></div><div class="reward-ring"></div><div class="reward-ring reward-ring-outer"></div>
+          <div class="reward-halo"></div>
+          <div class="reward-confetti"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="reward-card">
+            <div class="reward-seal"><span>轟</span></div>
+            <span class="reward-star reward-star-one"></span><span class="reward-star reward-star-two"></span><span class="reward-star reward-star-three"></span>
+            <strong id="feedbackReward" class="feedback-reward" hidden></strong>
+            <span class="reward-card-line"></span>
+          </div>
+        </div>
+      </div>
+      <div id="answerFeedback" class="answer-feedback" role="status" hidden><strong id="feedbackTitle"></strong><span id="feedbackAnswer"></span><span id="rewardAnnouncement" class="sr-only"></span></div>
+      <p id="quizError" class="error-message" role="alert" hidden></p><button id="answerRetry" class="text-button" type="button" hidden>同じ回答を再送する</button>
+      <button id="quizAdvanceSurface" class="quiz-advance-surface" type="button" aria-label="次の問題へ" hidden></button>
+    </section>
+
+    <section id="resultView" class="view" aria-labelledby="resultTitle" hidden>
+      <div class="view-toolbar"><button class="back-button" data-home type="button">ホーム</button></div>
+      <div class="result-panel"><p class="sr-only" id="resultBook"></p><h1 id="resultTitle">結果</h1><div class="result-score"><strong id="resultCorrect">0</strong><span id="resultTotal">/ 10問</span></div><p class="result-points"><span>合計点数</span><strong id="resultPoints">0轟</strong></p><p id="resultMode" class="muted"></p></div>
+      <button id="testAgain" class="primary-button wide" type="button">もう一度テスト</button><button class="secondary-button wide" id="resultRanking" type="button">ランキングを見る</button>
+    </section>
+
+    <section id="rankingView" class="view" aria-labelledby="rankingTitle" hidden>
+      <div class="view-toolbar"><button class="back-button" data-home type="button">ホーム</button><button type="button" id="rankingRefresh" class="text-button">更新</button></div>
+      <div class="section-heading"><h1 id="rankingTitle">ランキング</h1></div>
+      <p id="rankingStatus" class="muted" role="status"></p><p id="rankingError" class="error-message" role="alert" hidden></p><ol id="rankingList" class="ranking-list" aria-label="合計点数ランキング"></ol>
+    </section>
+
+    <section id="masteryView" class="view" aria-labelledby="masteryTitle" hidden>
+      <div class="view-toolbar"><button class="back-button" data-home type="button">ホーム</button><button type="button" id="masteryRefresh" class="text-button">更新</button></div>
+      <div class="section-heading"><div><h1 id="masteryTitle">定着率</h1><p id="masteryBook" class="muted"></p></div></div>
+      <p id="masteryStatus" class="muted" role="status"></p><p id="masteryError" class="error-message" role="alert" hidden></p>
+      <button id="masteryLogin" class="secondary-button wide" type="button" hidden>ログイン</button>
+      <ol id="masteryList" class="mastery-list" aria-label="Sectionごとの定着率"></ol>
+    </section>
+  </main>
+  <footer class="app-footer"><a href="#sources" id="sourcesOpen">出典</a></footer>
+</div>
+
+<dialog id="settingsDialog" aria-labelledby="settingsTitle"><div class="dialog-heading"><h2 id="settingsTitle">個人設定</h2><button type="button" class="icon-button" id="settingsClose" aria-label="個人設定を閉じる">閉じる</button></div><div class="dialog-body"><label class="sound-setting" for="soundSetting"><span>効果音</span><select id="soundSetting"><option value="on">音あり</option><option value="off">音なし</option></select></label><div id="loggedInSettings" hidden><div class="identity-row"><span id="identityInitial" hidden></span><div><span class="eyebrow">KGS 11th</span><strong id="identityName"></strong></div></div><dl class="settings-wallet" aria-label="保有金額と総所得"><div><dt>保有金額</dt><dd id="settingsBalance">—</dd></div><div><dt>総所得</dt><dd id="settingsScore">—</dd></div></dl><button id="logoutButton" class="secondary-button wide" type="button">ログアウト</button></div><form id="loginForm"><p class="settings-description">KGS 11thの出席番号と個人用PINでログイン</p><label>出席番号<input id="attendanceNumber" type="text" inputmode="numeric" autocomplete="off" pattern="(?:0?[1-9]|[1-3][0-9]|40|99)" maxlength="2" placeholder="出席番号" required></label><label for="accountPin">個人用PIN（4桁）</label><div class="pin-field"><input id="accountPin" type="password" inputmode="numeric" autocomplete="off" pattern="[0-9]{4}" minlength="4" maxlength="4" placeholder="••••" required><button id="pinVisibility" class="icon-button" type="button" aria-label="PINを表示" aria-controls="accountPin" aria-pressed="false">表示</button></div><p class="settings-help">ログインしてテストすると、ユーザー名と合計点数がランキングに表示されます。</p><p class="settings-help">アカウントがなくても、暗記とゲスト練習は使えます。</p><button id="loginButton" class="primary-button wide" type="submit">ログイン</button></form><p id="settingsError" class="error-message" role="alert" hidden></p><p id="settingsStatus" class="muted" role="status"></p></div></dialog>
+<dialog id="sourcesDialog" aria-labelledby="sourcesTitle"><div class="dialog-heading"><h2 id="sourcesTitle">教材の出典</h2><button type="button" class="icon-button" id="sourcesClose" aria-label="出典を閉じる">閉じる</button></div><div class="dialog-body source-details"><p><strong>Target 1900</strong><br>提供された「English Vocabulary Target 1900」のPDFから取得。</p><p><strong>英熟語Target 1000</strong><br><a href="https://ukaru-eigo.com/jukugo-target-1000-list/" target="_blank" rel="noopener noreferrer">英熟語ターゲット1000 一覧</a>から取得。</p><p><strong>古文単語</strong><br><a href="https://logicalmemory.jp/707/" target="_blank" rel="noopener noreferrer">古文単語400一覧</a>の掲載資料と提供画像に基づく。</p><p>正解・不正解音：<a href="https://otologic.jp/" target="_blank" rel="noopener noreferrer">OtoLogic</a>（<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>）</p><p>10万轟音：提供音源</p><p class="muted">原資料の表記に基づきます。書籍の公式アプリではありません。</p></div></dialog>
+<dialog id="quitDialog" aria-labelledby="quitTitle"><div class="dialog-body quit-body"><h2 id="quitTitle">テストを終了しますか？</h2><p class="muted" id="quitDescription">回答済みの得点は記録されています。</p><div class="quit-actions"><button type="button" class="text-button" id="quitCancel">続ける</button><button type="button" class="primary-button" id="quitConfirm">終了する</button></div></div></dialog>
+<div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>
