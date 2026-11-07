@@ -201,7 +201,7 @@
     document.body.dataset.view=view;
     for(const id of views)$(id+'View').hidden=id!==view;
     if(scroll)window.scrollTo({top:0,behavior:'instant'});
-    document.title=view==='home'?'Target':({memorize:'暗記',setup:setupMode==='review'?'解き直し':'テスト',quiz:'テスト',result:'テスト結果',ranking:'ランキング',mastery:'定着率'}[view]+' | Target');
+    document.title=['home','memorize'].includes(view)?'暗記':({memorize:'暗記',setup:setupMode==='review'?'解き直し':'テスト',quiz:'テスト',result:'テスト結果',ranking:'ランキング',mastery:'定着率'}[view]+' | 暗記');
   }
   function home() {memoryTicket++;clearMastery();show('home');renderIdentity();renderSectionControls();void loadHomeReview();void loadRanking('homeRanking');}
   function goHome() {if(activeView==='quiz'&&quiz&&!quiz.finished){openQuit();return;}home();}
