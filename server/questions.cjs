@@ -2,11 +2,15 @@
 const crypto = require('node:crypto');
 const path = require('node:path');
 const {HttpError} = require('./errors.cjs');
-const BOOKS = {target1900: {size: 1900, prefix: 'v1900'}, target1000: {size: 1000, prefix: 'i1000'}};
+const BOOKS = {target1900: {size: 1900, prefix: 'v1900'}, target1000: {size: 1000, prefix: 'i1000'}, kobun400: {size: 400, prefix: 'k400'}};
 const cache = new Map();
 
 function normalize(value) {
   return value.normalize('NFKC').toLocaleLowerCase('en-US').replace(/\s+/gu, ' ').trim();
+}
+
+function kobunMeanings(value) {
+  return new Set(value.normalize('NFKC').split(/[。；;]/u).map(part => part.replace(/\s+/gu, ' ').trim()).filter(Boolean));
 }
 
 function loadBook(book) {
@@ -63,6 +67,7 @@ function generateQuestions(input, reviewNumbers) {
   const promptKey = body.direction === 'english' ? 'japanese' : 'english';
   return eligible.map(row => {
     const correctEnglish = normalize(row.english), correctJapanese = normalize(row.japanese);
+    const meanings = body.book === 'kobun400' ? kobunMeanings(row.japanese) : null;
     const texts = new Set([normalize(row[answerKey])]);
     const options = [{id: crypto.randomUUID(), text: row[answerKey]}];
     const correctChoiceId = options[0].id;
@@ -70,6 +75,9 @@ function generateQuestions(input, reviewNumbers) {
       // Identical translations, or another entry of the same English word,
       // must never turn a second choice into an equally correct answer.
       if (normalize(other.english) === correctEnglish || normalize(other.japanese) === correctJapanese) continue;
+      // Classical multi-meaning entries can share one valid translation even
+      // when their full glosses differ. Exclude complete shared meanings.
+      if (meanings && [...kobunMeanings(other.japanese)].some(meaning => meanings.has(meaning))) continue;
       const normalized = normalize(other[answerKey]);
       if (texts.has(normalized)) continue;
       texts.add(normalized);

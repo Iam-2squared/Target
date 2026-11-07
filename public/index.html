@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#fcfbf8">
   <meta name="apple-mobile-web-app-title" content="Target">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="description" content="英単語1900・英熟語1000の暗記と4択テスト。">
+  <meta name="description" content="英単語1900・英熟語1000・古文単語400の暗記と4択テスト。">
   <title>Target</title>
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
@@ -32,14 +32,7 @@
     <section id="homeView" class="view" aria-labelledby="homeTitle">
       <h1 id="homeTitle" class="sr-only">Target</h1>
       <p id="connectionNotice" class="notice" role="status" hidden></p>
-      <div class="book-selection" role="group" aria-label="教材を選ぶ">
-        <button class="book-card vocabulary" data-book="target1900" type="button" aria-pressed="true">
-          <span class="book-copy"><strong>Target 1900</strong></span>
-        </button>
-        <button class="book-card idioms" data-book="target1000" type="button" aria-pressed="false">
-          <span class="book-copy"><strong>英熟語 Target 1000</strong></span>
-        </button>
-      </div>
+      <label class="book-selection" for="bookSelect"><span class="sr-only">教材を選ぶ</span><select id="bookSelect" aria-label="教材を選ぶ"><option value="target1900">Target 1900</option><option value="target1000">英熟語 Target 1000</option><option value="kobun400">古文単語</option></select></label>
       <div class="home-section-heading"><span id="homeSectionLabel">Section</span></div>
       <fieldset class="home-sections" aria-labelledby="homeSectionLabel"><div class="range-fields"><label><span class="sr-only">最初のSection</span><select id="homeSectionFrom" aria-label="最初のSection"></select></label><span aria-hidden="true">〜</span><label><span class="sr-only">最後のSection</span><select id="homeSectionTo" aria-label="最後のSection"></select></label></div></fieldset>
       <div class="study-actions">
@@ -76,7 +69,7 @@
       <div class="section-heading"><div><p class="sr-only" id="setupBook"></p><h1 id="setupTitle">テスト</h1></div></div>
       <p id="reviewNotice" class="muted review-notice" hidden></p><button type="button" id="reviewLogin" class="secondary-button wide" hidden>ログイン</button>
       <form id="testForm" class="setup-form">
-        <fieldset class="direction-field"><legend>解答</legend><div class="direction-options"><label><input type="radio" name="direction" value="english" checked><span><strong>英語</strong></span></label><label><input type="radio" name="direction" value="japanese"><span><strong>訳</strong></span></label></div></fieldset>
+        <fieldset class="direction-field"><legend>解答</legend><div class="direction-options"><label><input type="radio" name="direction" value="english" checked><span><strong id="directionWordLabel">英語</strong></span></label><label><input type="radio" name="direction" value="japanese"><span><strong id="directionMeaningLabel">訳</strong></span></label></div></fieldset>
         <fieldset id="testSectionRange"><legend>Section</legend><div class="range-fields"><label><span class="sr-only">最初のSection</span><select id="rangeFrom" aria-label="最初のSection"></select></label><span aria-hidden="true">〜</span><label><span class="sr-only">最後のSection</span><select id="rangeTo" aria-label="最後のSection"></select></label></div></fieldset>
         <label class="count-field">問題数<select id="questionCount"><option value="10">10問</option><option value="50">50問</option><option value="100">100問</option></select></label>
         <p id="testMode" class="mode-note"></p><p id="setupError" class="error-message" role="alert" hidden></p>
@@ -131,7 +124,7 @@
 </div>
 
 <dialog id="settingsDialog" aria-labelledby="settingsTitle"><div class="dialog-heading"><h2 id="settingsTitle">個人設定</h2><button type="button" class="icon-button" id="settingsClose" aria-label="個人設定を閉じる">閉じる</button></div><div class="dialog-body"><label class="sound-setting" for="soundSetting"><span>効果音</span><select id="soundSetting"><option value="on">音あり</option><option value="off">音なし</option></select></label><div id="loggedInSettings" hidden><div class="identity-row"><span id="identityInitial" hidden></span><div><span class="eyebrow">KGS 11th</span><strong id="identityName"></strong></div></div><dl class="settings-wallet" aria-label="保有金額と総所得"><div><dt>保有金額</dt><dd id="settingsBalance">—</dd></div><div><dt>総所得</dt><dd id="settingsScore">—</dd></div></dl><button id="logoutButton" class="secondary-button wide" type="button">ログアウト</button></div><form id="loginForm"><p class="settings-description">KGS 11thの出席番号と個人用PINでログイン</p><label>出席番号<input id="attendanceNumber" type="text" inputmode="numeric" autocomplete="off" pattern="(?:0?[1-9]|[1-3][0-9]|40|99)" maxlength="2" placeholder="出席番号" required></label><label for="accountPin">個人用PIN（4桁）</label><div class="pin-field"><input id="accountPin" type="password" inputmode="numeric" autocomplete="off" pattern="[0-9]{4}" minlength="4" maxlength="4" placeholder="••••" required><button id="pinVisibility" class="icon-button" type="button" aria-label="PINを表示" aria-controls="accountPin" aria-pressed="false">表示</button></div><p class="settings-help">ログインしてテストすると、ユーザー名と合計点数がランキングに表示されます。</p><p class="settings-help">アカウントがなくても、暗記とゲスト練習は使えます。</p><button id="loginButton" class="primary-button wide" type="submit">ログイン</button></form><p id="settingsError" class="error-message" role="alert" hidden></p><p id="settingsStatus" class="muted" role="status"></p></div></dialog>
-<dialog id="sourcesDialog" aria-labelledby="sourcesTitle"><div class="dialog-heading"><h2 id="sourcesTitle">教材の出典</h2><button type="button" class="icon-button" id="sourcesClose" aria-label="出典を閉じる">閉じる</button></div><div class="dialog-body source-details"><p><strong>Target 1900</strong><br>提供された「English Vocabulary Target 1900」のPDFから取得。</p><p><strong>英熟語Target 1000</strong><br><a href="https://ukaru-eigo.com/jukugo-target-1000-list/" target="_blank" rel="noopener noreferrer">英熟語ターゲット1000 一覧</a>から取得。</p><p>正解・不正解音：<a href="https://otologic.jp/" target="_blank" rel="noopener noreferrer">OtoLogic</a>（<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>）</p><p>10万轟音：提供音源</p><p class="muted">原資料の表記に基づきます。書籍の公式アプリではありません。</p></div></dialog>
+<dialog id="sourcesDialog" aria-labelledby="sourcesTitle"><div class="dialog-heading"><h2 id="sourcesTitle">教材の出典</h2><button type="button" class="icon-button" id="sourcesClose" aria-label="出典を閉じる">閉じる</button></div><div class="dialog-body source-details"><p><strong>Target 1900</strong><br>提供された「English Vocabulary Target 1900」のPDFから取得。</p><p><strong>英熟語Target 1000</strong><br><a href="https://ukaru-eigo.com/jukugo-target-1000-list/" target="_blank" rel="noopener noreferrer">英熟語ターゲット1000 一覧</a>から取得。</p><p><strong>古文単語</strong><br><a href="https://logicalmemory.jp/707/" target="_blank" rel="noopener noreferrer">古文単語400一覧</a>の掲載資料と提供画像に基づく。</p><p>正解・不正解音：<a href="https://otologic.jp/" target="_blank" rel="noopener noreferrer">OtoLogic</a>（<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>）</p><p>10万轟音：提供音源</p><p class="muted">原資料の表記に基づきます。書籍の公式アプリではありません。</p></div></dialog>
 <dialog id="quitDialog" aria-labelledby="quitTitle"><div class="dialog-body quit-body"><h2 id="quitTitle">テストを終了しますか？</h2><p class="muted" id="quitDescription">回答済みの得点は記録されています。</p><div class="quit-actions"><button type="button" class="text-button" id="quitCancel">続ける</button><button type="button" class="primary-button" id="quitConfirm">終了する</button></div></div></dialog>
 <div id="toast" class="toast" role="status" hidden></div>
 </body>

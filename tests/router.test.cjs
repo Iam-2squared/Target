@@ -39,6 +39,8 @@ test('Mastery HTTP route accepts both Vercel rewrite URL shapes and still requir
   for(const url of [
    '/api/mastery?book=target1900',
    '/api/mastery?book=target1000',
+   '/api/mastery?book=kobun400',
+   '/api/index?route=mastery&book=kobun400&path=mastery',
    '/api/mastery?book=target1900&route=mastery',
    '/api/mastery?route=mastery&book=target1000',
    '/api/index?route=mastery&book=target1900',

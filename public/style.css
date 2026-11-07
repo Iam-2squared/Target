@@ -31,10 +31,8 @@ strong { font-weight: 600; }
 .brand strong { font-size: 27px; letter-spacing: -.04em; color: var(--ink); }
 .account-badge { margin-left: auto; max-width: 45%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--muted); font-size: 11px; }
 .text-button, .icon-button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; padding: 8px; color: var(--muted); font-size: 13px; white-space: nowrap; }
-.book-selection { display: grid; gap: 12px; }
-.book-card { display: flex; align-items: center; width: 100%; min-height: 76px; padding: 20px; border: 1px solid var(--line); border-radius: 9px; background: var(--card); text-align: left; }
-.book-card[aria-pressed=true] { border-color: var(--ink); background: #f3f5f6; }
-.book-copy strong { font-size: 20px; color: var(--ink); }
+.book-selection { display: block; }
+.book-selection select { width: 100%; min-width: 0; min-height: 76px; padding: 17px 20px; border: 1px solid var(--ink); border-radius: 9px; background: #f3f5f6; color: var(--ink); font-size: 20px; font-weight: 600; cursor: pointer; }
 .study-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 22px; }
 .home-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 17px; font-size: 13px; font-weight: 550; }
 .home-sections { margin-top: 2px; }
@@ -271,8 +269,7 @@ dialog::backdrop { background: #1c273a55; }
   .app-shell { padding-left: 18px; padding-right: 18px; }
   .app-header { padding-top: 18px; padding-bottom: 24px; }
   .brand strong { font-size: 25px; }
-  .book-copy strong { font-size: 18px; }
-  .book-card { padding: 17px; min-height: 69px; }
+  .book-selection select { padding: 17px; min-height: 69px; font-size: 18px; }
   .memory-word, .memory-meaning { padding-left: 8px; padding-right: 8px; }
 }
 @media (max-height: 650px) {

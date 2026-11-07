@@ -12,8 +12,8 @@ TargetのVercel APIだけが専用のSupabase RPCとKGS連携用秘密を使用�
 | `POST /api/login` | `{attendanceNumber,accountPin}`。KGSにある1〜40番と運用者が作成した99番のみ。新規登録や名前変更は行いません。 |
 | `POST /api/logout` | 空オブジェクト。KGSのTarget専用セッションを失効し、Target Cookieを解除します。 |
 | `GET /api/ranking` | `{ranking:[{rank,name,correctCount,totalPoints}],updatedAt}`。解答経験のある参加者だけ。番号・メンバーID・アイコン・クラス情報を含みません。 |
-| `GET /api/mastery?book=target1900` | 本人の`{book,sections:[{section,from,to,total,mastered,percent,reviewCount}],reviewNumbers}`。教材はtarget1900またはtarget1000を1つ指定します。認証必須。各Sectionは100項目を分母とし、割合は整数へ切り捨てます。未出題は定着数に含めません。 |
-| `POST /api/quiz/start` | `{book,direction,count,from,to,requestId}`。教材は`target1900`または`target1000`、方向は`english`（日本語→英語）か`japanese`（英語→日本語）、画面の出題数は10・50・100（旧APIの20も受理）。範囲内の件数が少ないときはその件数で出題します。 |
+| `GET /api/mastery?book=target1900` | 本人の`{book,sections:[{section,from,to,total,mastered,percent,reviewCount}],reviewNumbers}`。教材は`target1900`・`target1000`・`kobun400`から1つ指定します。認証必須。各Sectionは100項目を分母とし、割合は整数へ切り捨てます。未出題は定着数に含めません。 |
+| `POST /api/quiz/start` | `{book,direction,count,from,to,requestId}`。教材は`target1900`・`target1000`・`kobun400`、方向は`english`（訳→英語／古語）か`japanese`（英語／古語→訳）、画面の出題数は10・50・100（旧APIの20も受理）。範囲内の件数が少ないときはその件数で出題します。 |
 | `POST /api/quiz/review/start` | 通常の開始と同じ6項目。本人の間違えた単語のうち、まだ2回連続正解していない項目だけを選択範囲から出題します。件数が少なければその件数、0件なら409 `REVIEW_EMPTY`です。認証必須。 |
 | `POST /api/quiz/answer` | `{quizId,questionId,choiceId,requestId}`。表示中の問題だけを採点。結果と次の問題を返します。 |
 

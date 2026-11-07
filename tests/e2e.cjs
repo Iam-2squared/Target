@@ -199,7 +199,7 @@ async function watchRewards(page){await page.evaluate(()=>{
   await scenario('Both memorization books fill the available screen and preserve final-page boundaries on phones',async()=>{
     const page=await openPage(Guest);
     for(const [bookName,total] of [['target1900',1900],['target1000',1000]]){
-      await page.locator('[data-book="'+bookName+'"]').click();await page.locator('#homeSectionFrom').selectOption('1');await page.locator('#homeSectionTo').selectOption(String(total/100));await page.locator('#memorizeOpen').click();await page.locator('#memorySheet .memory-row').first().waitFor();
+      await page.locator('#bookSelect').selectOption(bookName);await page.locator('#homeSectionFrom').selectOption('1');await page.locator('#homeSectionTo').selectOption(String(total/100));await page.locator('#memorizeOpen').click();await page.locator('#memorySheet .memory-row').first().waitFor();
       const initialCount=await page.locator('#memorySheet .memory-row').count();ok(initialCount>=1&&initialCount<=total,'The page contains complete entries within the book');
       ok((await page.locator('#memorySheet').innerText()).includes(book(bookName)[0].english),'Page begins with the first source entry');
       const previousLast=Number(await page.locator('#memorySheet .word-number').last().innerText());
@@ -216,7 +216,7 @@ async function watchRewards(page){await page.evaluate(()=>{
   await scenario('Section ranges keep original numbers and fit every requested phone width',async()=>{
     const page=await openPage(Guest);
     for(const [bookName,section,last] of [['target1900',19,1900],['target1000',10,1000]]){
-      await page.locator('[data-book="'+bookName+'"]').click();
+      await page.locator('#bookSelect').selectOption(bookName);
       eq(await page.locator('#homeSectionFrom option').count(),section);eq(await page.locator('#homeSectionTo option').count(),section);
       await page.locator('#homeSectionFrom').selectOption(String(section));await page.locator('#homeSectionTo').selectOption(String(section));
       await page.locator('#memorizeOpen').click();await page.locator('#memorySheet .memory-row').first().waitFor();
@@ -240,7 +240,7 @@ async function watchRewards(page){await page.evaluate(()=>{
   await scenario('Guest four-choice practice works in both directions without submitting a shared score',async()=>{
     const page=await openPage(Guest),scored=[];page.on('request',r=>{if(new URL(r.url()).pathname.startsWith('/api/quiz/'))scored.push(r.url());});
     for(const [direction,count] of [['english',10],['japanese',10],['english',100],['japanese',50]]){
-      await page.locator('[data-book="target1000"]').click();await page.locator('#testOpen').click();await page.locator('input[name="direction"][value="'+direction+'"]').check();await page.locator('#rangeFrom').selectOption('1');await page.locator('#rangeTo').selectOption('1');await page.locator('#questionCount').selectOption(String(count));
+      await page.locator('#bookSelect').selectOption('target1000');await page.locator('#testOpen').click();await page.locator('input[name="direction"][value="'+direction+'"]').check();await page.locator('#rangeFrom').selectOption('1');await page.locator('#rangeTo').selectOption('1');await page.locator('#questionCount').selectOption(String(count));
       eq(await page.locator('#questionCount option').allTextContents(),['10問','50問','100問']);
       if(count===100)await page.evaluate(()=>{document.getElementById('testStart').addEventListener('click',()=>{const began=performance.now(),observer=new MutationObserver(()=>{if(!document.getElementById('quizView').hidden){window.__guestPrepareMs=performance.now()-began;observer.disconnect();}});observer.observe(document.getElementById('quizView'),{attributes:true,attributeFilter:['hidden']});},{capture:true,once:true});});
       await page.locator('#testStart').click();eq(await page.locator('#questionPosition').innerText(),'1 / '+count+'問');

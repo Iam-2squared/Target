@@ -2,15 +2,16 @@
 (() => {
   const $ = id => document.getElementById(id);
   const books = {
-    target1900: {title:'Target 1900',kind:'英単語',total:1900},
-    target1000: {title:'英熟語Target 1000',kind:'英熟語',total:1000}
+    target1900: {title:'Target 1900',kind:'英単語',total:1900,wordLabel:'英語',meaningLabel:'訳'},
+    target1000: {title:'英熟語Target 1000',kind:'英熟語',total:1000,wordLabel:'英語',meaningLabel:'訳'},
+    kobun400: {title:'古文単語',kind:'古文単語',total:400,wordLabel:'古語',meaningLabel:'現代語訳'}
   };
   const views = ['home','memorize','setup','quiz','result','ranking','mastery'];
   const datasets = new Map(), datasetPromises = new Map();
   let selectedBook='target1900', activeView='home', member=null, lifetimeCorrect=0, lifetimePoints=0;
   let sessionKnown=false, sessionEpoch=0, sessionTicket=0, walletBalance=0, walletKnown=false;
   const rankingTickets={homeRanking:0,ranking:0};
-  const sectionRanges={target1900:{from:1,to:1},target1000:{from:1,to:1}};
+  const sectionRanges={target1900:{from:1,to:1},target1000:{from:1,to:1},kobun400:{from:1,to:1}};
   let masteryTicket=0,homeReviewTicket=0,setupMode='normal';
   let memoryPage=0, memoryBook='target1900', meaningsHidden=false, memoryTicket=0;
   let memoryPages=[], memoryLayoutKey='', memoryLayoutFrame=0,memorySelectionKey='',memoryRange={from:1,to:100};
@@ -288,7 +289,7 @@
   }
   function selectBook(book) {
     if(!Object.hasOwn(books,book))return;selectedBook=book;
-    for(const button of document.querySelectorAll('[data-book]'))button.setAttribute('aria-pressed',String(button.dataset.book===book));
+    $('bookSelect').value=book;
     clearMastery();startRetry=null;renderSectionControls();
     if(activeView==='home')void loadHomeReview();
   }
@@ -297,6 +298,9 @@
   }
   function renderSectionControls(){
     const total=Math.ceil(books[selectedBook].total/100),range=sectionRanges[selectedBook];
+    $('bookSelect').value=selectedBook;
+    $('directionWordLabel').textContent=books[selectedBook].wordLabel;
+    $('directionMeaningLabel').textContent=books[selectedBook].meaningLabel;
     for(const [id,part] of [['homeSectionFrom','from'],['homeSectionTo','to'],['rangeFrom','from'],['rangeTo','to']]){
       const select=$(id);
       if(select.options.length!==total){const fragment=document.createDocumentFragment();for(let number=1;number<=total;number++){const option=element('option','', 'Section '+number);option.value=String(number);fragment.append(option);}select.replaceChildren(fragment);}
@@ -443,15 +447,17 @@
     if(!question||typeof question!=='object'||typeof question.id!=='string'||!question.id||question.id.length>150||typeof question.prompt!=='string'||!question.prompt||question.prompt.length>3000||!Number.isSafeInteger(question.number)||question.number<1||!Array.isArray(question.choices)||question.choices.length!==4||question.choices.some(c=>!c||typeof c.id!=='string'||!c.id||c.id.length>150||typeof c.text!=='string'||!c.text||c.text.length>3000)||new Set(question.choices.map(c=>c.id)).size!==4||new Set(question.choices.map(c=>normalize(c.text))).size!==4)throw appError('問題の内容を確認できませんでした。テストを終了して、もう一度お試しください。');
     return question;
   }
+  function kobunMeanings(value) {return new Set(value.normalize('NFKC').split(/[。；;]/u).map(part=>part.replace(/\s+/gu,' ').trim()).filter(Boolean));}
   function guestQuestions(rows,settings) {
     const pool=rows.filter(row=>row.number>=settings.from&&row.number<=settings.to),selected=shuffle(pool).slice(0,settings.count);
     const answerField=settings.direction==='english'?'english':'japanese',promptField=settings.direction==='english'?'japanese':'english';
     return selected.map(row=>{
-      const texts=new Set([normalize(row[answerField])]),correctChoiceId=uuid();
+      const texts=new Set([normalize(row[answerField])]),correctChoiceId=uuid(),meanings=settings.book==='kobun400'?kobunMeanings(row.japanese):null;
       const choices=[{id:correctChoiceId,text:row[answerField]}];
       for(const other of shuffle(rows)){
         const normalized=normalize(other[answerField]);
         if(other.id===row.id||normalize(other.japanese)===normalize(row.japanese)||normalize(other.english)===normalize(row.english)||texts.has(normalized))continue;
+        if(meanings&&[...kobunMeanings(other.japanese)].some(meaning=>meanings.has(meaning)))continue;
         choices.push({id:uuid(),text:other[answerField]});texts.add(normalized);if(choices.length===4)break;
       }
       if(choices.length!==4)throw appError('異なる4つの選択肢を用意できませんでした。');
@@ -496,7 +502,7 @@
     $('quizProgress').max=quiz.total;$('quizProgress').value=quiz.answeredCount;
     $('quizMode').textContent=quiz.recorded?'ランキングに記録':'ゲスト';
     $('questionNumber').textContent='No. '+question.number;
-    $('questionInstruction').textContent=quiz.settings.direction==='english'?'英語を選んでください':'訳を選んでください';
+    $('questionInstruction').textContent=(quiz.settings.direction==='english'?books[quiz.settings.book].wordLabel:books[quiz.settings.book].meaningLabel)+'を選んでください';
     $('questionPrompt').textContent=question.prompt;$('questionPrompt').closest('.question-card').classList.toggle('english-prompt',quiz.settings.direction==='japanese');
     question.choices.forEach((choice,index)=>{const button=element('button','choice-button');button.type='button';button.dataset.choiceId=choice.id;button.setAttribute('aria-pressed','false');button.append(element('span','choice-letter',String.fromCharCode(65+index)),element('span','choice-text',choice.text));button.addEventListener('click',event=>selectChoice(choice.id,event));fragment.append(button);});
     $('questionChoices').replaceChildren(fragment);$('answerFeedback').hidden=true;$('answerRetry').hidden=true;setError('quizError');
@@ -631,7 +637,7 @@
     finally{logoutPending=false;$('logoutButton').disabled=false;}
   }
 
-  for(const button of document.querySelectorAll('[data-book]'))button.addEventListener('click',()=>selectBook(button.dataset.book));
+  $('bookSelect').addEventListener('change',()=>selectBook($('bookSelect').value));
   for(const [id,part] of [['homeSectionFrom','from'],['homeSectionTo','to'],['rangeFrom','from'],['rangeTo','to']])$(id).addEventListener('change',()=>changeSection(part,$(id).value));
   $('questionCount').addEventListener('change',()=>{startRetry=null;});
   for(const input of document.querySelectorAll('input[name=direction]'))input.addEventListener('change',()=>{startRetry=null;});
