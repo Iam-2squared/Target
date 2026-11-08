@@ -1,14 +1,5 @@
 'use strict';
 const {HttpError}=require('./errors.cjs');
-const store=require('./store.cjs');
-const protocol=require('./map-protocol.cjs');
-async function perform(action,value){
-  if(action!=='state')throw new HttpError(410,'マップは領土戦に変わりました。再読み込みしてください。','MAP_REPLACED');
-  let input;
-  try{input=protocol.parseInput(action,value,{trusted:true});}
-  catch{throw new HttpError(400,'マスの指定を確認してください。','INVALID_REQUEST');}
-  const result=await store.mapRpc(action,input);
-  try{return protocol.validateResult(action,result,input);}
-  catch{throw new HttpError(503,'マップの状態を確認できませんでした。再読み込みしてください。','MAP_UNAVAILABLE');}
-}
+// HTTP integrations authorize before reaching this retired entry point.
+async function perform(){throw new HttpError(410,'マップは削除されました。','MAP_REMOVED');}
 module.exports={perform};

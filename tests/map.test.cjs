@@ -17,22 +17,22 @@ test('trusted map service accepts no client role, account override, invalid pric
  for(const expectedOverwritePrice of [undefined,100,0,'1000'])assert.throws(()=>protocol.parseInput('buy',{...input,requestId,shape,color:1,maxCost:500,expectedUnitPrice:100,expectedOverwritePrice},{trusted:true}));
  for(const extra of [{role:'admin'},{balance:1},{ownerId:memberId},{name:''},{memberId:'../member'}])assert.throws(()=>protocol.parseInput('quote',{...input,shape,color:1,...extra},{trusted:true}));
 });
-test('map perform validates trusted input before a private RPC and sanitizes its bounded response',async()=>isolated(async()=>{
- const calls=[];store.mapRpc=async(action,value)=>{calls.push({action,value});return state();};
- assert.deepEqual(await map.perform('state',input),state());assert.equal(calls.length,1);
- await assert.rejects(map.perform('state',{...input,role:'admin'}),error=>error.status===400);assert.equal(calls.length,1);
- store.mapRpc=async()=>stateWithInvalidBytes();
- await assert.rejects(map.perform('state',input),error=>error.status===503&&error.code==='MAP_UNAVAILABLE');
+test('removed map perform rejects every action before input processing or a private RPC',async()=>isolated(async()=>{
+ let calls=0;store.mapRpc=async()=>{calls++;return state();};
+ for(const action of ['state','quote','buy'])for(const value of [input,null,{...input,role:'admin'}])await assert.rejects(map.perform(action,value),e=>e.status===410&&e.code==='MAP_REMOVED');
+ assert.equal(calls,0);
 }));
-function stateWithInvalidBytes(){return{...state(),pixels:Buffer.alloc(250000,9).toString('base64')};}
-test('private map routes authorize the KGS bearer before parsing any asserted identity',async()=>isolated(async env=>{
+test('private map routes authorize first then return410 without reading a body or storage',async()=>isolated(async env=>{
  let reads=0,calls=0;store.mapRpc=async()=>{calls++;return state();};
- for(const authorization of [undefined,'','Bearer invalid']){
-  const req={url:'/api/integrations/kgs/map/state',method:'POST',headers:{authorization,'content-type':'application/json'}};Object.defineProperty(req,'body',{get(){reads++;throw Error('Body must remain unread');}});
-  const res=response();await handler(req,res);assert.equal(res.statusCode,404);assert.equal(reads,0);assert.equal(calls,0);
+ for(const action of ['state','quote','buy']){
+  for(const authorization of [undefined,'','Bearer invalid']){
+   const req={url:'/api/integrations/kgs/map/'+action,method:'POST',headers:{authorization,'content-type':'application/json'}};Object.defineProperty(req,'body',{get(){reads++;throw Error('Body must remain unread');}});
+   const res=response();await handler(req,res);assert.equal(res.statusCode,404);assert.equal(reads,0);assert.equal(calls,0);
+  }
+  const req={url:'/api/index?route=integrations/kgs/map/'+action,query:{route:'integrations/kgs/map/'+action},method:'POST',headers:{authorization:'Bearer '+env.KGS_TARGET_INTEGRATION_SECRET,'content-type':'invalid'}};Object.defineProperty(req,'body',{get(){reads++;throw Error('Body must remain unread');}});
+  const res=response();await handler(req,res);assert.equal(res.statusCode,410);assert.equal(res.value.error.code,'MAP_REMOVED');
  }
- const req={url:'/api/index?route=integrations/kgs/map/state',query:{route:'integrations/kgs/map/state'},method:'POST',headers:{authorization:'Bearer '+env.KGS_TARGET_INTEGRATION_SECRET,'content-type':'application/json'},body:input};
- const res=response();await handler(req,res);assert.equal(res.statusCode,200);assert.equal(res.value.width,500);assert.equal(calls,1);
+ assert.equal(reads,0);assert.equal(calls,0);
 }));
 test('modern wallet keeps map expenses distinct from immutable gacha receipts',()=>{
  const value={...shop.guestWallet(),balance:9500,totalIncome:10000,spent:500,mapSpent:500};assert.deepEqual(shop.validateWallet(value),value);

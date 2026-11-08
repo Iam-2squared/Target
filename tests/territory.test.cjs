@@ -10,17 +10,16 @@ test('trusted territory service rejects authority extras and malformed commands 
  for(const extra of[{role:'admin'},{score:1},{balance:1000000},{troops:1000},{memberId:'not-uuid'},{name:''},{rulesVersion:2},{command:{type:'join',slot:1}}])assert.throws(()=>p.parseInput('quote',{...quote,...extra},{trusted:true}));
  for(const v of[{...identity,revision:0},{...identity,seasonId},{...identity,summaryMinute:1}])assert.throws(()=>p.parseInput('state',v,{trusted:true}));
 });
-test('territory perform binds trusted actor and sanitizes complete DB results',async()=>isolated(async()=>{
- const calls=[];store.territoryRpc=async(action,value)=>{calls.push({action,value});return state();};assert.deepEqual(await territory.perform('state',identity),state());assert.equal(calls.length,1);assert.deepEqual(calls[0],{action:'state',value:identity});
- await assert.rejects(territory.perform('state',{...identity,role:'admin'}),e=>e.status===400);assert.equal(calls.length,1);
- store.territoryRpc=async()=>({...state(),selfSlot:1});await assert.rejects(territory.perform('state',identity),e=>e.status===503&&e.code==='TERRITORY_UNAVAILABLE');
+test('removed territory perform rejects all inputs before a private RPC',async()=>isolated(async()=>{
+ let calls=0;store.territoryRpc=async()=>{calls++;return state();};
+ for(const action of ['state','quote','act'])for(const value of [identity,null,{...identity,role:'admin'}])await assert.rejects(territory.perform(action,value),e=>e.status===410&&e.code==='MAP_REMOVED');
+ assert.equal(calls,0);
 }));
-test('private territory routes verify bearer before body, identity and storage access',async()=>isolated(async env=>{
+test('private territory routes preserve bearer auth then reject before body and storage access',async()=>isolated(async env=>{
  let reads=0,calls=0;store.territoryRpc=async()=>{calls++;return state();};
- for(const action of['state','quote','act'])for(const authorization of[undefined,'','Bearer invalid']){const req={url:'/api/integrations/kgs/territory/'+action,method:'POST',headers:{authorization,'content-type':'application/json'}};Object.defineProperty(req,'body',{get(){reads++;throw Error('must remain unread');}});const res=response();await handler(req,res);assert.equal(res.statusCode,404);assert.equal(reads,0);assert.equal(calls,0);}
- const req={url:'/api/index?route=integrations/kgs/territory/state',query:{route:'integrations/kgs/territory/state'},method:'POST',headers:{authorization:'Bearer '+env.KGS_TARGET_INTEGRATION_SECRET,'content-type':'application/json'},body:identity};const res=response();await handler(req,res);assert.equal(res.statusCode,200);assert.equal(res.value.width,50);assert.equal(calls,1);
-}));
-test('old paint writes are retired without body reads or a wallet RPC',async()=>isolated(async env=>{
- let calls=0,reads=0;store.mapRpc=async()=>{calls++;return{};};
- for(const action of['quote','buy']){const req={url:'/api/integrations/kgs/map/'+action,method:'POST',headers:{authorization:'Bearer '+env.KGS_TARGET_INTEGRATION_SECRET,'content-type':'application/json'}};Object.defineProperty(req,'body',{get(){reads++;throw Error('must remain unread');}});const res=response();await handler(req,res);assert.equal(res.statusCode,410);assert.equal(res.value.error.code,'MAP_REPLACED');}assert.equal(reads,0);assert.equal(calls,0);
+ for(const action of['state','quote','act']){
+  for(const authorization of[undefined,'','Bearer invalid']){const req={url:'/api/integrations/kgs/territory/'+action,method:'POST',headers:{authorization,'content-type':'application/json'}};Object.defineProperty(req,'body',{get(){reads++;throw Error('must remain unread');}});const res=response();await handler(req,res);assert.equal(res.statusCode,404);assert.equal(reads,0);assert.equal(calls,0);}
+  const req={url:'/api/index?route=integrations/kgs/territory/'+action,query:{route:'integrations/kgs/territory/'+action},method:'POST',headers:{authorization:'Bearer '+env.KGS_TARGET_INTEGRATION_SECRET,'content-type':'invalid'}};Object.defineProperty(req,'body',{get(){reads++;throw Error('must remain unread');}});const res=response();await handler(req,res);assert.equal(res.statusCode,410);assert.equal(res.value.error.code,'MAP_REMOVED');
+ }
+ assert.equal(reads,0);assert.equal(calls,0);
 }));
