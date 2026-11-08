@@ -9,8 +9,8 @@ const path=require('node:path');
 const {chromium,webkit}=require('playwright');
 const root=path.resolve(__dirname,'..'),reportDir=path.join(root,'test-results');
 const books=Object.fromEntries(['target1900','target1000','kobun400'].map(book=>[book,require('../data/'+book+'.json')]));
-const engines=(process.env.VERTICAL_BROWSER||'chromium').split(',');
-assert(engines.every(engine=>['chromium','webkit'].includes(engine)),'Use VERTICAL_BROWSER=chromium,webkit.');
+const engines=(process.env.STACKED_BROWSER||'chromium').split(',');
+assert(engines.every(engine=>['chromium','webkit'].includes(engine)),'Use STACKED_BROWSER=chromium,webkit.');
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.mp3':'audio/mpeg','.webmanifest':'application/manifest+json'};
 let checks=0;const results=[],pageErrors=[],unexpectedRequests=[];
 const ok=(value,message)=>{checks++;assert(value,message);};
@@ -32,7 +32,7 @@ async function snapshot(page){return page.evaluate(()=>{
     const term=row.querySelector('.memory-english'),meaning=row.querySelector('.memory-meaning');
     const textRects=node=>{const range=document.createRange();range.selectNodeContents(node);return Array.from(range.getClientRects(),r=>({x:r.x,y:r.y,right:r.right,bottom:r.bottom}));};
     return{number:Number(row.querySelector('.word-number').textContent),term:term.textContent,meaning:meaning.textContent,
-      bounds:bounds(row),termBox:bounds(term),meaningBox:bounds(meaning),
+      bounds:bounds(row),wordBox:bounds(row.querySelector('.memory-word')),termBox:bounds(term),meaningBox:bounds(meaning),
       termMode:getComputedStyle(term).writingMode,meaningMode:getComputedStyle(meaning).writingMode,
       termText:textRects(term),meaningText:textRects(meaning),meaningVisibility:getComputedStyle(meaning).visibility};
   });
@@ -44,15 +44,18 @@ function checkPage(s,book,label){
   ok(s.rows.length>0,label+' has visible entries');
   ok(s.scrollWidth<=s.width+1,label+' has no horizontal page scrolling');
   ok(s.scrollHeight<=s.height+1,label+' has no vertical page scrolling');
-  let previous=Infinity;
+  let previousBottom=-Infinity;
   for(const row of s.rows){
     const source=books[book][row.number-1];ok(source,label+' has a valid source number');
     eq(row.term,source.english,label+' retains source term '+row.number);
     eq(row.meaning,source.japanese,label+' retains source meaning '+row.number);
-    const vertical=book==='kobun400';
-    eq(row.termMode,vertical?'vertical-rl':'horizontal-tb',label+' term writing direction');
-    eq(row.meaningMode,vertical?'vertical-rl':'horizontal-tb',label+' meaning writing direction');
-    if(vertical){ok(row.bounds.x<previous,label+' entries read from right to left');previous=row.bounds.x;}
+    eq(row.termMode,'horizontal-tb',label+' term is horizontal');
+    eq(row.meaningMode,'horizontal-tb',label+' meaning is horizontal');
+    ok(row.bounds.y>=previousBottom-1,label+' entries run top-to-bottom without overlapping');previousBottom=row.bounds.bottom;
+    if(book==='kobun400'){
+      ok(row.wordBox.bottom<=row.meaningBox.y+1,label+' meaning is below the classical term');
+      ok(Math.abs(row.wordBox.x-row.meaningBox.x)<=1&&Math.abs(row.wordBox.width-row.meaningBox.width)<=1,label+' classical term and meaning share the full-width card');
+    }else ok(row.termBox.right<=row.meaningBox.x+1,label+' English term stays beside its meaning');
     for(const [kind,box,rects]of[['term',row.termBox,row.termText],['meaning',row.meaningBox,row.meaningText]]){
       ok(box.x>=s.sheet.x-2&&box.y>=s.sheet.y-2&&box.right<=s.sheet.right+2&&box.bottom<=s.sheet.bottom+2,label+' '+kind+' box stays within sheet for '+row.number);
       ok(box.x>=row.bounds.x-2&&box.y>=row.bounds.y-2&&box.right<=row.bounds.right+2&&box.bottom<=row.bounds.bottom+2,label+' '+kind+' box stays within its own entry without overlapping its neighbor for '+row.number);
@@ -97,18 +100,17 @@ const server=http.createServer(async(req,res)=>{
           for(let section=1;section<=4;section++){
             await open(page,'kobun400',section);const first=await snapshot(page),numbers=[];
             ok(first.pages>1,'Each100-word Section has multiple pages');
-            if(section===1&&viewport.height>viewport.width)ok(first.rows.length>=Math.floor((first.sheet.width-5)/Math.ceil(first.rows[0].bounds.width)),'The first page uses the space available for complete vertical cards');
             let previous;
             for(let index=0;index<first.pages;index++){
               await page.locator('#memoryPage').selectOption({value:String(index)});await settle(page);
               const state=await snapshot(page);eq(state.pages,first.pages,'Page count remains stable');eq(state.page,index,'Page jump retains requested page');
               checkPage(state,'kobun400',engine+' '+viewport.width+'×'+viewport.height+' Section'+section+' page'+index);
-              if(previous){const used=previous.rows.reduce((width,row)=>width+Math.ceil(row.bounds.width),0),next=Math.ceil(state.rows[0].bounds.width);ok(used+next>previous.sheet.width-5,'The preceding page could not fit the next complete vertical card: '+JSON.stringify({viewport,section,page:index,previous:previous.rows.map(row=>({number:row.number,width:row.bounds.width})),used,nextNumber:state.rows[0].number,next,capacity:previous.sheet.width-5}));}
+              if(previous){const used=previous.rows.reduce((height,row)=>height+Math.ceil(row.bounds.height),0),next=Math.ceil(state.rows[0].bounds.height);ok(used+next>previous.sheet.height-5,'The preceding page could not fit the next complete stacked card: '+JSON.stringify({viewport,section,page:index,used,nextNumber:state.rows[0].number,next,capacity:previous.sheet.height-5}));}
               numbers.push(...state.rows.map(row=>row.number));
               previous=state;
             }
             eq(numbers,Array.from({length:100},(_,index)=>(section-1)*100+index+1),'Every Section entry appears once without gaps');
-            if(section===1){await page.locator('#memoryPage').selectOption({value:'0'});await settle(page);await page.screenshot({path:path.join(reportDir,'kobun-vertical-'+engine+'-'+viewport.width+'x'+viewport.height+'.png')});}
+            if(section===1){await page.locator('#memoryPage').selectOption({value:'0'});await settle(page);await page.screenshot({path:path.join(reportDir,'kobun-stacked-'+engine+'-'+viewport.width+'x'+viewport.height+'.png')});}
             await home(page);
           }
         });
@@ -139,7 +141,7 @@ const server=http.createServer(async(req,res)=>{
   finally{
     await browser?.close().catch(()=>{});await new Promise(resolve=>server.close(resolve));
     const report={generatedAt:new Date().toISOString(),engines,environment:'Actual public app/assets and datasets over loopback HTTP; only guest session and empty ranking are fixture responses; no DB',physicalIPhoneVerified:false,checks,pageErrors,unexpectedRequests,results};
-    await fs.mkdir(reportDir,{recursive:true});await fs.writeFile(path.join(reportDir,'kobun-vertical-'+engines.join('-')+'-results.json'),JSON.stringify(report,null,2)+'\n');
+    await fs.mkdir(reportDir,{recursive:true});await fs.writeFile(path.join(reportDir,'kobun-stacked-'+engines.join('-')+'-results.json'),JSON.stringify(report,null,2)+'\n');
     console.log(results.filter(result=>result.status==='passed').length+' scenarios passed; '+checks+' assertions.');if(failure)process.exitCode=1;
   }
 })().catch(error=>{console.error(error.stack);process.exitCode=1;});

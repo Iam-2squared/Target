@@ -68,8 +68,8 @@ try{
   await login(A,1,pins[0]);await login(A2,1,pins[0]);await login(B,2,pins[1]);await login(C,3,pins[2]);await login(D,4,pins[3]);
 
   await scenario('Actual migrated probabilities, private boundaries and uploaded MP3 are exact',async()=>{
-    eq((await targetDb.query('SELECT target_private.reward_points_for_roll(n) AS amount,count(*)::int AS count FROM generate_series(0,99)n GROUP BY amount ORDER BY amount')).rows,[{amount:100,count:82},{amount:1000,count:15},{amount:10000,count:2},{amount:100000,count:1}]);
-    eq((await targetDb.query('SELECT n,target_private.reward_points_for_roll(n) AS amount FROM unnest(ARRAY[0,1,2,3,17,18,99,-1,100])n ORDER BY n')).rows,[{n:-1,amount:null},{n:0,amount:100000},{n:1,amount:10000},{n:2,amount:10000},{n:3,amount:1000},{n:17,amount:1000},{n:18,amount:100},{n:99,amount:100},{n:100,amount:null}]);
+    eq((await targetDb.query('SELECT target_private.reward_points_for_roll(n) AS amount,count(*)::int AS count FROM generate_series(0,99)n GROUP BY amount ORDER BY amount')).rows,[{amount:100,count:71},{amount:1000,count:20},{amount:10000,count:7},{amount:100000,count:2}]);
+    eq((await targetDb.query('SELECT n,target_private.reward_points_for_roll(n) AS amount FROM unnest(ARRAY[0,1,2,8,9,28,29,99,-1,100])n ORDER BY n')).rows,[{n:-1,amount:null},{n:0,amount:100000},{n:1,amount:100000},{n:2,amount:10000},{n:8,amount:10000},{n:9,amount:1000},{n:28,amount:1000},{n:29,amount:100},{n:99,amount:100},{n:100,amount:null}]);
     originalOdds=(await targetDb.query("SELECT pg_get_functiondef('target_private.reward_points_for_roll(integer)'::regprocedure) AS body")).rows[0].body;
     const r=await Guest.request.get(targetBase+'/audio/bonus-100000.mp3'),bytes=await r.body();eq(r.status(),200);ok(/^audio\/mpeg(?:;|$)/.test(r.headers()['content-type']||''));eq(bytes.length,255562);eq(crypto.createHash('sha256').update(bytes).digest('hex'),'1b7e2ed1b5d2a0b1feca02a201a911b444c796ddb1d7e11f2e09de751eed9fb4');
     await target(Guest,'/api/quiz/start',{book:'target1900',direction:'english',count:10,from:1,to:10,requestId:uuid()},401);
