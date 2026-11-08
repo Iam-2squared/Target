@@ -90,9 +90,14 @@ body[data-view=memorize] main { display: flex; flex: 1; min-height: 0; }
 .memory-word { position: relative; padding-top: 23px; color: #234f78; background: #edf3fa; font-size: clamp(22px, 3dvh, 25px); font-weight: 650; line-height: 1.35; }
 .memory-english { min-width: 0; }
 .memory-meaning { color: #58462e; background: #f7f1e5; font-size: clamp(17px, 2.25dvh, 19px); font-weight: 500; line-height: 1.5; }
-.is-stacked .memory-copy { grid-template-columns: minmax(0, 1fr); gap: 0; }
-.is-stacked .memory-word { border-radius: 8px 8px 0 0; font-size: clamp(24px, 3dvh, 28px); }
-.is-stacked .memory-meaning { border-radius: 0 0 8px 8px; font-size: clamp(19px, 2.5dvh, 21px); }
+.memory-sheet.is-stacked { flex-direction: row-reverse; align-items: stretch; overflow: hidden; }
+.is-stacked .memory-measure { inset: 0; height: var(--memory-height); display: flex; flex-direction: row-reverse; }
+.is-stacked .memory-row { height: var(--memory-height); padding: 0 5px; }
+.is-stacked .memory-copy { display: flex; flex-direction: column; gap: 0; height: var(--memory-height); }
+.is-stacked .memory-word { display: flex; flex: 0 0 auto; flex-direction: column; align-items: center; justify-content: flex-start; gap: 10px; min-width: 54px; padding: 10px 10px 12px; border-radius: 8px 8px 0 0; font-size: clamp(24px, 3dvh, 28px); }
+.is-stacked .word-number { position: static; flex: 0 0 auto; font-size: 11px; }
+.is-stacked .memory-english { display: block; flex: 0 0 auto; writing-mode: vertical-rl; text-orientation: mixed; height: max-content; max-height: calc(var(--memory-height) * .55 - 48px); }
+.is-stacked .memory-meaning { display: block; flex: 1 1 0; min-height: 0; writing-mode: vertical-rl; text-orientation: mixed; width: max-content; padding: 12px 8px; border-radius: 0 0 8px 8px; font-size: clamp(19px, 2.5dvh, 21px); line-height: 1.6; }
 .meanings-hidden .memory-meaning { visibility: hidden; }
 .page-navigation { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; }
 .outlined { padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }

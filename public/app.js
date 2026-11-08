@@ -14,7 +14,7 @@
   const sectionRanges={target1900:{from:1,to:1},target1000:{from:1,to:1},kobun400:{from:1,to:1}};
   let masteryTicket=0,homeReviewTicket=0,setupMode='normal';
   let memoryPage=0, memoryBook='target1900', meaningsHidden=false, memoryTicket=0;
-  let memoryPages=[], memoryLayoutKey='', memoryLayoutFrame=0,memorySelectionKey='',memoryRange={from:1,to:100};
+  let memoryPages=[], memoryColumns=[], memoryLayoutKey='', memoryLayoutFrame=0,memorySelectionKey='',memoryRange={from:1,to:100};
   let quiz=null, startRetry=null, starting=false, loginPending=false, logoutPending=false;
   const SOUND_KEY='target-sound-enabled';
   let soundEnabled=readSoundSetting(),soundPlayers,soundGeneration=0,activeSound=null,soundSessionLease=null;
@@ -380,24 +380,37 @@
     try{await dataset(book);if(ticket===memoryTicket&&activeView==='memorize')renderMemory();}
     catch(error){if(ticket!==memoryTicket)return;setError('memorizeError',error.message);$('memorySheet').replaceChildren();$('memoryNext').disabled=false;$('memoryNext').textContent='再読み込み';}
   }
-  function memoryRow(row) {
-    const line=element('div','memory-row'),copy=element('div','memory-copy'),word=element('div','memory-word');
+  function setMemoryColumnHeights(line,column) {
+    line.querySelector('.memory-word').style.height=column.wordHeight+'px';
+    const meaning=line.querySelector('.memory-meaning');
+    meaning.style.height=column.meaningHeight+'px';meaning.style.flex='0 0 auto';
+  }
+  function memoryRow(row,column) {
+    const line=element('div','memory-row'),copy=element('div','memory-copy'),word=element('div','memory-word'),meaning=element('div','memory-meaning',row.japanese);
+    if(column){line.style.width=column.width+'px';meaning.style.width='100%';}
     word.append(element('span','word-number',row.number),element('span','memory-english',row.english));
-    copy.append(word,element('div','memory-meaning',row.japanese));
-    line.append(copy);return line;
+    copy.append(word,meaning);
+    line.append(copy);if(column)setMemoryColumnHeights(line,column);return line;
   }
   function planMemoryPages(rows) {
-    const sheet=$('memorySheet'),width=sheet.clientWidth,height=sheet.clientHeight;
+    const sheet=$('memorySheet'),vertical=memoryBook==='kobun400',width=sheet.clientWidth,height=vertical?sheet.getBoundingClientRect().height:sheet.clientHeight;
     if(!width||!height)return false;
     const key=memorySelectionKey+':'+width+':'+height;
     if(key===memoryLayoutKey&&memoryPages.length)return true;
+    if(vertical)sheet.style.setProperty('--memory-height',height+'px');
     const anchor=memoryPages[memoryPage]?.start??0,wasLast=memoryPages.length>0&&memoryPage===memoryPages.length-1;
     const measure=element('div','memory-measure'),fragment=document.createDocumentFragment();
     measure.setAttribute('aria-hidden','true');measure.inert=true;
     for(const row of rows)fragment.append(memoryRow(row));
     measure.append(fragment);sheet.replaceChildren(measure);
-    const sizes=Array.from(measure.children,node=>Math.ceil(node.getBoundingClientRect().height));
-    const capacity=Math.max(1,height-5),pages=[];
+    const nodes=Array.from(measure.children);
+    // Resolve the space below each word before measuring vertical text widths.
+    // Batch the reads and writes to keep this to two layout passes per range.
+    const columns=vertical?nodes.map(node=>{const wordHeight=node.querySelector('.memory-word').getBoundingClientRect().height;return {wordHeight,meaningHeight:height-wordHeight};}):[];
+    if(vertical)nodes.forEach((node,index)=>setMemoryColumnHeights(node,columns[index]));
+    const sizes=nodes.map(node=>Math.ceil(node.getBoundingClientRect()[vertical?'width':'height']));
+    if(vertical)columns.forEach((column,index)=>{column.width=sizes[index];});
+    const capacity=Math.max(1,(vertical?width:height)-5),pages=[];
     let start=0,used=0,count=0;
     for(let index=0;index<sizes.length;index++){
       if(count&&used+sizes[index]>capacity){
@@ -406,7 +419,8 @@
       used+=sizes[index];count++;
     }
     if(count)pages.push({start,end:rows.length});
-    memoryPages=pages;memoryLayoutKey=key;
+    // Keep WebKit's rendered flex widths equal to the measured vertical columns.
+    memoryPages=pages;memoryColumns=columns;memoryLayoutKey=key;
     memoryPage=wasLast?pages.length-1:Math.max(0,pages.findIndex(page=>page.start<=anchor&&anchor<page.end));
     return true;
   }
@@ -415,7 +429,7 @@
     if(!planMemoryPages(rows))return;
     const pageCount=memoryPages.length;memoryPage=Math.max(0,Math.min(memoryPage,pageCount-1));
     const {start,end}=memoryPages[memoryPage],fragment=document.createDocumentFragment();
-    for(const row of rows.slice(start,end))fragment.append(memoryRow(row));
+    for(let index=start;index<end;index++)fragment.append(memoryRow(rows[index],memoryColumns[index]));
     $('memorySheet').replaceChildren(fragment);$('memorySheet').classList.toggle('meanings-hidden',meaningsHidden);
     $('memorySheet').setAttribute('aria-label',books[memoryBook].kind+' '+rows[start].number+'〜'+rows[end-1].number);
     $('memorizeRange').textContent=rows[start].number+'–'+rows[end-1].number;
