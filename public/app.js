@@ -14,7 +14,7 @@
   const sectionRanges={target1900:{from:1,to:1},target1000:{from:1,to:1},kobun400:{from:1,to:1}};
   let masteryTicket=0,homeReviewTicket=0,setupMode='normal';
   let memoryPage=0, memoryBook='target1900', meaningsHidden=false, memoryTicket=0;
-  let memoryPages=[], memoryLayoutKey='', memoryLayoutFrame=0,memorySelectionKey='',memoryRange={from:1,to:100};
+  let memoryPages=[], memoryColumnWidths=[], memoryLayoutKey='', memoryLayoutFrame=0,memorySelectionKey='',memoryRange={from:1,to:100};
   let quiz=null, startRetry=null, starting=false, loginPending=false, logoutPending=false;
   const SOUND_KEY='target-sound-enabled';
   let soundEnabled=readSoundSetting(),soundPlayers,soundGeneration=0,activeSound=null,soundSessionLease=null;
@@ -373,39 +373,46 @@
   async function openMemory() {
     const book=selectedBook,ticket=++memoryTicket,range=selectedWordRange(book),key=book+':'+range.from+':'+range.to;
     if(memorySelectionKey!==key){memoryPage=0;memoryPages=[];memoryLayoutKey='';}memoryBook=book;memoryRange=range;memorySelectionKey=key;
+    $('memorySheet').classList.toggle('is-vertical',book==='kobun400');
     $('memorySheet').replaceChildren(element('p','memory-loading','読み込み中…'));
     $('memorizeBook').textContent=books[book].title;setError('memorizeError');show('memorize');
     $('memoryNext').disabled=true;$('memoryPrevious').disabled=true;
     try{await dataset(book);if(ticket===memoryTicket&&activeView==='memorize')renderMemory();}
     catch(error){if(ticket!==memoryTicket)return;setError('memorizeError',error.message);$('memorySheet').replaceChildren();$('memoryNext').disabled=false;$('memoryNext').textContent='再読み込み';}
   }
-  function memoryRow(row) {
+  function memoryRow(row,columnWidth) {
     const line=element('div','memory-row'),copy=element('div','memory-copy'),word=element('div','memory-word');
+    if(columnWidth!==undefined)line.style.width=columnWidth+'px';
     word.append(element('span','word-number',row.number),element('span','memory-english',row.english));
     copy.append(word,element('div','memory-meaning',row.japanese));
     line.append(copy);return line;
   }
   function planMemoryPages(rows) {
-    const sheet=$('memorySheet'),width=sheet.clientWidth,height=sheet.clientHeight;
+    const sheet=$('memorySheet'),width=sheet.clientWidth,height=sheet.clientHeight,vertical=memoryBook==='kobun400';
     if(!width||!height)return false;
     const key=memorySelectionKey+':'+width+':'+height;
     if(key===memoryLayoutKey&&memoryPages.length)return true;
     const anchor=memoryPages[memoryPage]?.start??0,wasLast=memoryPages.length>0&&memoryPage===memoryPages.length-1;
     const measure=element('div','memory-measure'),fragment=document.createDocumentFragment();
     measure.setAttribute('aria-hidden','true');measure.inert=true;
+    // A definite height prevents WebKit from overestimating vertical text widths.
+    if(vertical)measure.style.height=sheet.getBoundingClientRect().height+'px';
     for(const row of rows)fragment.append(memoryRow(row));
     measure.append(fragment);sheet.replaceChildren(measure);
-    const heights=Array.from(measure.children,node=>Math.ceil(node.getBoundingClientRect().height));
-    const capacity=Math.max(1,height-5),pages=[];
+    // Classical Japanese fills top-to-bottom columns from right to left.
+    // Measure along the page's packing axis so both layouts fit the viewport.
+    const sizes=Array.from(measure.children,node=>Math.ceil(node.getBoundingClientRect()[vertical?'width':'height']));
+    const capacity=Math.max(1,(vertical?width:height)-5),pages=[];
     let start=0,used=0,count=0;
-    for(let index=0;index<heights.length;index++){
-      if(count&&used+heights[index]>capacity){
+    for(let index=0;index<sizes.length;index++){
+      if(count&&used+sizes[index]>capacity){
         pages.push({start,end:index});start=index;used=0;count=0;
       }
-      used+=heights[index];count++;
+      used+=sizes[index];count++;
     }
     if(count)pages.push({start,end:rows.length});
-    memoryPages=pages;memoryLayoutKey=key;
+    // Reuse column widths so WebKit keeps wrapped meanings inside their entry.
+    memoryPages=pages;memoryColumnWidths=vertical?sizes:[];memoryLayoutKey=key;
     memoryPage=wasLast?pages.length-1:Math.max(0,pages.findIndex(page=>page.start<=anchor&&anchor<page.end));
     return true;
   }
@@ -414,7 +421,7 @@
     if(!planMemoryPages(rows))return;
     const pageCount=memoryPages.length;memoryPage=Math.max(0,Math.min(memoryPage,pageCount-1));
     const {start,end}=memoryPages[memoryPage],fragment=document.createDocumentFragment();
-    for(const row of rows.slice(start,end))fragment.append(memoryRow(row));
+    for(let index=start;index<end;index++)fragment.append(memoryRow(rows[index],memoryColumnWidths[index]));
     $('memorySheet').replaceChildren(fragment);$('memorySheet').classList.toggle('meanings-hidden',meaningsHidden);
     $('memorySheet').setAttribute('aria-label',books[memoryBook].kind+' '+rows[start].number+'〜'+rows[end-1].number);
     $('memorizeRange').textContent=rows[start].number+'–'+rows[end-1].number;

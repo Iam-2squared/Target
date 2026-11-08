@@ -90,6 +90,14 @@ body[data-view=memorize] main { display: flex; flex: 1; min-height: 0; }
 .memory-word { position: relative; padding-top: 23px; color: #234f78; background: #edf3fa; font-size: clamp(22px, 3dvh, 25px); font-weight: 650; line-height: 1.35; }
 .memory-english { min-width: 0; }
 .memory-meaning { color: #58462e; background: #f7f1e5; font-size: clamp(17px, 2.25dvh, 19px); font-weight: 500; line-height: 1.5; }
+.memory-sheet.is-vertical { flex-direction: row-reverse; align-items: stretch; overflow: hidden; }
+.is-vertical .memory-measure { inset: 0; height: 100%; display: flex; flex-direction: row-reverse; }
+.is-vertical .memory-row { height: 100%; padding: 0 5px; }
+.is-vertical .memory-copy { display: flex; flex-direction: row-reverse; gap: 6px; height: 100%; }
+.is-vertical .memory-word { display: flex; flex: 0 0 auto; flex-direction: column; align-items: center; justify-content: flex-start; gap: 12px; min-width: 54px; height: 100%; padding: 12px 10px; }
+.is-vertical .word-number { position: static; flex: 0 0 auto; font-size: 11px; }
+.is-vertical .memory-english { writing-mode: vertical-rl; text-orientation: mixed; max-height: calc(100% - 26px); }
+.is-vertical .memory-meaning { display: block; flex: 0 0 auto; writing-mode: vertical-rl; text-orientation: mixed; width: max-content; height: 100%; padding: 14px 8px; line-height: 1.65; }
 .meanings-hidden .memory-meaning { visibility: hidden; }
 .page-navigation { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; }
 .outlined { padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }
