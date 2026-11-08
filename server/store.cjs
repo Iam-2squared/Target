@@ -1,7 +1,17 @@
 'use strict';
 const {getConfig} = require('./config.cjs');
 const {HttpError} = require('./errors.cjs');
-let pool;
+let pool,mapPool;
+async function mapResponseText(response){
+  if(!/^application\/json(?:;|$)/i.test(response.headers.get('content-type')||''))throw new Error('response type');
+  const limit=512*1024,length=response.headers.get('content-length');
+  if(length!==null&&(!/^\d+$/.test(length)||Number(length)>limit))throw new Error('response limit');
+  const reader=response.body?.getReader();if(!reader)throw new Error('response body');
+  const chunks=[];let size=0;
+  try{for(;;){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>limit)throw new Error('response limit');chunks.push(Buffer.from(value));}}
+  catch(error){await reader.cancel().catch(()=>{});throw error;}
+  return Buffer.concat(chunks).toString('utf8');
+}
 
 function unpack(result) {
   if (result && typeof result === 'object' && result.error) {
@@ -19,15 +29,18 @@ function unpack(result) {
 
 async function runRpc(functionName, action, input = {}) {
   const config = getConfig();
+  const map=functionName==='target_map_rpc';
   try {
     if (config.databaseUrl) {
-      if (!pool) {
+      let active=map?mapPool:pool;
+      if (!active) {
         const {Pool} = require('pg');
-        pool = new Pool({connectionString: config.databaseUrl, max: 3, connectionTimeoutMillis: 10000,
-          statement_timeout: 15000, idleTimeoutMillis: 10000, application_name: 'target-test'});
-        pool.on('error', () => {});
+        active = new Pool({connectionString: config.databaseUrl, max: map?2:3, connectionTimeoutMillis: 10000,
+          statement_timeout: map?25000:15000, idleTimeoutMillis: 10000, application_name: map?'target-map-test':'target-test'});
+        active.on('error', () => {});
+        if(map)mapPool=active;else pool=active;
       }
-      const result = await pool.query('SELECT public.'+functionName+'($1,$2,$3::jsonb) AS result', [config.rpcSecret, action, JSON.stringify(input)]);
+      const result = await active.query('SELECT public.'+functionName+'($1,$2,$3::jsonb) AS result', [config.rpcSecret, action, JSON.stringify(input)]);
       return unpack(result.rows[0]?.result);
     }
     const headers = {'Content-Type': 'application/json', apikey: config.publishableKey};
@@ -35,13 +48,13 @@ async function runRpc(functionName, action, input = {}) {
     if (config.publishableKey.split('.').length === 3) headers.Authorization = 'Bearer ' + config.publishableKey;
     const response = await fetch(config.supabaseOrigin + '/rest/v1/rpc/' + functionName, {
       method: 'POST', headers, body: JSON.stringify({p_secret: config.rpcSecret, p_action: action, p_input: input}),
-      signal: AbortSignal.timeout(12000), redirect: 'error'
+      signal: AbortSignal.timeout(map?26000:12000), redirect: 'error'
     });
     if (!response.ok) {
       await response.body?.cancel();
       throw new HttpError(503, '共有サーバーに接続できませんでした。時間をおいて再試行してください。', 'STORAGE_UNAVAILABLE');
     }
-    const raw = await response.text();
+    const raw = map?await mapResponseText(response):await response.text();
     if (Buffer.byteLength(raw) > 1024 * 1024) throw new Error('response limit');
     return unpack(JSON.parse(raw));
   } catch (error) {
@@ -51,11 +64,12 @@ async function runRpc(functionName, action, input = {}) {
 }
 
 async function closeStore() {
-  const previous = pool;
-  pool = undefined;
-  if (previous) await previous.end();
+  const previous = [pool,mapPool];
+  pool = undefined;mapPool=undefined;
+  await Promise.all(previous.filter(Boolean).map(value=>value.end()));
 }
 
 const rpc=(action,input={})=>runRpc('target_rpc',action,input);
 const shopRpc=(action,input={})=>runRpc('target_shop_rpc',action,input);
-module.exports = {rpc, shopRpc, closeStore};
+const mapRpc=(action,input={})=>runRpc('target_map_rpc',action,input);
+module.exports = {rpc, shopRpc, mapRpc, closeStore};

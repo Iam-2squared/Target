@@ -129,6 +129,11 @@ async function handler(req, res) {
       shop.authorize(req,config);
       return send(res,200,await shop.perform(shopAction,await readJson(req)));
     }
+    const mapAction={'/api/integrations/kgs/map/state':'state','/api/integrations/kgs/map/quote':'quote','/api/integrations/kgs/map/buy':'buy'}[pathname];
+    if(mapAction&&req.method==='POST'){
+      shop.authorize(req,config);
+      return send(res,200,await require('./map.cjs').perform(mapAction,await readJson(req)));
+    }
     if (req.method === 'POST') checkOrigin(req, config);
 
     if (pathname === '/api/session' && req.method === 'GET') {

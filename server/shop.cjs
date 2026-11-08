@@ -50,13 +50,16 @@ function validateQuantities(owned,quantities,catalog){
 function validateModernWallet(value,{requestId,itemType}={}){
   const invalid=()=>new HttpError(503,'保有金額を確認できませんでした。再試行してください。','SHOP_UNAVAILABLE');
   const points=n=>Number.isSafeInteger(n)&&n>=0&&n<=MAX_POINTS&&n%100===0;
+  const mapSpent=Object.hasOwn(value,'mapSpent')?value.mapSpent:0;
+  if(!points(mapSpent)||mapSpent>value.spent)throw invalid();
   const stickers=validateQuantities(value.ownedStickers,value.stickerQuantities,STICKERS),frames=validateQuantities(value.ownedFrames,value.frameQuantities,FRAMES);
   if(!['balance','totalIncome','spent'].every(key=>points(value[key]))||value.balance+value.spent!==value.totalIncome||value.price!==PRICE||value.catalogSize!==17||value.frameCatalogSize!==33||value.duplicatesAllowed!==true||
       !Number.isSafeInteger(value.drawCount)||value.drawCount<0||value.drawCount>100000000||!Number.isSafeInteger(value.legacyDiscountedDraws)||value.legacyDiscountedDraws<0||value.legacyDiscountedDraws>4||
       !stickers||!frames||stickers.total+frames.total!==value.drawCount||value.legacyDiscountedDraws>LEGACY_STICKERS.reduce((sum,id)=>sum+(stickers?.map.get(id)||0),0)||
-      value.spent!==value.drawCount*PRICE-value.legacyDiscountedDraws*(PRICE-LEGACY_PRICE)||
+      value.spent!==value.drawCount*PRICE-value.legacyDiscountedDraws*(PRICE-LEGACY_PRICE)+mapSpent||
       !value.frameOdds||typeof value.frameOdds!=='object'||Array.isArray(value.frameOdds)||Object.keys(value.frameOdds).length!==4||!Object.entries(FRAME_ODDS).every(([key,n])=>value.frameOdds[key]===n))throw invalid();
   const result={balance:value.balance,totalIncome:value.totalIncome,spent:value.spent,price:PRICE,catalogVersion:CATALOG_VERSION,catalogSize:17,frameCatalogSize:33,duplicatesAllowed:true,ownedStickers:stickers.ids,ownedFrames:frames.ids,stickerQuantities:stickers.rows,frameQuantities:frames.rows,drawCount:value.drawCount,legacyDiscountedDraws:value.legacyDiscountedDraws,frameOdds:{...FRAME_ODDS}};
+  if(Object.hasOwn(value,'mapSpent'))result.mapSpent=mapSpent;
   if(requestId!==undefined){
     const pool=itemType||'sticker',ids=pool==='sticker'?STICKERS:FRAMES,owned=pool==='sticker'?stickers:frames;
     if(typeof requestId!=='string'||!UUID.test(requestId)||typeof value.requestId!=='string'||value.requestId.toLowerCase()!==requestId.toLowerCase()||value.itemType!==pool||!ids.includes(value.itemId)||value[pool==='sticker'?'stickerId':'frameId']!==value.itemId||
