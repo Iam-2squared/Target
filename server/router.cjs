@@ -132,7 +132,13 @@ async function handler(req, res) {
     const mapAction={'/api/integrations/kgs/map/state':'state','/api/integrations/kgs/map/quote':'quote','/api/integrations/kgs/map/buy':'buy'}[pathname];
     if(mapAction&&req.method==='POST'){
       shop.authorize(req,config);
+      if(mapAction!=='state')throw new HttpError(410,'マップは領土戦に変わりました。再読み込みしてください。','MAP_REPLACED');
       return send(res,200,await require('./map.cjs').perform(mapAction,await readJson(req)));
+    }
+    const territoryAction={'/api/integrations/kgs/territory/state':'state','/api/integrations/kgs/territory/quote':'quote','/api/integrations/kgs/territory/act':'act'}[pathname];
+    if(territoryAction&&req.method==='POST'){
+      shop.authorize(req,config);
+      return send(res,200,await require('./territory.cjs').perform(territoryAction,await readJson(req)));
     }
     if (req.method === 'POST') checkOrigin(req, config);
 

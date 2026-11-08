@@ -2,9 +2,9 @@
 const {getConfig} = require('./config.cjs');
 const {HttpError} = require('./errors.cjs');
 let pool,mapPool;
-async function mapResponseText(response){
+async function mapResponseText(response,limit=512*1024){
   if(!/^application\/json(?:;|$)/i.test(response.headers.get('content-type')||''))throw new Error('response type');
-  const limit=512*1024,length=response.headers.get('content-length');
+  const length=response.headers.get('content-length');
   if(length!==null&&(!/^\d+$/.test(length)||Number(length)>limit))throw new Error('response limit');
   const reader=response.body?.getReader();if(!reader)throw new Error('response body');
   const chunks=[];let size=0;
@@ -16,7 +16,7 @@ async function mapResponseText(response){
 function unpack(result) {
   if (result && typeof result === 'object' && result.error) {
     const error = result.error;
-    const statuses = new Set([400, 401, 403, 404, 409, 429, 503, 507]);
+    const statuses = new Set([400, 401, 403, 404, 409, 410, 429, 503, 507]);
     const code = typeof error.code === 'string' && /^[A-Z_]{1,60}$/.test(error.code) ? error.code : 'DATABASE_REJECTED';
     const status = statuses.has(error.status) ? error.status : 503;
     const message = typeof error.message === 'string' && error.message.length <= 200 ? error.message : '共有サーバーで処理できませんでした。';
@@ -29,7 +29,7 @@ function unpack(result) {
 
 async function runRpc(functionName, action, input = {}) {
   const config = getConfig();
-  const map=functionName==='target_map_rpc';
+  const territory=functionName==='target_territory_rpc',map=territory||functionName==='target_map_rpc';
   try {
     if (config.databaseUrl) {
       let active=map?mapPool:pool;
@@ -54,7 +54,7 @@ async function runRpc(functionName, action, input = {}) {
       await response.body?.cancel();
       throw new HttpError(503, '共有サーバーに接続できませんでした。時間をおいて再試行してください。', 'STORAGE_UNAVAILABLE');
     }
-    const raw = map?await mapResponseText(response):await response.text();
+    const raw = map?await mapResponseText(response,territory?256*1024:512*1024):await response.text();
     if (Buffer.byteLength(raw) > 1024 * 1024) throw new Error('response limit');
     return unpack(JSON.parse(raw));
   } catch (error) {
@@ -72,4 +72,5 @@ async function closeStore() {
 const rpc=(action,input={})=>runRpc('target_rpc',action,input);
 const shopRpc=(action,input={})=>runRpc('target_shop_rpc',action,input);
 const mapRpc=(action,input={})=>runRpc('target_map_rpc',action,input);
-module.exports = {rpc, shopRpc, mapRpc, closeStore};
+const territoryRpc=(action,input={})=>runRpc('target_territory_rpc',action,input);
+module.exports = {rpc, shopRpc, mapRpc, territoryRpc, closeStore};

@@ -3,6 +3,7 @@ const {HttpError}=require('./errors.cjs');
 const store=require('./store.cjs');
 const protocol=require('./map-protocol.cjs');
 async function perform(action,value){
+  if(action!=='state')throw new HttpError(410,'マップは領土戦に変わりました。再読み込みしてください。','MAP_REPLACED');
   let input;
   try{input=protocol.parseInput(action,value,{trusted:true});}
   catch{throw new HttpError(400,'マスの指定を確認してください。','INVALID_REQUEST');}
