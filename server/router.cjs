@@ -5,6 +5,7 @@ const {getConfig, checkOrigin} = require('./config.cjs');
 const store = require('./store.cjs');
 const identity = require('./identity.cjs');
 const shop = require('./shop.cjs');
+const calculus = require('./calculus.cjs');
 const {validateQuizInput, generateQuestions} = require('./questions.cjs');
 const PROCESSING_STARTED=Symbol('target.processing.started');
 
@@ -16,7 +17,7 @@ const HEADERS = {
   'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'"
 };
 
-async function readJson(req) {
+async function readJson(req, limit = 8192) {
   if (!/^application\/json(?:\s*;|$)/i.test(req.headers?.['content-type'] || '')) {
     throw new HttpError(415, 'JSON形式で送信してください。', 'CONTENT_TYPE');
   }
@@ -28,12 +29,12 @@ async function readJson(req) {
     let size = 0;
     for await (const chunk of req) {
       size += chunk.length;
-      if (size > 8192) throw new HttpError(413, '送信容量の上限を超えています。', 'BODY_LIMIT');
+      if (size > limit) throw new HttpError(413, '送信容量の上限を超えています。', 'BODY_LIMIT');
       chunks.push(chunk);
     }
     bytes = Buffer.concat(chunks);
   }
-  if (bytes.length > 8192) throw new HttpError(413, '送信容量の上限を超えています。', 'BODY_LIMIT');
+  if (bytes.length > limit) throw new HttpError(413, '送信容量の上限を超えています。', 'BODY_LIMIT');
   let result;
   try { result = JSON.parse(bytes.toString('utf8')); }
   catch { throw new HttpError(400, '送信内容を読み込めませんでした。', 'BAD_JSON'); }
@@ -122,6 +123,15 @@ async function handler(req, res) {
       (typeof helperRoute === 'string' ? helperRoute : Array.isArray(helperRoute) && typeof helperRoute[0] === 'string' ? helperRoute[0] : null) : null;
     const pathname = route ? '/api/' + route.replace(/^\/+/, '') : url.pathname;
     if (!['GET', 'POST'].includes(req.method)) throw new HttpError(405, 'この操作には対応していません。', 'METHOD');
+    const calculusAction={'/api/integrations/calculus/status':'status','/api/integrations/calculus/link':'link','/api/integrations/calculus/sync':'sync'}[pathname];
+    if(calculusAction&&req.method==='POST'){
+      calculus.authorize(req,config);
+      return send(res,200,await calculus.perform(calculusAction,await readJson(req),config));
+    }
+    if(pathname==='/api/integrations/kgs/wealth'&&req.method==='POST'){
+      shop.authorize(req,config);
+      return send(res,200,await calculus.wealth(await readJson(req,16384),config));
+    }
     const shopAction={'/api/integrations/kgs/wallet':'wallet','/api/integrations/kgs/gacha':'draw'}[pathname];
     if(shopAction&&req.method==='POST'){
       // Only the KGS service may assert an already authenticated class member.

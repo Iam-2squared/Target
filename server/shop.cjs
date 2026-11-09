@@ -93,10 +93,12 @@ function validateWallet(value,{requestId,itemType}={}){
 }
 async function wallet(member){
   const input=parseInput('wallet',{memberId:member?.id,name:member?.name});
+  await require('./calculus.cjs').refreshMembers([input.memberId]);
   return validateWallet(await store.shopRpc('wallet',input));
 }
 async function perform(action,input){
   const parsed=parseInput(action,input);
+  await require('./calculus.cjs').refreshMembers([parsed.memberId]);
   // Historical acknowledgements remain compatible with old DB versions.
   // New purchases require an explicit price, catalog and pool acknowledgment.
   const forwarded={...parsed};if(forwarded.expectedPrice===LEGACY_PRICE)delete forwarded.expectedPrice;

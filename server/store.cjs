@@ -73,4 +73,5 @@ const rpc=(action,input={})=>runRpc('target_rpc',action,input);
 const shopRpc=(action,input={})=>runRpc('target_shop_rpc',action,input);
 const mapRpc=(action,input={})=>runRpc('target_map_rpc',action,input);
 const territoryRpc=(action,input={})=>runRpc('target_territory_rpc',action,input);
-module.exports = {rpc, shopRpc, mapRpc, territoryRpc, closeStore};
+const calculusRpc=(action,input={})=>runRpc('target_calculus_rpc',action,input);
+module.exports = {rpc, shopRpc, mapRpc, territoryRpc, calculusRpc, closeStore};

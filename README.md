@@ -18,6 +18,14 @@ KGS 11thの雰囲気に合わせた英単語・英熟語の暗記と4択テス�
 
 公開先： https://kgs-target.vercel.app/
 
+## 今日の微積との共通ウォレット
+
+今日の微積で既存KGSアカウントを確認して連携すると、内部1ポイントにつき10,000轟を取り込みます。`total_points` は暗記と微積の総取得、`calculus_points` はそのうち微積分、`spent_points` は既存の全利用額です。保有額は総取得から利用額を引いた値で、ランキングは利用前の総取得を使用します。
+
+微積の累積獲得値をサーバー間で取得し、前回から増えた分だけを一つのトランザクションで反映します。連携先は双方につき1件で固定され、再送・古い応答・アカウント削除で加算済みの轟が増減することはありません。既存のガチャ・マップ利用履歴は保持します。接続失敗時は反映済みの金額を返し、次回のウォレット取得やランキング取得で同期を再試行します。
+
+追加環境変数はサーバー専用の `CALCULUS_TARGET_INTEGRATION_SECRET` と `CALCULUS_SOURCE_URL` です。秘密キーは今日の微積とだけ共有する新しい値で、既存のKGS・Cookie・RPC用の値とは分けます。新しい連携を未設定でも従来の暗記機能は使えます。
+
 `npm ci` → `npm run build`。ローカルサーバーは`npm start`、単体検証は`npm test`です。共有機能の環境変数は[.env.example](.env.example)を非公開で設定してください。
 
 教材の出典は[docs/materials.md](docs/materials.md)、APIは[docs/api.md](docs/api.md)、運用と無料枠は[docs/OPERATIONS.md](docs/OPERATIONS.md)、実測結果は[docs/VERIFICATION.md](docs/VERIFICATION.md)を参照してください。
