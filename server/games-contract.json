@@ -1,0 +1,26 @@
+{
+  "rulesVersion": 1,
+  "minStake": 100,
+  "maxStake": 100000,
+  "stakeStep": 100,
+  "moneyLimit": 10000000000000,
+  "games": {
+    "coin": {"choice": [0, 1], "outcome": "one uniform integer0..1", "matchMultiplier": 2},
+    "dice": {"choice": [1, 2, 3, 4, 5, 6], "outcome": "one uniform integer1..6", "matchMultiplier": 6},
+    "slots": {"choice": null, "outcome": "three independent uniform integers0..5", "tripleMultiplier": 20, "pairMultiplier": 1, "otherMultiplier": 0}
+  },
+  "wallet": {"balance": "money", "totalIncome": "money", "spent": "money", "walletRevision": "integer0..1e13", "gameNet": "signedmoney-1e13..1e13"},
+  "round": {"requestId": "uuid", "game": "coin|dice|slots", "stake": "money100..100000 step100", "choice": "game-specific integer or null", "rulesVersion": 1, "outcome": ["game-specific integer"], "multiplier": "integer0|1|2|6|20", "payout": "stake*multiplier", "net": "payout-stake", "createdAt": "timestamp"},
+  "storageRpc": {
+    "name": "target_games_rpc",
+    "credential": "TARGET_RPC_SECRET",
+    "actions": {
+      "state": {"input": ["memberId", "name"], "output": {"rulesVersion": 1, "minStake": 100, "maxStake": 100000, "stakeStep": 100, "wallet": "wallet", "rounds": "own newest10 rounds"}},
+      "play": {"input": ["memberId", "name", "requestId", "game", "stake", "choice", "rulesVersion"], "output": {"rulesVersion": 1, "wallet": "CURRENT wallet", "round": "IMMUTABLE round"}},
+      "snapshot": {"input": ["memberId"], "output": "wallet directly; no remote source refresh"}
+    }
+  },
+  "serviceRoutes": {"state": "/api/integrations/kgs/games/state", "play": "/api/integrations/kgs/games/play", "credential": "KGS_TARGET_INTEGRATION_SECRET"},
+  "businessErrors": {"INVALID_REQUEST": 400, "RULES_CHANGED": 409, "REQUEST_ID_CONFLICT": 409, "INSUFFICIENT_BALANCE": 409, "GAME_LIMIT": 409, "RATE_LIMITED": 429, "CAPACITY_LIMIT": 507},
+  "quizAnswer": "Existing result with totalPoints=current wallet.totalIncome, walletRevision=current wallet.walletRevision, balance=current wallet.balance; historical receipt total is not forwarded"
+}

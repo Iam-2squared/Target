@@ -23,6 +23,7 @@ async function reject(sql,args,code){await assert.rejects(db.query(sql,args),err
  const fingerprint=async()=>(await db.query("SELECT proname,md5(pg_get_functiondef(oid)) AS hash FROM pg_proc WHERE oid IN ('public.target_rpc(text,text,jsonb)'::regprocedure,'public.target_shop_rpc(text,text,jsonb)'::regprocedure,'public.target_calculus_rpc(text,text,jsonb)'::regprocedure,'public.target_map_rpc(text,text,jsonb)'::regprocedure,'public.target_territory_rpc(text,text,jsonb)'::regprocedure) ORDER BY proname")).rows;
  const before=await fingerprint(),receipts=(await db.query('SELECT * FROM target_private.item_draws')).rows;
  await db.query(await fs.readFile(path.join(directory,latest),'utf8'));
+ for(const file of files.filter(n=>n>latest))await db.query(await fs.readFile(path.join(directory,file),'utf8'));
  eq(await fingerprint(),before,'Existing quiz, mastery, bonus, calculus, shop and removed-map RPCs are unchanged');eq((await db.query('SELECT * FROM target_private.item_draws')).rows,receipts);
  const count=async()=>(await db.query('SELECT count(*)::integer AS n FROM target_private.profiles')).rows[0].n;
  const beforeStatus=await count();eq(await rpc('status',{memberId:fresh.memberId}),{gift:null});eq(await count(),beforeStatus,'Status never creates wallets');

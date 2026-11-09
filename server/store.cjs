@@ -76,4 +76,5 @@ const mapRpc=(action,input={})=>runRpc('target_map_rpc',action,input);
 const territoryRpc=(action,input={})=>runRpc('target_territory_rpc',action,input);
 const calculusRpc=(action,input={})=>runRpc('target_calculus_rpc',action,input);
 const birthdayRpc=(action,input={},options={})=>runRpc('target_birthday_rpc',action,input,options);
-module.exports = {rpc, shopRpc, mapRpc, territoryRpc, calculusRpc, birthdayRpc, closeStore};
+const gamesRpc=(action,input={})=>runRpc('target_games_rpc',action,input);
+module.exports = {rpc, shopRpc, mapRpc, territoryRpc, calculusRpc, birthdayRpc, gamesRpc, closeStore};

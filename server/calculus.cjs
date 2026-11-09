@@ -39,7 +39,7 @@ function parseStatus(value){
     typeof value.linked!=='boolean'||value.conversionRate!==RATE||typeof value.syncPending!=='boolean')throw unavailable();
   if(!value.linked){if(['member','balance','totalIncome','calculusIncome'].some(key=>value[key]!==null))throw unavailable();}
   else if(!exact(value.member,['id','name'])||!identity.UUID.test(value.member.id||'')||typeof value.member.name!=='string'||!value.member.name.trim()||value.member.name.length>20||
-    !['balance','totalIncome','calculusIncome'].every(key=>money(value[key]))||value.balance>value.totalIncome||value.calculusIncome>value.totalIncome||value.calculusIncome%RATE!==0)throw unavailable();
+    !['balance','totalIncome','calculusIncome'].every(key=>money(value[key]))||value.balance>value.totalIncome||value.calculusIncome%RATE!==0)throw unavailable();
   return value;
 }
 async function responseJson(response){

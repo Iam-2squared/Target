@@ -7,6 +7,7 @@ const identity = require('./identity.cjs');
 const shop = require('./shop.cjs');
 const calculus = require('./calculus.cjs');
 const birthday = require('./birthday.cjs');
+const games = require('./games.cjs');
 const {validateQuizInput, generateQuestions} = require('./questions.cjs');
 const PROCESSING_STARTED=Symbol('target.processing.started');
 
@@ -124,6 +125,12 @@ async function handler(req, res) {
       (typeof helperRoute === 'string' ? helperRoute : Array.isArray(helperRoute) && typeof helperRoute[0] === 'string' ? helperRoute[0] : null) : null;
     const pathname = route ? '/api/' + route.replace(/^\/+/, '') : url.pathname;
     if (!['GET', 'POST'].includes(req.method)) throw new HttpError(405, 'この操作には対応していません。', 'METHOD');
+    const gamesAction={'/api/integrations/kgs/games/state':'state','/api/integrations/kgs/games/play':'play'}[pathname];
+    if(gamesAction&&req.method==='POST'){
+      shop.authorize(req,config);
+      birthday.readQuery(req,pathname);
+      return send(res,200,await games.perform(gamesAction,await readJson(req),config));
+    }
     if(pathname==='/api/birthday-gifts/cron'){
       birthday.authorizeCron(req);
       if(req.method!=='GET')throw new HttpError(405,'この操作には対応していません。','METHOD');
@@ -175,7 +182,7 @@ async function handler(req, res) {
       }
       const profile = await store.rpc('profile', {memberId: member.id, name: member.name});
       const wallet=await shop.wallet(member);
-      return send(res, 200, {member: {name: member.name}, correctCount: profile.correctCount, totalPoints: wallet.totalIncome,bonus:profile.bonus??null,...wallet});
+      return send(res, 200, {member: {id:member.id,name: member.name}, correctCount: profile.correctCount, totalPoints: wallet.totalIncome,bonus:profile.bonus??null,...wallet});
     }
     if (pathname === '/api/ranking' && req.method === 'GET') return send(res, 200, await store.rpc('ranking'));
     if (pathname === '/api/mastery' && req.method === 'GET') {
@@ -198,7 +205,7 @@ async function handler(req, res) {
       const profile = await store.rpc('profile', {memberId: result.member.id, name: result.member.name});
       const wallet=await shop.wallet(result.member);
       identity.setSession(res, result.token, result.expiresAt, config);
-      return send(res, 200, {member: {name: result.member.name}, correctCount: profile.correctCount, totalPoints: wallet.totalIncome,bonus:profile.bonus??null,...wallet});
+      return send(res, 200, {member: {id:result.member.id,name: result.member.name}, correctCount: profile.correctCount, totalPoints: wallet.totalIncome,bonus:profile.bonus??null,...wallet});
     }
     if (pathname === '/api/logout' && req.method === 'POST') {
       const body = await readJson(req);
@@ -235,7 +242,9 @@ async function handler(req, res) {
         throw new HttpError(400, '回答内容を確認してください。', 'INVALID_ANSWER');
       }
       const member = await identity.requireMember(req, res, config);
-      return send(res, 200, await store.rpc('answer', {memberId: member.id, name: member.name, ...body}));
+      const result=await store.rpc('answer', {memberId: member.id, name: member.name, ...body});
+      const current=await games.snapshot(member.id);
+      return send(res, 200, {...result,totalPoints:current.totalIncome,walletRevision:current.walletRevision,balance:current.balance});
     }
     throw new HttpError(404, '見つかりません。', 'NOT_FOUND');
   } catch (error) {

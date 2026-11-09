@@ -1,0 +1,60 @@
+'use strict';
+const test=require('node:test'),assert=require('node:assert/strict'),crypto=require('node:crypto');
+const games=require('../server/games.cjs'),shop=require('../server/shop.cjs'),calculus=require('../server/calculus.cjs'),identity=require('../server/identity.cjs'),store=require('../server/store.cjs'),{handler}=require('../server/router.cjs');
+const random=()=>crypto.randomBytes(32).toString('base64url'),memberId=crypto.randomUUID(),requestId=crypto.randomUUID();
+const wallet=()=>({balance:0,totalIncome:100000,spent:100000,walletRevision:7,gameNet:-90000});
+const round=()=>({requestId,game:'coin',stake:1000,choice:0,rulesVersion:1,outcome:[1],multiplier:0,payout:0,net:-1000,createdAt:'2026-11-09T00:00:00.000Z'});
+async function fixture(fn){
+ const values={NODE_ENV:'production',VERCEL:'1',TARGET_DATABASE_URL:undefined,TARGET_RPC_SECRET:random(),TARGET_COOKIE_SECRET:random(),KGS_TARGET_INTEGRATION_SECRET:random(),CALCULUS_TARGET_INTEGRATION_SECRET:undefined,
+  KGS_IDENTITY_URL:'https://class.example.invalid',TARGET_ALLOWED_ORIGINS:'https://target.example.invalid',TARGET_SUPABASE_URL:'https://abcdefghijklmnopqrst.supabase.co',TARGET_SUPABASE_PUBLISHABLE_KEY:'sb_publishable_'+random()};
+ const previous=Object.fromEntries(Object.keys(values).map(key=>[key,process.env[key]])),original={fetch:global.fetch,rpc:store.rpc,games:store.gamesRpc,member:identity.requireMember};
+ for(const[key,value]of Object.entries(values))if(value===undefined)delete process.env[key];else process.env[key]=value;
+ try{return await fn(values);}finally{global.fetch=original.fetch;store.rpc=original.rpc;store.gamesRpc=original.games;identity.requireMember=original.member;
+  for(const[key,value]of Object.entries(previous))if(value===undefined)delete process.env[key];else process.env[key]=value;}
+}
+function response(){return{headers:{},setHeader(key,value){this.headers[key.toLowerCase()]=value;},getHeader(key){return this.headers[key.toLowerCase()];},end(bytes){this.result=JSON.parse(String(bytes));this.writableEnded=true;}};}
+test('G service authenticates and validates rewrite metadata before touching a body or storage',()=>fixture(async values=>{
+ for(const path of ['/api/integrations/kgs/games/state','/api/integrations/kgs/games/play']){
+  let read=false;const res=response();await handler({url:path,method:'POST',headers:{authorization:'Bearer wrong'},get body(){read=true;throw Error('must not read');}},res);assert.equal(res.statusCode,404);assert.equal(read,false);
+  const rejected=response();await handler({url:path+'?payout=100000',method:'POST',headers:{authorization:'Bearer '+values.KGS_TARGET_INTEGRATION_SECRET},get body(){throw Error('query rejected before body');}},rejected);assert.equal(rejected.statusCode,400);
+ }
+}));
+test('G inputs bind only a normalized identity and fixed rules; clients cannot assert results or credit',()=>{
+ const value={memberId,name:' 名前 ',requestId,game:'coin',stake:1000,choice:0,rulesVersion:1};assert.equal(games.parseInput('play',value).name,'名前');
+ for(const change of [{stake:-100},{stake:101},{stake:100001},{choice:2},{choice:'0'},{rulesVersion:'1'},{payout:2000},{outcome:[0]},{balance:100000},{memberId:'bad'}])assert.throws(()=>games.parseInput('play',{...value,...change}),error=>error.status===400);
+ assert.equal(games.parseInput('play',{...value,game:'slots',choice:null}).choice,null);
+ assert.throws(()=>games.parseInput('play',{...value,game:'dice',choice:0}),error=>error.status===400);
+});
+test('G validators check signed net, exact payout formula, private history order and current wallet',()=>{
+ const input={requestId,game:'coin',stake:1000,choice:0,rulesVersion:1},value={rulesVersion:1,wallet:wallet(),round:round()};
+ assert.deepEqual(games.parseResponse('play',value,input),value);
+ for(const changed of [{payout:2000},{multiplier:2},{net:1000},{outcome:[0]},{choice:null},{requestId:'bad'}])assert.throws(()=>games.parseRound({...round(),...changed}),error=>error.status===503);
+ for(const changed of [{balance:100},{totalIncome:-100},{gameNet:0.5},{walletRevision:-1},{walletRevision:10000000000001},{extra:0}])assert.throws(()=>games.parseWallet({...wallet(),...changed}),error=>error.status===503);
+ assert.throws(()=>games.parseResponse('play',value,{...input,requestId:crypto.randomUUID()}),error=>error.status===503);
+ const state={rulesVersion:1,minStake:100,maxStake:100000,stakeStep:100,wallet:wallet(),rounds:[round()]};assert.deepEqual(games.parseResponse('state',state),state);
+ assert.throws(()=>games.parseResponse('state',{...state,rounds:[round(),round()]}),error=>error.status===503);
+});
+test('all216 slot combinations produce6 triples,90 refunds and120 losses',()=>{
+ const counts=new Map();for(let a=0;a<6;a++)for(let b=0;b<6;b++)for(let c=0;c<6;c++){const multiplier=games.multiplier('slots',null,[a,b,c]);counts.set(multiplier,(counts.get(multiplier)||0)+1);}
+ assert.equal(counts.get(20),6);assert.equal(counts.get(1),90);assert.equal(counts.get(0),120);assert.equal(6*20+90,210);
+ for(let choice=0;choice<2;choice++)assert.equal([0,1].reduce((sum,outcome)=>sum+games.multiplier('coin',choice,[outcome]),0),2);
+ for(let choice=1;choice<=6;choice++)assert.equal([1,2,3,4,5,6].reduce((sum,outcome)=>sum+games.multiplier('dice',choice,[outcome]),0),6);
+});
+test('source outages retain valid posted game funds and do not stop receipt recovery',()=>fixture(async()=>{
+ global.fetch=async()=>{throw Error('source offline');};let read=false;
+ store.gamesRpc=async(action,input)=>{read=true;assert.equal(action,'play');assert.equal(input.memberId,memberId);return{rulesVersion:1,wallet:wallet(),round:round()};};
+ const result=await games.perform('play',{memberId,name:'名前',requestId,game:'coin',stake:1000,choice:0,rulesVersion:1});assert.equal(read,true);assert.equal(result.wallet.balance,0);assert.equal(result.round.net,-1000);
+}));
+test('recorded answer responses combine immutable quiz content with a fresh net wallet and revision without source HTTP',()=>fixture(async()=>{
+ let sourceCalls=0;global.fetch=async()=>{sourceCalls++;throw Error('answer must not refresh sources');};identity.requireMember=async()=>({id:memberId,name:'名前'});
+ const oldResult={correct:true,awardPoints:100000,quizPoints:100000,totalPoints:190000,nextQuestion:null,bonus:null};
+ store.rpc=async action=>{assert.equal(action,'answer');return oldResult;};
+ store.gamesRpc=async(action,input)=>{assert.equal(action,'snapshot');assert.deepEqual(input,{memberId});return{balance:0,totalIncome:0,spent:0,walletRevision:12,gameNet:-190000};};
+ const res=response();await handler({method:'POST',url:'/api/quiz/answer',headers:{origin:'https://target.example.invalid',host:'target.example.invalid','content-type':'application/json'},body:{quizId:crypto.randomUUID(),questionId:crypto.randomUUID(),choiceId:crypto.randomUUID(),requestId}},res);
+ assert.equal(res.statusCode,200);assert.equal(res.result.totalPoints,0);assert.equal(res.result.walletRevision,12);assert.equal(res.result.balance,0);assert.equal(res.result.quizPoints,100000);assert.equal(oldResult.totalPoints,190000);assert.equal(sourceCalls,0);
+}));
+test('legacy shop snapshots preserve optional revisions and historical calculus income may exceed net income',()=>{
+ const old=shop.guestWallet();assert.deepEqual(shop.validateWallet({...old,walletRevision:0}),{...old,walletRevision:0});
+ for(const walletRevision of [-1,1.5,'1',10000000000001])assert.throws(()=>shop.validateWallet({...old,walletRevision}),error=>error.status===503);
+ const linked={linked:true,conversionRate:10000,member:{id:memberId,name:'名前'},balance:0,totalIncome:0,calculusIncome:90000,syncPending:false};assert.deepEqual(calculus.parseStatus(linked),linked);
+});

@@ -70,7 +70,7 @@ function validateModernWallet(value,{requestId,itemType}={}){
   }
   return result;
 }
-function validateWallet(value,{requestId,itemType}={}){
+function validateWalletWithoutRevision(value,{requestId,itemType}={}){
   if(value?.catalogVersion===CATALOG_VERSION)return validateModernWallet(value,{requestId,itemType});
   const hasVersion=!!value&&Object.hasOwn(value,'catalogVersion'),hasSize=!!value&&Object.hasOwn(value,'catalogSize');
   const catalogVersion=hasVersion?value.catalogVersion:1,catalogSize=hasSize?value.catalogSize:LEGACY_STICKERS.length;
@@ -90,6 +90,14 @@ function validateWallet(value,{requestId,itemType}={}){
   return{balance:value.balance,totalIncome:value.totalIncome,spent:value.spent,price:value.price,catalogVersion,catalogSize,
     ownedStickers:STICKERS.filter(id=>value.ownedStickers.includes(id)),
     ...(requestId?{requestId:value.requestId,stickerId:value.stickerId,cost:value.cost??LEGACY_PRICE}:{})};
+}
+function validateWallet(value,options={}){
+  const result=validateWalletWithoutRevision(value,options);
+  if(Object.hasOwn(value,'walletRevision')){
+    if(!Number.isSafeInteger(value.walletRevision)||value.walletRevision<0||value.walletRevision>MAX_POINTS)throw new HttpError(503,'保有金額を確認できませんでした。再試行してください。','SHOP_UNAVAILABLE');
+    result.walletRevision=value.walletRevision;
+  }
+  return result;
 }
 async function wallet(member){
   const input=parseInput('wallet',{memberId:member?.id,name:member?.name});

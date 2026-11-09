@@ -9,7 +9,7 @@
   const views = ['home','memorize','setup','quiz','result','ranking','mastery'];
   const datasets = new Map(), datasetPromises = new Map();
   let selectedBook='target1900', activeView='home', member=null, lifetimeCorrect=0, lifetimePoints=0;
-  let sessionKnown=false, sessionEpoch=0, sessionTicket=0, walletBalance=0, walletKnown=false;
+  let sessionKnown=false, sessionEpoch=0, sessionTicket=0, walletBalance=0, walletKnown=false, walletRevision=null;
   const rankingTickets={homeRanking:0,ranking:0};
   const sectionRanges={target1900:{from:1,to:1},target1000:{from:1,to:1},kobun400:{from:1,to:1}};
   let masteryTicket=0,homeReviewTicket=0,setupMode='normal';
@@ -43,6 +43,8 @@
     return result;
   }
   const validPoints=value=>Number.isSafeInteger(value)&&value>=0;
+  const validRevision=value=>Number.isSafeInteger(value)&&value>=0&&value<=10000000000000;
+  const validMoney=value=>validRevision(value)&&value%100===0;
   const gou=value=>value.toLocaleString('ja-JP')+'轟';
   function guestAward() {
     const limit=0x100000000-(0x100000000%100);let value;
@@ -232,8 +234,29 @@
   }
   function parseIdentity(data) {
     if(data.member!==null&&(!data.member||typeof data.member!=='object'||typeof data.member.name!=='string'||data.member.name.length>20))throw appError('アカウントの情報を確認できませんでした。');
-    if(!Number.isSafeInteger(data.correctCount)||data.correctCount<0||!validPoints(data.totalPoints)||!validPoints(data.balance)||!validPoints(data.totalIncome)||!validPoints(data.spent)||data.totalIncome!==data.totalPoints||data.balance+data.spent!==data.totalIncome)throw appError('保有金額を確認できませんでした。');
-    return {member:data.member===null?null:{name:data.member.name},correctCount:data.correctCount,totalPoints:data.totalPoints,balance:data.balance,bonus:checkedBonus(data.bonus),timing:data.__timing};
+    if(data.member&&Object.hasOwn(data.member,'id')&&(typeof data.member.id!=='string'||!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(data.member.id)))throw appError('アカウントの情報を確認できませんでした。');
+    if(!Number.isSafeInteger(data.correctCount)||data.correctCount<0||!validMoney(data.totalPoints)||!validMoney(data.balance)||!validMoney(data.totalIncome)||!validMoney(data.spent)||data.totalIncome!==data.totalPoints||data.balance+data.spent!==data.totalIncome||
+      (Object.hasOwn(data,'walletRevision')&&!validRevision(data.walletRevision)))throw appError('保有金額を確認できませんでした。');
+    return {member:data.member===null?null:{name:data.member.name,...(data.member.id?{id:data.member.id.toLowerCase()}:{})},correctCount:data.correctCount,totalPoints:data.totalPoints,balance:data.balance,
+      ...(Object.hasOwn(data,'walletRevision')?{walletRevision:data.walletRevision}:{}),bonus:checkedBonus(data.bonus),timing:data.__timing};
+  }
+  function sameAccount(left,right) {
+    if(!left||!right)return left===right;
+    return left.id&&right.id?left.id===right.id:left.name===right.name;
+  }
+  function resetWallet() {walletRevision=null;lifetimePoints=0;walletBalance=0;walletKnown=false;}
+  function applyWallet(snapshot) {
+    const revision=snapshot.walletRevision,versioned=revision!==undefined;
+    if(versioned){
+      if(walletRevision!==null&&(revision<walletRevision||revision===walletRevision&&
+        (snapshot.totalPoints!==lifetimePoints||walletKnown&&snapshot.balance!==undefined&&snapshot.balance!==walletBalance)))return false;
+    }else if(walletRevision!==null||snapshot.totalPoints<lifetimePoints)return false;
+    const unchanged=versioned&&revision===walletRevision;
+    lifetimePoints=snapshot.totalPoints;
+    if(versioned)walletRevision=revision;
+    if(snapshot.balance!==undefined){walletBalance=snapshot.balance;walletKnown=!!member;}
+    else if(!unchanged)walletKnown=false;
+    return true;
   }
   function renderIdentity() {
     $('accountBadge').textContent=member?(member.name.trim()||'KGSアカウント'):(sessionKnown?'ゲスト':'接続未確認');
@@ -253,21 +276,26 @@
     const ticket=++sessionTicket,epoch=sessionEpoch;
     try {
       const identity=parseIdentity(await api('/session'));
-      if(ticket!==sessionTicket||epoch!==sessionEpoch)return;
-      const changed=!!member!==!!identity.member;
+      if(epoch!==sessionEpoch)return;
+      // An older request can contain a newer committed wallet. Apply only its
+      // financial snapshot when it belongs to the current known account.
+      if(ticket!==sessionTicket){if(sameAccount(member,identity.member)&&(!member?.id||identity.member?.id===member.id)&&applyWallet(identity))renderIdentity();return;}
+      if(member?.id&&identity.member&&!identity.member.id)return;
+      const changed=!sameAccount(member,identity.member);
       if(changed)bonus.reset();
       // The session cookie may have changed in another tab even when both
       // identities are logged in. Never retain one account's rendered mastery
       // through a fresh server session check or apply its outstanding request.
       clearMastery();
-      member=identity.member;lifetimeCorrect=identity.correctCount;lifetimePoints=identity.totalPoints;walletBalance=identity.balance;walletKnown=!!member;sessionKnown=true;
+      if(changed){resetWallet();if(sessionKnown)sessionEpoch++;}
+      member=identity.member;lifetimeCorrect=identity.correctCount;applyWallet(identity);sessionKnown=true;
       if(member)bonus.update(identity.bonus,identity.timing);
       $('connectionNotice').hidden=true;renderIdentity();
       if(activeView==='mastery')void loadMastery();
       if(activeView==='home')void loadHomeReview();
     } catch(error) {
       if(ticket!==sessionTicket||epoch!==sessionEpoch)return;
-      if(error.status===401){bonus.reset();clearMastery();member=null;lifetimeCorrect=0;lifetimePoints=0;walletBalance=0;walletKnown=false;sessionKnown=true;}
+      if(error.status===401){bonus.reset();clearMastery();member=null;lifetimeCorrect=0;resetWallet();sessionKnown=true;sessionEpoch++;sessionTicket++;}
       if(walletFeedback){walletKnown=false;if($('settingsDialog').open)setError('settingsError','保有金額を確認できませんでした。もう一度個人設定を開いてください。');}
       if(notify){$('connectionNotice').textContent='共有機能に接続できません。暗記とゲスト練習は利用できます。';$('connectionNotice').hidden=false;}
       renderIdentity();
@@ -343,7 +371,7 @@
       masteryRows(data,book);$('homeReviewCount').textContent=data.reviewNumbers.length+'個';$('homeReviewStatus').textContent='';
     }catch(error){
       if(!current())return;
-      if(error.status===401){bonus.reset();clearMastery();member=null;lifetimeCorrect=0;lifetimePoints=0;walletBalance=0;walletKnown=false;sessionKnown=true;sessionEpoch++;sessionTicket++;renderIdentity();}
+      if(error.status===401){bonus.reset();clearMastery();member=null;lifetimeCorrect=0;resetWallet();sessionKnown=true;sessionEpoch++;sessionTicket++;renderIdentity();}
       else{$('homeReviewStatus').textContent='読み込めませんでした。';$('homeReviewRetry').hidden=false;}
     }finally{if(current())$('homeReviewRetry').disabled=false;}
   }
@@ -366,7 +394,7 @@
       $('masteryList').replaceChildren(fragment);$('masteryStatus').textContent='2回連続で正解すると定着します。';
     }catch(error){
       if(!current())return;
-      if(error.status===401){bonus.reset();clearMastery();member=null;lifetimeCorrect=0;lifetimePoints=0;walletBalance=0;walletKnown=false;sessionKnown=true;sessionEpoch++;sessionTicket++;renderIdentity();$('masteryStatus').textContent='ログインして定着率を確認できます。';}
+      if(error.status===401){bonus.reset();clearMastery();member=null;lifetimeCorrect=0;resetWallet();sessionKnown=true;sessionEpoch++;sessionTicket++;renderIdentity();$('masteryStatus').textContent='ログインして定着率を確認できます。';}
       else{$('masteryStatus').textContent='';setError('masteryError',error.message);}
     }finally{if(current())$('masteryRefresh').disabled=false;}
   }
@@ -507,7 +535,7 @@
       show('quiz');renderQuestion();
     } catch(error) {
       if(!currentSetup())return;
-      if(error.status===401){bonus.reset();clearMastery();member=null;lifetimeCorrect=0;lifetimePoints=0;walletBalance=0;walletKnown=false;sessionKnown=true;sessionEpoch++;renderIdentity();}
+      if(error.status===401){bonus.reset();clearMastery();member=null;lifetimeCorrect=0;resetWallet();sessionKnown=true;sessionEpoch++;renderIdentity();}
       setError('setupError',error.code==='REVIEW_EMPTY'?'解き直す単語はありません。':error.message);
     } finally {starting=false;$('testStart').disabled=false;renderIdentity();}
   }
@@ -550,13 +578,15 @@
     const question=quiz.question;
     const correctChoice=question.choices.find(choice=>choice.id===result.correctChoiceId);
     if(typeof result.correct!=='boolean'||typeof result.correctChoiceId!=='string'||!correctChoice||typeof result.correctText!=='string'||result.correctText!==correctChoice.text||result.correct!==(quiz.pendingAnswer?.choiceId===result.correctChoiceId)||!Number.isSafeInteger(result.answeredCount)||result.answeredCount!==quiz.answeredCount+1||!Number.isSafeInteger(result.correctCount)||result.correctCount!==quiz.correctCount+(result.correct?1:0)||result.total!==quiz.total||result.finished!==(result.answeredCount===quiz.total))throw appError('回答結果を確認できませんでした。同じ回答を再送してください。');
-    if(!validPoints(result.awardPoints)||![0,100,500,1000,10000,100000].includes(result.awardPoints)||(!result.correct&&result.awardPoints!==0)||!validPoints(result.quizPoints)||result.quizPoints!==quiz.quizPoints+result.awardPoints||!validPoints(result.totalPoints)||result.totalPoints<result.quizPoints)throw appError('得点を確認できませんでした。同じ回答を再送してください。');
+    if(!validPoints(result.awardPoints)||![0,100,500,1000,10000,100000].includes(result.awardPoints)||(!result.correct&&result.awardPoints!==0)||!validPoints(result.quizPoints)||result.quizPoints!==quiz.quizPoints+result.awardPoints||!validMoney(result.totalPoints)||(!quiz.recorded&&result.totalPoints<result.quizPoints)||
+      (Object.hasOwn(result,'walletRevision')&&!validRevision(result.walletRevision))||
+      (Object.hasOwn(result,'balance')&&(!validMoney(result.balance)||result.balance>result.totalPoints)))throw appError('得点を確認できませんでした。同じ回答を再送してください。');
     if(!result.finished)questionShape(result.nextQuestion);
     const bonusState=checkedBonus(result.bonus);if(quiz.recorded)bonus.update(bonusState,result.__timing);
     quiz.feedback=result;quiz.answeredCount=result.answeredCount;quiz.correctCount=result.correctCount;quiz.quizPoints=result.quizPoints;quiz.finished=result.finished;
     renderAnswerFeedback(result);feedbackSound(quiz,result.correct);
     $('quizPoints').textContent=gou(quiz.quizPoints);
-    if(quiz.recorded){clearMastery();sessionTicket++;lifetimePoints=Math.max(lifetimePoints,result.totalPoints);walletKnown=false;renderIdentity();if($('settingsDialog').open)void refreshSession({notify:false,walletFeedback:true});}
+    if(quiz.recorded){clearMastery();sessionTicket++;applyWallet(result);renderIdentity();if($('settingsDialog').open)void refreshSession({notify:false,walletFeedback:true});}
     $('quizCorrect').textContent=quiz.correctCount+'問 正解';$('quizProgress').value=quiz.answeredCount;
     $('quizMode').textContent=quiz.recorded?'ランキングに記録':'ゲスト';
     $('answerRetry').hidden=true;beginResultDisplay();
@@ -589,7 +619,7 @@
     } catch(error) {
       if(quiz!==current||current.sessionEpoch!==sessionEpoch)return;
       clearRewardCelebration();
-      if(error.status===401){bonus.reset();clearMastery();member=null;lifetimeCorrect=0;lifetimePoints=0;walletBalance=0;walletKnown=false;sessionKnown=true;sessionEpoch++;renderIdentity();}
+      if(error.status===401){bonus.reset();clearMastery();member=null;lifetimeCorrect=0;resetWallet();sessionKnown=true;sessionEpoch++;renderIdentity();}
       $('quizMode').textContent=current.recorded?'記録未確認':'ゲスト';
       setError('quizError',error.message+' 回答は保持しています。');$('answerRetry').hidden=error.status===401;
     } finally {current.pending=false;if(quiz===current)$('answerRetry').disabled=false;}
@@ -636,7 +666,7 @@
     loginPending=true;for(const id of ['attendanceNumber','accountPin','pinVisibility','loginButton'])$(id).disabled=true;$('loginButton').textContent='ログイン中…';
     try {
       const identity=parseIdentity(await api('/login',{attendanceNumber,accountPin}));if(!identity.member)throw appError('ログイン情報を確認できませんでした。');
-      clearRewardCelebration();bonus.reset();clearMastery();sessionEpoch++;sessionTicket++;member=identity.member;lifetimeCorrect=identity.correctCount;lifetimePoints=identity.totalPoints;walletBalance=identity.balance;walletKnown=!!member;sessionKnown=true;bonus.update(identity.bonus,identity.timing);$('accountPin').value='';$('attendanceNumber').value='';setPinVisible(false);$('connectionNotice').hidden=true;renderIdentity();$('settingsStatus').textContent='ログインしました。';
+      clearRewardCelebration();bonus.reset();clearMastery();sessionEpoch++;sessionTicket++;resetWallet();member=identity.member;lifetimeCorrect=identity.correctCount;applyWallet(identity);sessionKnown=true;bonus.update(identity.bonus,identity.timing);$('accountPin').value='';$('attendanceNumber').value='';setPinVisible(false);$('connectionNotice').hidden=true;renderIdentity();$('settingsStatus').textContent='ログインしました。';
       if(activeView==='mastery')void loadMastery();
       if(activeView==='home')void loadHomeReview();
     } catch(error){setError('settingsError',error.message);}
@@ -645,7 +675,7 @@
   async function logout() {
     if(loginPending||logoutPending)return;logoutPending=true;$('logoutButton').disabled=true;setError('settingsError');$('settingsStatus').textContent='';
     try {
-      await api('/logout',{});clearRewardCelebration();bonus.reset();clearMastery();sessionEpoch++;sessionTicket++;member=null;lifetimeCorrect=0;lifetimePoints=0;walletBalance=0;walletKnown=false;sessionKnown=true;$('accountPin').value='';$('attendanceNumber').value='';setPinVisible(false);renderIdentity();$('settingsStatus').textContent='ログアウトしました。';
+      await api('/logout',{});clearRewardCelebration();bonus.reset();clearMastery();sessionEpoch++;sessionTicket++;member=null;lifetimeCorrect=0;resetWallet();sessionKnown=true;$('accountPin').value='';$('attendanceNumber').value='';setPinVisible(false);renderIdentity();$('settingsStatus').textContent='ログアウトしました。';
       if(activeView==='mastery')void loadMastery();
       if(activeView==='quiz'&&quiz?.recorded){quiz=null;home();}
     } catch(error){setError('settingsError',error.message);}
