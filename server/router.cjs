@@ -6,6 +6,7 @@ const store = require('./store.cjs');
 const identity = require('./identity.cjs');
 const shop = require('./shop.cjs');
 const calculus = require('./calculus.cjs');
+const birthday = require('./birthday.cjs');
 const {validateQuizInput, generateQuestions} = require('./questions.cjs');
 const PROCESSING_STARTED=Symbol('target.processing.started');
 
@@ -123,6 +124,18 @@ async function handler(req, res) {
       (typeof helperRoute === 'string' ? helperRoute : Array.isArray(helperRoute) && typeof helperRoute[0] === 'string' ? helperRoute[0] : null) : null;
     const pathname = route ? '/api/' + route.replace(/^\/+/, '') : url.pathname;
     if (!['GET', 'POST'].includes(req.method)) throw new HttpError(405, 'この操作には対応していません。', 'METHOD');
+    if(pathname==='/api/birthday-gifts/cron'){
+      birthday.authorizeCron(req);
+      if(req.method!=='GET')throw new HttpError(405,'この操作には対応していません。','METHOD');
+      birthday.readQuery(req,pathname);
+      return send(res,200,await birthday.refresh({drain:true,config}));
+    }
+    const birthdayAction={'/api/integrations/kgs/birthday-gift':'status','/api/integrations/kgs/birthday-gift/seen':'seen'}[pathname];
+    if(birthdayAction&&req.method==='POST'){
+      shop.authorize(req,config);
+      birthday.readQuery(req,pathname);
+      return send(res,200,await birthday.perform(birthdayAction,await readJson(req),config));
+    }
     const calculusAction={'/api/integrations/calculus/status':'status','/api/integrations/calculus/link':'link','/api/integrations/calculus/sync':'sync'}[pathname];
     if(calculusAction&&req.method==='POST'){
       calculus.authorize(req,config);

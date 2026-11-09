@@ -27,9 +27,10 @@ function unpack(result) {
   return result;
 }
 
-async function runRpc(functionName, action, input = {}) {
+async function runRpc(functionName, action, input = {}, options = {}) {
   const config = getConfig();
   const territory=functionName==='target_territory_rpc',map=territory||functionName==='target_map_rpc';
+  const timeout=Number.isSafeInteger(options.timeoutMs)?Math.max(1,Math.min(12000,options.timeoutMs)):undefined;
   try {
     if (config.databaseUrl) {
       let active=map?mapPool:pool;
@@ -40,7 +41,7 @@ async function runRpc(functionName, action, input = {}) {
         active.on('error', () => {});
         if(map)mapPool=active;else pool=active;
       }
-      const result = await active.query('SELECT public.'+functionName+'($1,$2,$3::jsonb) AS result', [config.rpcSecret, action, JSON.stringify(input)]);
+      const result = await active.query({text:'SELECT public.'+functionName+'($1,$2,$3::jsonb) AS result', values:[config.rpcSecret, action, JSON.stringify(input)],...(timeout?{query_timeout:timeout}:{})});
       return unpack(result.rows[0]?.result);
     }
     const headers = {'Content-Type': 'application/json', apikey: config.publishableKey};
@@ -48,7 +49,7 @@ async function runRpc(functionName, action, input = {}) {
     if (config.publishableKey.split('.').length === 3) headers.Authorization = 'Bearer ' + config.publishableKey;
     const response = await fetch(config.supabaseOrigin + '/rest/v1/rpc/' + functionName, {
       method: 'POST', headers, body: JSON.stringify({p_secret: config.rpcSecret, p_action: action, p_input: input}),
-      signal: AbortSignal.timeout(map?26000:12000), redirect: 'error'
+      signal: AbortSignal.timeout(timeout??(map?26000:12000)), redirect: 'error'
     });
     if (!response.ok) {
       await response.body?.cancel();
@@ -74,4 +75,5 @@ const shopRpc=(action,input={})=>runRpc('target_shop_rpc',action,input);
 const mapRpc=(action,input={})=>runRpc('target_map_rpc',action,input);
 const territoryRpc=(action,input={})=>runRpc('target_territory_rpc',action,input);
 const calculusRpc=(action,input={})=>runRpc('target_calculus_rpc',action,input);
-module.exports = {rpc, shopRpc, mapRpc, territoryRpc, calculusRpc, closeStore};
+const birthdayRpc=(action,input={},options={})=>runRpc('target_birthday_rpc',action,input,options);
+module.exports = {rpc, shopRpc, mapRpc, territoryRpc, calculusRpc, birthdayRpc, closeStore};

@@ -1,0 +1,58 @@
+'use strict';
+// Isolated PostgreSQL only. This suite never connects to hosted class data.
+const assert=require('node:assert/strict'),crypto=require('node:crypto'),fs=require('node:fs/promises'),path=require('node:path');
+const {Client,Pool}=require('pg');
+const source=new URL(process.env.DATABASE_URL||'');
+assert.equal(process.env.NODE_ENV,'test');assert(['localhost','127.0.0.1','[::1]'].includes(source.hostname));source.pathname='/target_birthday_ledger_test';
+const db=new Pool({connectionString:source.href,max:10}),secret=crypto.randomBytes(32).toString('base64url'),uuid=()=>crypto.randomUUID();
+const rpc=(action,input,key=secret)=>db.query('SELECT public.target_birthday_rpc($1,$2,$3::jsonb) AS v',[key,action,JSON.stringify(input)]).then(r=>r.rows[0].v);
+const calculus=(action,input)=>db.query('SELECT public.target_calculus_rpc($1,$2,$3::jsonb) AS v',[secret,action,JSON.stringify(input)]).then(r=>r.rows[0].v);
+const shop=(action,input)=>db.query('SELECT public.target_shop_rpc($1,$2,$3::jsonb) AS v',[secret,action,JSON.stringify(input)]).then(r=>r.rows[0].v);
+const member={memberId:uuid(),name:'誕生日テスト'},fresh={memberId:uuid(),name:'新規の誕生日'},gift=(m,birthdayDate='2026-01-01')=>({...m,birthdayDate});
+let checks=0;const eq=(a,b,message)=>{checks++;assert.deepEqual(a,b,message);};
+async function reject(sql,args,code){await assert.rejects(db.query(sql,args),error=>error.code===code);checks++;}
+(async()=>{try{
+ const adminURL=new URL(source.href);adminURL.pathname='/postgres';const admin=new Client({connectionString:adminURL.href});await admin.connect();
+ try{await admin.query('DROP DATABASE IF EXISTS target_birthday_ledger_test WITH (FORCE)');await admin.query('CREATE DATABASE target_birthday_ledger_test');}finally{await admin.end();}
+ const directory=path.resolve(__dirname,'../supabase/migrations'),files=(await fs.readdir(directory)).filter(n=>/^\d+_.*\.sql$/.test(n)).sort(),latest=files.find(n=>n.endsWith('_target_birthday_gift_income.sql'));assert(latest);
+ for(const file of files.filter(n=>n<latest))await db.query(await fs.readFile(path.join(directory,file),'utf8'));
+ await db.query("INSERT INTO target_private.server_credentials(singleton,key_hash) VALUES(true,encode(sha256(convert_to($1,'UTF8')),'hex'))",[secret]);
+ await db.query('INSERT INTO target_private.profiles(member_id,name,total_points,correct_count,answered_count) VALUES($1,$2,200000,2,2)',[member.memberId,member.name]);
+ const purchase={...member,requestId:uuid(),expectedPrice:100000,expectedCatalogVersion:3,itemType:'frame'};
+ const oldDraw=await shop('draw',purchase);eq(oldDraw.spent,100000);
+ const fingerprint=async()=>(await db.query("SELECT proname,md5(pg_get_functiondef(oid)) AS hash FROM pg_proc WHERE oid IN ('public.target_rpc(text,text,jsonb)'::regprocedure,'public.target_shop_rpc(text,text,jsonb)'::regprocedure,'public.target_calculus_rpc(text,text,jsonb)'::regprocedure,'public.target_map_rpc(text,text,jsonb)'::regprocedure,'public.target_territory_rpc(text,text,jsonb)'::regprocedure) ORDER BY proname")).rows;
+ const before=await fingerprint(),receipts=(await db.query('SELECT * FROM target_private.item_draws')).rows;
+ await db.query(await fs.readFile(path.join(directory,latest),'utf8'));
+ eq(await fingerprint(),before,'Existing quiz, mastery, bonus, calculus, shop and removed-map RPCs are unchanged');eq((await db.query('SELECT * FROM target_private.item_draws')).rows,receipts);
+ const count=async()=>(await db.query('SELECT count(*)::integer AS n FROM target_private.profiles')).rows[0].n;
+ const beforeStatus=await count();eq(await rpc('status',{memberId:fresh.memberId}),{gift:null});eq(await count(),beforeStatus,'Status never creates wallets');
+ eq((await rpc('grant',{gifts:[gift(member)]},'bad-secret')).error.code,'RPC_FORBIDDEN');
+ for(const gifts of [[],[gift(member),gift(member,'2026-01-02')],[{...gift(member),amount:100000}],[gift(member,'2026-02-30')],[gift(member,'9999-12-31')],[{...gift(member),name:''}]])eq((await rpc('grant',{gifts})).error.code,'INVALID_REQUEST');
+ const linked=await calculus('link',{...member,userId:1,totalPoints:9,known:true,deleted:false});eq(linked.totalIncome,290000);
+ const race=await Promise.all(Array.from({length:40},()=>rpc('grant',{gifts:[gift(member)]})));eq(race.reduce((n,value)=>n+value.granted,0),1,'Forty concurrent replays credit once');
+ eq(await rpc('status',{memberId:member.memberId}),{gift:{giftYear:2026,birthdayDate:'2026-01-01',amount:100000,seen:false}});
+ eq((await rpc('grant',{gifts:[gift(member,'2026-02-01')]})).granted,0,'Editing DOB cannot mint another annual gift');
+ let wallet=await shop('wallet',member);eq(wallet.totalIncome,390000);eq(wallet.balance,290000);eq(wallet.spent,100000);
+ const draw=await shop('draw',{...member,requestId:uuid(),expectedPrice:100000,expectedCatalogVersion:3,itemType:'sticker'});eq(draw.balance,190000);eq(draw.totalIncome,390000);eq(draw.spent,200000,'Gift is spendable without lowering gross income');
+ eq((await shop('draw',purchase)).cost,100000,'Prior immutable gacha receipt still replays');
+ await calculus('sync',{totals:[{userId:1,totalPoints:10,known:true,deleted:false}]});eq((await shop('wallet',member)).totalIncome,400000,'Calculus imports still work after gifts');
+ const seen=await rpc('seen',{memberId:member.memberId,giftYear:2026});eq(seen.gift.seen,true);eq(await rpc('seen',{memberId:member.memberId,giftYear:2026}),seen,'Seen retries do not credit or change money');
+ const original=(await db.query('SELECT * FROM target_private.birthday_receipts WHERE member_id=$1',[member.memberId])).rows[0];
+ for(const field of ['amount=200000','gift_year=2025',"birthday_date='2026-01-02'",'created_at=created_at-interval \'1 second\'','seen_at=NULL'])await reject('UPDATE target_private.birthday_receipts SET '+field+' WHERE member_id=$1',[member.memberId],'42501');
+ await reject('DELETE FROM target_private.birthday_receipts WHERE member_id=$1',[member.memberId],'42501');eq((await db.query('SELECT * FROM target_private.birthday_receipts WHERE member_id=$1',[member.memberId])).rows[0],original);
+ const bytesBefore=(await db.query('SELECT logical_bytes FROM target_private.system_state')).rows[0].logical_bytes;
+ eq(await rpc('grant',{gifts:[gift(fresh,'2025-01-01'),gift(fresh,'2026-01-01')]}),{granted:2});eq((await shop('wallet',fresh)).totalIncome,200000,'Distinct annual keys catch up independently');
+ eq(Number((await db.query('SELECT logical_bytes FROM target_private.system_state')).rows[0].logical_bytes)-Number(bytesBefore),768,'Catch-up reserves one profile plus two receipts');
+ eq((await rpc('status',{memberId:fresh.memberId})).gift.giftYear,2026);await rpc('seen',{memberId:fresh.memberId,giftYear:2026});eq((await rpc('status',{memberId:fresh.memberId})).gift.giftYear,2025,'Older unseen catch-up gifts remain visible');
+ await rpc('seen',{memberId:fresh.memberId,giftYear:2025});eq((await rpc('status',{memberId:fresh.memberId})).gift.giftYear,2026);
+ const capped={memberId:uuid(),name:'上限テスト'},unallocated={memberId:uuid(),name:'ロールバック'};
+ await db.query('INSERT INTO target_private.profiles(member_id,name,total_points,calculus_points) VALUES($1,$2,9999999900000,9999999900000)',[capped.memberId,capped.name]);
+ const countsBefore=await count(),incomeBefore=(await shop('wallet',member)).totalIncome;
+ eq((await rpc('grant',{gifts:[gift(unallocated),gift(capped,'2025-01-01'),gift(capped,'2026-01-01')]})).error.code,'INCOME_LIMIT','Whole multi-year batch cap is preflighted together');
+ eq(await count(),countsBefore);eq((await rpc('status',{memberId:capped.memberId})).gift,null);eq((await shop('wallet',member)).totalIncome,incomeBefore);
+ const bytes=(await db.query('SELECT logical_bytes FROM target_private.system_state')).rows[0].logical_bytes;await db.query('UPDATE target_private.system_state SET logical_bytes=104857600');
+ eq((await rpc('grant',{gifts:[gift(unallocated)]})).error.code,'CAPACITY_LIMIT');eq(await count(),countsBefore);await db.query('UPDATE target_private.system_state SET logical_bytes=$1',[bytes]);
+ await reject('UPDATE target_private.profiles SET birthday_points=birthday_points+100 WHERE member_id=$1',[member.memberId],'23514');
+ const acl=(await db.query("SELECT has_table_privilege('anon','target_private.birthday_receipts','SELECT') AS receipt,has_function_privilege('anon','public.target_birthday_rpc(text,text,jsonb)','EXECUTE') AS rpc,has_function_privilege('authenticated','public.target_birthday_rpc(text,text,jsonb)','EXECUTE') AS auth_rpc,has_function_privilege('anon','target_private.birthday_status(uuid)','EXECUTE') AS helper,relrowsecurity AS rls FROM pg_class WHERE oid='target_private.birthday_receipts'::regclass")).rows[0];eq(acl,{receipt:false,rpc:true,auth_rpc:false,helper:false,rls:true});
+ console.log(JSON.stringify({birthdayDatabase:'passed',checks,concurrentReplays:40,oldRpcDefinitionsPreserved:true,hostedWrites:false}));
+}finally{await db.end();}})().catch(error=>{console.error('Birthday database verification failed: '+error.name+' '+error.message.replace(/\s+/g,' ').slice(0,200));process.exitCode=1;});

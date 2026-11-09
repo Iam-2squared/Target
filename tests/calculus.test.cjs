@@ -56,7 +56,7 @@ test('wealth refresh uses one bounded source batch and preserves every requested
   if(action==='sync'){stored++;assert.equal(input.totals.length,100);return{synced:100};}
   assert.equal(action,'wealth');assert.equal(stored,1);return{entries:ids.map(id=>({memberId:id,totalIncome:0}))};
  };
- global.fetch=async(url,options)=>{fetched++;const body=JSON.parse(options.body);assert.equal(body.userIds.length,100);assert.equal(new Set(body.userIds).size,100);
+ global.fetch=async(url,options)=>{if(url.endsWith('/birthday-gifts'))return Response.json({gifts:[],hasMore:false});fetched++;const body=JSON.parse(options.body);assert.equal(body.userIds.length,100);assert.equal(new Set(body.userIds).size,100);
   return Response.json({totals:body.userIds.map(userId=>({userId,totalPoints:0,known:true,deleted:false}))});};
  const result=await calculus.wealth({memberId:ids[0],name:'表示名',members:ids.map(id=>({id,name:'表示名'}))},config);
  assert.equal(fetched,1);assert.equal(result.entries.length,100);assert.equal(result.syncPending,false);

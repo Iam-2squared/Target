@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "amount": 100000,
+  "annualKey": ["memberId", "giftYear"],
+  "source": {
+    "credential": "KGS_TARGET_INTEGRATION_SECRET",
+    "pending": {"method": "POST", "path": "/api/integrations/target/birthday-gifts", "input": {}, "output": {"gifts": [{"memberId": "uuid", "name": "string", "birthdayDate": "YYYY-MM-DD"}], "hasMore": "boolean"}},
+    "ack": {"method": "POST", "path": "/api/integrations/target/birthday-gifts/ack", "input": {"gifts": [{"memberId": "uuid", "birthdayDate": "YYYY-MM-DD"}]}, "output": {"ok": true}}
+  },
+  "storageRpc": {
+    "name": "target_birthday_rpc",
+    "credential": "TARGET_RPC_SECRET",
+    "actions": {
+      "grant": {"input": {"gifts": [{"memberId": "uuid", "name": "string", "birthdayDate": "YYYY-MM-DD"}]}, "output": {"granted": "integer 0..100"}},
+      "status": {"input": {"memberId": "uuid"}, "output": "receiptStatus"},
+      "seen": {"input": {"memberId": "uuid", "giftYear": "integer 1..9999"}, "output": "receiptStatus"}
+    }
+  },
+  "receiptStatus": {"gift": "null or {giftYear:integer,birthdayDate:YYYY-MM-DD,amount:100000,seen:boolean}"},
+  "receiptSelection": "Newest unseen receipt, including historical catch-up; otherwise newest current-JST-year receipt; otherwise null",
+  "browserStatus": {"gift": "receipt or null", "syncPending": "boolean"}
+}

@@ -26,6 +26,7 @@ async function rejects(sql,args,code){await assert.rejects(db.query(sql,args),e=
   const fingerprint=async()=>(await db.query("SELECT md5(pg_get_functiondef('public.target_rpc(text,text,jsonb)'::regprocedure)) AS quiz,md5(pg_get_functiondef('public.target_shop_rpc(text,text,jsonb)'::regprocedure)) AS shop")).rows[0];
   const before=await fingerprint(),receipts=(await db.query('SELECT * FROM target_private.item_draws')).rows;
   await db.query(await fs.readFile(path.join(directory,latest),'utf8'));
+  for(const file of files.filter(n=>n>latest))await db.query(await fs.readFile(path.join(directory,file),'utf8'));
   eq(await fingerprint(),before,'Quiz, bonus, mastery and gacha RPC definitions stay unchanged');
   eq((await db.query('SELECT * FROM target_private.item_draws')).rows,receipts,'Existing immutable spending stays identical');
   eq((await shop('wallet',member)).balance,100000);

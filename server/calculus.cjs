@@ -113,7 +113,8 @@ function parseWealth(input){
   return input.members.map(member=>member.id.toLowerCase());
 }
 async function wealth(input,config=getConfig()){
-  const ids=parseWealth(input),{syncPending}=await refreshMembers(ids,config,true);
+  const ids=parseWealth(input),[calculus,birthday]=await Promise.all([refreshMembers(ids,config,true),require('./birthday.cjs').refresh({config})]);
+  const syncPending=calculus.syncPending||birthday.syncPending;
   const value=await store.calculusRpc('wealth',{memberIds:ids});
   if(!exact(value,['entries'])||!Array.isArray(value.entries)||value.entries.length!==ids.length)throw unavailable();
   const expected=new Set(ids),seen=new Set();
