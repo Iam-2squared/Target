@@ -91,24 +91,47 @@ test('historical v3 Plinko retains20 binary rows,21 bins and integer payout arit
  assert.equal(counts.reduce((sum,count,bin)=>sum+count*Math.abs(bin-10)*2,0),3695120);
 });
 test('photo Plinko v4 uses16 rows and the exact17-bin integer-tenths payout table',()=>{
- assert.deepEqual(games.PLINKO_TENTHS,[10000,1300,260,90,40,20,2,2,2,2,2,20,40,90,260,1300,10000]);
- assert.deepEqual(games.PLINKO_MULTIPLIERS,[1000,130,26,9,4,2,0.2,0.2,0.2,0.2,0.2,2,4,9,26,130,1000]);
+ assert.deepEqual(games.PLINKO_FOUR_TENTHS,[10000,1300,260,90,40,20,2,2,2,2,2,20,40,90,260,1300,10000]);
+ assert.deepEqual(games.PLINKO_FOUR_MULTIPLIERS,[1000,130,26,9,4,2,0.2,0.2,0.2,0.2,0.2,2,4,9,26,130,1000]);
  for(let bin=0;bin<=16;bin++)for(const stake of [100,700,100000]){
-  const outcome=Array.from({length:16},(_,i)=>i<bin?1:0),payout=stake*games.PLINKO_TENTHS[bin]/10;
-  const value={requestId,game:'plinko',stake,choice:null,rulesVersion:4,outcome,multiplier:games.PLINKO_MULTIPLIERS[bin],payout,net:payout-stake,createdAt:round().createdAt};assert.deepEqual(games.parseRound(value),value);assert(Number.isSafeInteger(payout));
+  const outcome=Array.from({length:16},(_,i)=>i<bin?1:0),payout=stake*games.PLINKO_FOUR_TENTHS[bin]/10;
+  const value={requestId,game:'plinko',stake,choice:null,rulesVersion:4,outcome,multiplier:games.PLINKO_FOUR_MULTIPLIERS[bin],payout,net:payout-stake,createdAt:round().createdAt};assert.deepEqual(games.parseRound(value),value);assert(Number.isSafeInteger(payout));
  }
  const current={memberId,name:'名前',requestId,game:'plinko',stake:100,choice:null,rulesVersion:4};assert.deepEqual(games.parseInput('play',current),current);
- assert.equal(games.multiplier('plinko',null,Array(16).fill(0),4),1000);assert.equal(100000*games.PLINKO_TENTHS[0]/10,100000000);
+ assert.equal(games.multiplier('plinko',null,Array(16).fill(0),4),1000);assert.equal(100000*games.PLINKO_FOUR_TENTHS[0]/10,100000000);
  assert.throws(()=>games.multiplier('plinko',null,Array(20).fill(0),4),error=>error.status===503);assert.throws(()=>games.multiplier('plinko',null,Array(16).fill(0),3),error=>error.status===503);
  const counts=Array(17).fill(0);for(let path=0;path<65536;path++){let bits=path,bin=0;while(bits){bits&=bits-1;bin++;}counts[bin]++;}
  assert.deepEqual(counts,[1,16,120,560,1820,4368,8008,11440,12870,11440,8008,4368,1820,560,120,16,1]);
- assert.equal(counts.reduce((sum,count,bin)=>sum+count*games.PLINKO_TENTHS[bin],0),648652);
+ assert.equal(counts.reduce((sum,count,bin)=>sum+count*games.PLINKO_FOUR_TENTHS[bin],0),648652);
 });
 test('source outages retain valid posted game funds and do not stop receipt recovery',()=>fixture(async()=>{
  global.fetch=async()=>{throw Error('source offline');};let read=false;
  store.gamesRpc=async(action,input)=>{read=true;assert.equal(action,'play');assert.equal(input.memberId,memberId);return{rulesVersion:4,wallet:wallet(),round:round()};};
  const result=await games.perform('play',{memberId,name:'名前',requestId,game:'coin',stake:1000,choice:0,rulesVersion:1});assert.equal(read,true);assert.equal(result.wallet.balance,0);assert.equal(result.round.net,-1000);
 }));
+test('rules5 changes only the two shoulders of the central five while rules4 remains exact',()=>{
+ const five=[10000,1300,260,90,40,20,10,2,2,2,10,20,40,90,260,1300,10000];assert.deepEqual(games.PLINKO_TENTHS,five);
+ for(let bin=0;bin<17;bin++)for(const stake of[100,700,100000])for(const version of[4,5]){
+  const outcome=Array.from({length:16},(_,i)=>i<bin?1:0),tenths=version===5?five[bin]:games.PLINKO_FOUR_TENTHS[bin],payout=stake*tenths/10;
+  const value={requestId,game:'plinko',stake,choice:null,rulesVersion:version,outcome,multiplier:tenths/10,payout,net:payout-stake,createdAt:round().createdAt};
+  assert.deepEqual(games.parseRound(value),value);
+  if(bin===6||bin===10)assert.throws(()=>games.parseRound({...value,rulesVersion:version===5?4:5}),e=>e.status===503);
+ }
+ assert.deepEqual(games.PLINKO_MULTIPLIERS.slice(6,11),[1,.2,.2,.2,1]);
+});
+test('rollout bridge echoes actual state4 or5 and never validates rules5 money under envelope4',()=>{
+ const s={rulesVersion:4,minStake:100,maxStake:100000,stakeStep:100,wallet:wallet(),rounds:[round()]};assert.deepEqual(games.parseResponse('state',s),s);
+ const p={memberId,name:'名前',requestId,game:'plinko',stake:100,choice:null,rulesVersion:5};
+ const r={requestId,game:'plinko',stake:100,choice:null,rulesVersion:5,outcome:[...Array(6).fill(1),...Array(10).fill(0)],multiplier:1,payout:100,net:0,createdAt:round().createdAt};
+ const current={rulesVersion:5,wallet:wallet(),round:r};assert.deepEqual(games.parseResponse('play',current,p),current);
+ assert.throws(()=>games.parseResponse('play',{...current,rulesVersion:4},p),e=>e.status===503);
+ assert.throws(()=>games.parseResponse('state',{...s,rounds:[r]}),e=>e.status===503);
+ const input={...p,count:1},batch={requestId,game:'plinko',stake:100,choice:null,rulesVersion:5,count:1,totalStake:100,totalPayout:100,net:0,createdAt:r.createdAt,rounds:[{...r,requestId:games.childId(requestId,1)}]};
+ assert.deepEqual(games.parseResponse('batch',{rulesVersion:5,wallet:wallet(),batch},input).batch,batch);
+ assert.throws(()=>games.parseResponse('batch',{rulesVersion:4,wallet:wallet(),batch},input),e=>e.status===503);
+ const old={...batch,rulesVersion:4,totalPayout:20,net:-80,rounds:[{...batch.rounds[0],rulesVersion:4,multiplier:.2,payout:20,net:-80}]};
+ for(const envelope of[4,5])assert.deepEqual(games.parseResponse('batch',{rulesVersion:envelope,wallet:wallet(),batch:old},{...input,rulesVersion:4}).batch,old);
+});
 test('recorded answer responses combine immutable quiz content with a fresh net wallet and revision without source HTTP',()=>fixture(async()=>{
  let sourceCalls=0;global.fetch=async()=>{sourceCalls++;throw Error('answer must not refresh sources');};identity.requireMember=async()=>({id:memberId,name:'名前'});
  const oldResult={correct:true,awardPoints:100000,quizPoints:100000,totalPoints:190000,nextQuestion:null,bonus:null};

@@ -1,5 +1,5 @@
 {
-  "rulesVersion": 4,
+  "rulesVersion": 5,
   "minStake": 100,
   "maxStake": 100000,
   "stakeStep": 100,
@@ -17,11 +17,11 @@
         90,
         40,
         20,
+        10,
         2,
         2,
         2,
-        2,
-        2,
+        10,
         20,
         40,
         90,
@@ -36,11 +36,11 @@
         9,
         4,
         2,
+        1,
         0.2,
         0.2,
         0.2,
-        0.2,
-        0.2,
+        1,
         2,
         4,
         9,
@@ -50,7 +50,11 @@
       ],
       "maxMultiplier": 1000,
       "maxPayout": 100000000,
-      "payout": "stake*multiplierTenths[bin]/10 using integer arithmetic"
+      "payout": "stake*multiplierTenths[bin]/10 using integer arithmetic",
+      "rtp": {
+        "fraction": "38839/32768",
+        "percent": 118.5272216796875
+      }
     }
   },
   "wallet": {
@@ -65,11 +69,11 @@
     "game": "plinko; historical coin|dice|slots under rulesVersion1 or2",
     "stake": "money100..100000 step100",
     "choice": "game-specific integer or null",
-    "rulesVersion": "1,2,3 or4; validate outcome and payout under its immutable version",
+    "rulesVersion": "1..5; immutable per-receipt version",
     "outcome": [
-      "16 binary bits forcurrent4;20 binary bits forhistorical3; historical1/2 game-specific outcomes"
+      "16 binary bits forcurrent5/historical4;20 forhistorical3; historical1/2 game-specific outcomes"
     ],
-    "multiplier": "v4 fixed photo array; historical1/2/3 multipliers unchanged",
+    "multiplier": "v5 current array; historical1/2/3/4 tables retained",
     "payout": "stake*multiplier",
     "net": "payout-stake",
     "createdAt": "timestamp"
@@ -84,7 +88,7 @@
           "name"
         ],
         "output": {
-          "rulesVersion": 4,
+          "rulesVersion": "actual database envelope4 or5 during rollout;5 after activation",
           "minStake": 100,
           "maxStake": 100000,
           "stakeStep": 100,
@@ -103,7 +107,7 @@
           "rulesVersion"
         ],
         "output": {
-          "rulesVersion": 4,
+          "rulesVersion": "actual database envelope4 or5 during rollout;5 after activation",
           "wallet": "CURRENT wallet",
           "round": "IMMUTABLE round"
         }
@@ -126,7 +130,7 @@
           "count"
         ],
         "output": {
-          "rulesVersion": 4,
+          "rulesVersion": "actual database envelope4 or5 during rollout;5 after activation",
           "wallet": "CURRENT wallet",
           "batch": "IMMUTABLE batch"
         }
@@ -189,6 +193,53 @@
         2.0
       ],
       "maxMultiplier": 2
+    },
+    "4": {
+      "choice": null,
+      "rows": 16,
+      "outcome": "16 independent uniform binary left/right decisions",
+      "bin": "sum(outcome)",
+      "multiplierTenths": [
+        10000,
+        1300,
+        260,
+        90,
+        40,
+        20,
+        2,
+        2,
+        2,
+        2,
+        2,
+        20,
+        40,
+        90,
+        260,
+        1300,
+        10000
+      ],
+      "multipliers": [
+        1000,
+        130,
+        26,
+        9,
+        4,
+        2,
+        0.2,
+        0.2,
+        0.2,
+        0.2,
+        0.2,
+        2,
+        4,
+        9,
+        26,
+        130,
+        1000
+      ],
+      "maxMultiplier": 1000,
+      "maxPayout": 100000000,
+      "payout": "stake*multiplierTenths[bin]/10 using integer arithmetic"
     }
   },
   "moneyGrid": {
@@ -204,19 +255,19 @@
     "birthdayIncome": 100000,
     "rawStudy": 100
   },
-  "replayPolicy": "Existing v1/v2/v3 receipts replay exactly with original payouts. Unseen v1/v2/v3 requests return RULES_CHANGED. New requests are rulesVersion4/plinko/null only; state/play envelopes advertise current4.",
+  "replayPolicy": "Existing v1/v2/v3/v4 receipts replay exactly, including4 batches up to100. Unseen legacy requests return RULES_CHANGED after v5 activation. New requests use5/plinko/null. Rollout servers echo actual4/5 envelopes; a5 receipt cannot appear under envelope4.",
   "batch": {
     "requestId": "uuid",
     "game": "plinko",
     "stake": "per-ball stake100..100000 step100",
     "choice": null,
-    "rulesVersion": 4,
+    "rulesVersion": "5 current;4 historical exact replay",
     "count": "integer1..100",
     "totalStake": "stake*count",
     "totalPayout": "sum(rounds.payout)",
     "net": "totalPayout-totalStake",
     "createdAt": "one timestamp shared by every ordered child",
-    "rounds": "ordered existing Round4 DTOs; count entries"
+    "rounds": "ordered immutable per-version rounds; every child matches the parent version"
   },
   "batchChildId": "Normalize parent UUID to32 lowercase hex chars; retain first24; XOR final8 hex uint32 with ordinal1..count; rebuild canonical UUID. No extra child DTO fields.",
   "batchNamespace": "Parent and every derived child are preflighted against all member single rounds and batch parents. Exact replay checks precede quota/balance/RNG; other collisions return REQUEST_ID_CONFLICT.",
@@ -235,5 +286,6 @@
     "grossPayout": 10000000000,
     "netWin": 9990000000
   },
-  "batchResponseLimitBytes": 65536
+  "batchResponseLimitBytes": 65536,
+  "rolloutBridge": "Servers accept and forward actual envelope4/5 without retagging. State4 cannot contain a5 history row. A5 play/batch success requires envelope5. UI waits for state5 before placing new5 requests."
 }
