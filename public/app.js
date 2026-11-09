@@ -12,6 +12,7 @@
   let sessionKnown=false, sessionEpoch=0, sessionTicket=0, walletBalance=0, walletKnown=false, walletRevision=null;
   const rankingTickets={homeRanking:0,ranking:0};
   const sectionRanges={target1900:{from:1,to:1},target1000:{from:1,to:1},kobun400:{from:1,to:1}};
+  const reviewSectionRanges={target1900:{from:1,to:19},target1000:{from:1,to:10},kobun400:{from:1,to:4}};
   let masteryTicket=0,homeReviewTicket=0,setupMode='normal';
   let memoryPage=0, memoryBook='target1900', meaningsHidden=false, memoryTicket=0;
   let memoryPages=[], memoryColumns=[], memoryLayoutKey='', memoryLayoutFrame=0,memorySelectionKey='',memoryRange={from:1,to:100};
@@ -269,7 +270,9 @@
     $('testStart').textContent=starting?'準備中…':'開始';
     $('testStart').disabled=starting||(setupMode==='review'&&!member);
     $('reviewNotice').hidden=setupMode!=='review';$('reviewLogin').hidden=setupMode!=='review'||!!member;
-    $('reviewNotice').textContent=member?'間違えた後、まだ定着していない単語を出題します。':'解き直しにはログインが必要です。';
+    const reviewRange=reviewSectionRanges[selectedBook],allSections=Math.ceil(books[selectedBook].total/100);
+    const reviewLabel=reviewRange.from===1&&reviewRange.to===allSections?'全Section':reviewRange.from===reviewRange.to?'Section '+reviewRange.from:'Section '+reviewRange.from+'〜'+reviewRange.to;
+    $('reviewNotice').textContent=member?reviewLabel+'にある、まだ定着していないミスから出題します。2回連続正解でクリア。':'解き直しにはログインが必要です。';
     $('masteryLogin').hidden=!!member;
     if(!member){$('homeReviewCount').textContent='—';$('homeReviewStatus').textContent=sessionKnown?'ログインして確認':'接続を確認しています…';$('homeReviewRetry').hidden=true;}
   }
@@ -322,27 +325,29 @@
     clearMastery();startRetry=null;renderSectionControls();
     if(activeView==='home')void loadHomeReview();
   }
-  function selectedWordRange(book=selectedBook){
-    const range=sectionRanges[book];return {from:(range.from-1)*100+1,to:Math.min(range.to*100,books[book].total)};
+  function selectedWordRange(book=selectedBook,review=false){
+    const range=(review?reviewSectionRanges:sectionRanges)[book];return {from:(range.from-1)*100+1,to:Math.min(range.to*100,books[book].total)};
   }
   function renderSectionControls(){
-    const total=Math.ceil(books[selectedBook].total/100),range=sectionRanges[selectedBook];
+    const total=Math.ceil(books[selectedBook].total/100);
     $('bookSelect').value=selectedBook;
     $('directionWordLabel').textContent=books[selectedBook].wordLabel;
     $('directionMeaningLabel').textContent=books[selectedBook].meaningLabel;
     for(const [id,part] of [['homeSectionFrom','from'],['homeSectionTo','to'],['rangeFrom','from'],['rangeTo','to']]){
       const select=$(id);
       if(select.options.length!==total){const fragment=document.createDocumentFragment();for(let number=1;number<=total;number++){const option=element('option','', 'Section '+number);option.value=String(number);fragment.append(option);}select.replaceChildren(fragment);}
+      const range=(id.startsWith('range')&&setupMode==='review'?reviewSectionRanges:sectionRanges)[selectedBook];
       select.value=String(range[part]);
     }
-    const review=setupMode==='review';$('testSectionRange').hidden=review;
-    $('rangeFrom').disabled=review;$('rangeTo').disabled=review;
+    $('testSectionRange').hidden=false;
+    $('rangeFrom').disabled=false;$('rangeTo').disabled=false;
   }
-  function changeSection(part,value){
+  function changeSection(part,value,{review=false}={}){
     const section=Number(value),total=Math.ceil(books[selectedBook].total/100);if(!Number.isInteger(section)||section<1||section>total)return;
-    const range=sectionRanges[selectedBook];range[part]=section;
+    const range=(review?reviewSectionRanges:sectionRanges)[selectedBook];range[part]=section;
     if(range.from>range.to)range[part==='from'?'to':'from']=section;
-    startRetry=null;renderSectionControls();
+    startRetry=null;renderSectionControls();setError('setupError');
+    if(review)renderIdentity();
   }
   function clearMastery(){
     homeReviewTicket++;$('homeReviewCount').textContent='—';$('homeReviewStatus').textContent='';$('homeReviewRetry').hidden=true;$('homeReviewRetry').disabled=false;
@@ -529,7 +534,7 @@
   async function startTest(event) {
     event.preventDefault();if(starting)return;setError('setupError');
     const review=setupMode==='review';
-    const {from,to}=review?{from:1,to:books[selectedBook].total}:selectedWordRange(),count=Number($('questionCount').value),direction=document.querySelector('input[name=direction]:checked')?.value;
+    const {from,to}=selectedWordRange(selectedBook,review),count=Number($('questionCount').value),direction=document.querySelector('input[name=direction]:checked')?.value;
     if(!Number.isSafeInteger(from)||!Number.isSafeInteger(to)||from<1||to<from||to>books[selectedBook].total||![10,50,100].includes(count)||!['english','japanese'].includes(direction)){setError('setupError','出題範囲と問題数を確認してください。');return;}
     if(review&&!member){setError('setupError','解き直しにはログインが必要です。');return;}
     const settings={book:selectedBook,direction,count,from,to},key=JSON.stringify({...settings,review}),epoch=sessionEpoch;
@@ -555,7 +560,7 @@
     } catch(error) {
       if(!currentSetup())return;
       if(error.status===401){bonus.reset();clearMastery();member=null;lifetimeCorrect=0;resetWallet();sessionKnown=true;sessionEpoch++;renderIdentity();}
-      setError('setupError',error.code==='REVIEW_EMPTY'?'解き直す単語はありません。':error.message);
+      setError('setupError',error.code==='REVIEW_EMPTY'?'選択したSectionに解き直す単語はありません。':error.message);
     } finally {starting=false;$('testStart').disabled=false;renderIdentity();}
   }
   function renderQuestion() {
@@ -709,7 +714,7 @@
   }
 
   $('bookSelect').addEventListener('change',()=>selectBook($('bookSelect').value));
-  for(const [id,part] of [['homeSectionFrom','from'],['homeSectionTo','to'],['rangeFrom','from'],['rangeTo','to']])$(id).addEventListener('change',()=>changeSection(part,$(id).value));
+  for(const [id,part] of [['homeSectionFrom','from'],['homeSectionTo','to'],['rangeFrom','from'],['rangeTo','to']])$(id).addEventListener('change',()=>changeSection(part,$(id).value,{review:id.startsWith('range')&&setupMode==='review'}));
   $('questionCount').addEventListener('change',()=>{startRetry=null;});
   for(const input of document.querySelectorAll('input[name=direction]'))input.addEventListener('change',()=>{startRetry=null;});
   for(const button of document.querySelectorAll('[data-home]'))button.addEventListener('click',goHome);

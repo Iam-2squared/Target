@@ -68,7 +68,7 @@
     <section id="setupView" class="view" aria-labelledby="setupTitle" hidden>
       <div class="view-toolbar"><button class="back-button" data-home type="button">ホーム</button></div>
       <div class="section-heading"><div><p class="sr-only" id="setupBook"></p><h1 id="setupTitle">テスト</h1></div></div>
-      <p id="reviewNotice" class="muted review-notice" hidden></p><button type="button" id="reviewLogin" class="secondary-button wide" hidden>ログイン</button>
+      <p id="reviewNotice" class="muted review-notice" aria-live="polite" hidden></p><button type="button" id="reviewLogin" class="secondary-button wide" hidden>ログイン</button>
       <form id="testForm" class="setup-form">
         <fieldset class="direction-field"><legend>解答</legend><div class="direction-options"><label><input type="radio" name="direction" value="english" checked><span><strong id="directionWordLabel">英語</strong></span></label><label><input type="radio" name="direction" value="japanese"><span><strong id="directionMeaningLabel">訳</strong></span></label></div></fieldset>
         <fieldset id="testSectionRange"><legend>Section</legend><div class="range-fields"><label><span class="sr-only">最初のSection</span><select id="rangeFrom" aria-label="最初のSection"></select></label><span aria-hidden="true">〜</span><label><span class="sr-only">最後のSection</span><select id="rangeTo" aria-label="最後のSection"></select></label></div></fieldset>
