@@ -1,5 +1,5 @@
 {
-  "rulesVersion": 3,
+  "rulesVersion": 4,
   "minStake": 100,
   "maxStake": 100000,
   "stakeStep": 100,
@@ -7,34 +7,50 @@
   "games": {
     "plinko": {
       "choice": null,
-      "rows": 20,
-      "outcome": "20 independent uniform binary left/right decisions",
+      "rows": 16,
+      "outcome": "16 independent uniform binary left/right decisions",
       "bin": "sum(outcome)",
-      "multipliers": [
-        2.0,
-        1.8,
-        1.6,
-        1.4,
-        1.2,
-        1.0,
-        0.8,
-        0.6,
-        0.4,
-        0.2,
-        0.0,
-        0.2,
-        0.4,
-        0.6,
-        0.8,
-        1.0,
-        1.2,
-        1.4,
-        1.6,
-        1.8,
-        2.0
+      "multiplierTenths": [
+        10000,
+        1300,
+        260,
+        90,
+        40,
+        20,
+        2,
+        2,
+        2,
+        2,
+        2,
+        20,
+        40,
+        90,
+        260,
+        1300,
+        10000
       ],
-      "maxMultiplier": 2,
-      "payout": "stake*(abs(bin-10)*2)/10 using integer arithmetic"
+      "multipliers": [
+        1000,
+        130,
+        26,
+        9,
+        4,
+        2,
+        0.2,
+        0.2,
+        0.2,
+        0.2,
+        0.2,
+        2,
+        4,
+        9,
+        26,
+        130,
+        1000
+      ],
+      "maxMultiplier": 1000,
+      "maxPayout": 100000000,
+      "payout": "stake*multiplierTenths[bin]/10 using integer arithmetic"
     }
   },
   "wallet": {
@@ -49,11 +65,11 @@
     "game": "plinko; historical coin|dice|slots under rulesVersion1 or2",
     "stake": "money100..100000 step100",
     "choice": "game-specific integer or null",
-    "rulesVersion": "1,2 or3; validate outcome and payout under its immutable version",
+    "rulesVersion": "1,2,3 or4; validate outcome and payout under its immutable version",
     "outcome": [
-      "20 integers0/1 for current Plinko; historical game-specific outcomes"
+      "16 binary bits forcurrent4;20 binary bits forhistorical3; historical1/2 game-specific outcomes"
     ],
-    "multiplier": "v3 abs(bin-10)/5; historical1/2 multipliers unchanged",
+    "multiplier": "v4 fixed photo array; historical1/2/3 multipliers unchanged",
     "payout": "stake*multiplier",
     "net": "payout-stake",
     "createdAt": "timestamp"
@@ -68,7 +84,7 @@
           "name"
         ],
         "output": {
-          "rulesVersion": 3,
+          "rulesVersion": 4,
           "minStake": 100,
           "maxStake": 100000,
           "stakeStep": 100,
@@ -87,7 +103,7 @@
           "rulesVersion"
         ],
         "output": {
-          "rulesVersion": 3,
+          "rulesVersion": 4,
           "wallet": "CURRENT wallet",
           "round": "IMMUTABLE round"
         }
@@ -127,6 +143,34 @@
       "dice": 2,
       "slotsTriple": 3,
       "slotsPair": 1
+    },
+    "3": {
+      "game": "plinko",
+      "rows": 20,
+      "multipliers": [
+        2.0,
+        1.8,
+        1.6,
+        1.4,
+        1.2,
+        1.0,
+        0.8,
+        0.6,
+        0.4,
+        0.2,
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0,
+        1.2,
+        1.4,
+        1.6,
+        1.8,
+        2.0
+      ],
+      "maxMultiplier": 2
     }
   },
   "moneyGrid": {
@@ -142,5 +186,5 @@
     "birthdayIncome": 100000,
     "rawStudy": 100
   },
-  "replayPolicy": "Existing v1/v2 receipts replay exactly with original payout. Unseen v1/v2 requests return RULES_CHANGED. New requests are rulesVersion3/plinko/null only. State/play envelopes advertise current3."
+  "replayPolicy": "Existing v1/v2/v3 receipts replay exactly with original payouts. Unseen v1/v2/v3 requests return RULES_CHANGED. New requests are rulesVersion4/plinko/null only; state/play envelopes advertise current4."
 }

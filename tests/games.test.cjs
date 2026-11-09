@@ -26,12 +26,12 @@ test('G inputs bind only a normalized identity and fixed rules; clients cannot a
  assert.throws(()=>games.parseInput('play',{...value,game:'dice',choice:0}),error=>error.status===400);
 });
 test('G validators check signed net, exact payout formula, private history order and current wallet',()=>{
- const input={requestId,game:'coin',stake:1000,choice:0,rulesVersion:1},value={rulesVersion:3,wallet:wallet(),round:round()};
+ const input={requestId,game:'coin',stake:1000,choice:0,rulesVersion:1},value={rulesVersion:4,wallet:wallet(),round:round()};
  assert.deepEqual(games.parseResponse('play',value,input),value);
  for(const changed of [{payout:2000},{multiplier:2},{net:1000},{outcome:[0]},{choice:null},{requestId:'bad'}])assert.throws(()=>games.parseRound({...round(),...changed}),error=>error.status===503);
  for(const changed of [{balance:100},{totalIncome:-100},{gameNet:0.5},{walletRevision:-1},{walletRevision:10000000000001},{extra:0}])assert.throws(()=>games.parseWallet({...wallet(),...changed}),error=>error.status===503);
  assert.throws(()=>games.parseResponse('play',value,{...input,requestId:crypto.randomUUID()}),error=>error.status===503);
- const state={rulesVersion:3,minStake:100,maxStake:100000,stakeStep:100,wallet:wallet(),rounds:[round()]};assert.deepEqual(games.parseResponse('state',state),state);
+ const state={rulesVersion:4,minStake:100,maxStake:100000,stakeStep:100,wallet:wallet(),rounds:[round()]};assert.deepEqual(games.parseResponse('state',state),state);
  assert.throws(()=>games.parseResponse('state',{...state,rounds:[round(),round()]}),error=>error.status===503);
 });
 test('all216 slot combinations produce6 triples,90 refunds and120 losses',()=>{
@@ -50,8 +50,8 @@ test('v2 lower returns retain uniform outcomes and validate historical v1 receip
  assert.equal(counts.get(3),6);assert.equal(counts.get(1),90);assert.equal(counts.get(0),120);assert.equal(6*3+90,108);
  assert.equal(games.multiplier('coin',0,[0],2),1.5);assert.equal(games.multiplier('dice',1,[1],2),2);
 });
-test('current Plinko validates20 binary rows,21 bins in0.2 steps and integer payout arithmetic',()=>{
- assert.deepEqual(games.PLINKO_MULTIPLIERS,[2,1.8,1.6,1.4,1.2,1,0.8,0.6,0.4,0.2,0,0.2,0.4,0.6,0.8,1,1.2,1.4,1.6,1.8,2]);
+test('historical v3 Plinko retains20 binary rows,21 bins and integer payout arithmetic',()=>{
+ assert.deepEqual(games.LEGACY_PLINKO_MULTIPLIERS,[2,1.8,1.6,1.4,1.2,1,0.8,0.6,0.4,0.2,0,0.2,0.4,0.6,0.8,1,1.2,1.4,1.6,1.8,2]);
  for(let bin=0;bin<=20;bin++)for(const stake of [100,700,1000,99900,100000]){
   const outcome=Array.from({length:20},(_,i)=>i<bin?1:0),multiplier=Math.abs(bin-10)/5,payout=stake*(Math.abs(bin-10)*2)/10;
   const value={requestId,game:'plinko',stake,choice:null,rulesVersion:3,outcome,multiplier,payout,net:payout-stake,createdAt:round().createdAt};assert.deepEqual(games.parseRound(value),value);assert(Number.isSafeInteger(payout));
@@ -65,9 +65,23 @@ test('current Plinko validates20 binary rows,21 bins in0.2 steps and integer pay
  assert.deepEqual(counts,[1,20,190,1140,4845,15504,38760,77520,125970,167960,184756,167960,125970,77520,38760,15504,4845,1140,190,20,1]);
  assert.equal(counts.reduce((sum,count,bin)=>sum+count*Math.abs(bin-10)*2,0),3695120);
 });
+test('photo Plinko v4 uses16 rows and the exact17-bin integer-tenths payout table',()=>{
+ assert.deepEqual(games.PLINKO_TENTHS,[10000,1300,260,90,40,20,2,2,2,2,2,20,40,90,260,1300,10000]);
+ assert.deepEqual(games.PLINKO_MULTIPLIERS,[1000,130,26,9,4,2,0.2,0.2,0.2,0.2,0.2,2,4,9,26,130,1000]);
+ for(let bin=0;bin<=16;bin++)for(const stake of [100,700,100000]){
+  const outcome=Array.from({length:16},(_,i)=>i<bin?1:0),payout=stake*games.PLINKO_TENTHS[bin]/10;
+  const value={requestId,game:'plinko',stake,choice:null,rulesVersion:4,outcome,multiplier:games.PLINKO_MULTIPLIERS[bin],payout,net:payout-stake,createdAt:round().createdAt};assert.deepEqual(games.parseRound(value),value);assert(Number.isSafeInteger(payout));
+ }
+ const current={memberId,name:'名前',requestId,game:'plinko',stake:100,choice:null,rulesVersion:4};assert.deepEqual(games.parseInput('play',current),current);
+ assert.equal(games.multiplier('plinko',null,Array(16).fill(0),4),1000);assert.equal(100000*games.PLINKO_TENTHS[0]/10,100000000);
+ assert.throws(()=>games.multiplier('plinko',null,Array(20).fill(0),4),error=>error.status===503);assert.throws(()=>games.multiplier('plinko',null,Array(16).fill(0),3),error=>error.status===503);
+ const counts=Array(17).fill(0);for(let path=0;path<65536;path++){let bits=path,bin=0;while(bits){bits&=bits-1;bin++;}counts[bin]++;}
+ assert.deepEqual(counts,[1,16,120,560,1820,4368,8008,11440,12870,11440,8008,4368,1820,560,120,16,1]);
+ assert.equal(counts.reduce((sum,count,bin)=>sum+count*games.PLINKO_TENTHS[bin],0),648652);
+});
 test('source outages retain valid posted game funds and do not stop receipt recovery',()=>fixture(async()=>{
  global.fetch=async()=>{throw Error('source offline');};let read=false;
- store.gamesRpc=async(action,input)=>{read=true;assert.equal(action,'play');assert.equal(input.memberId,memberId);return{rulesVersion:3,wallet:wallet(),round:round()};};
+ store.gamesRpc=async(action,input)=>{read=true;assert.equal(action,'play');assert.equal(input.memberId,memberId);return{rulesVersion:4,wallet:wallet(),round:round()};};
  const result=await games.perform('play',{memberId,name:'名前',requestId,game:'coin',stake:1000,choice:0,rulesVersion:1});assert.equal(read,true);assert.equal(result.wallet.balance,0);assert.equal(result.round.net,-1000);
 }));
 test('recorded answer responses combine immutable quiz content with a fresh net wallet and revision without source HTTP',()=>fixture(async()=>{
