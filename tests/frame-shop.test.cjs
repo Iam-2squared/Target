@@ -26,3 +26,14 @@ test('code-first rollout reads authentic v1 and v2 responses without claiming v3
   assert.deepEqual(shop.validateWallet(v2),v2);assert.equal(shop.validateWallet(v2).ownedFrames,undefined);
   assert.throws(()=>shop.validateWallet({...v2,requestId:'x',stickerId:'goodnight',cost:100000},{requestId:'x',itemType:'frame'}),error=>error.status===503);
 });
+test('v3 restoration refunds spending while retaining every item and replaying its original receipt',()=>{
+  const value={...wallet(),balance:2000000,spent:0,refundedSpend:330000,walletRevision:12};
+  assert.deepEqual(shop.validateWallet(value),value);
+  const mapped={...value,mapSpent:100,spent:100,balance:1999900};assert.deepEqual(shop.validateWallet(mapped),mapped);
+  const zero={...wallet(),refundedSpend:0};assert.deepEqual(shop.validateWallet(zero),zero);
+  for(const refundedSpend of [undefined,null,-100,1,10,50,329900,330100,10000000000100,Infinity,'330000'])assert.throws(()=>shop.validateWallet({...value,refundedSpend}),error=>error.status===503);
+  assert.throws(()=>shop.validateWallet({...value,refundedSpend:330100,mapSpent:100}),error=>error.status===503);
+  const requestId=id(),replay={...value,requestId,itemType:'frame',itemId:'l03',frameId:'l03',rarity:'legendary',quantity:1,cost:100000};
+  assert.deepEqual(shop.validateWallet(replay,{requestId,itemType:'frame'}),replay);
+  for(const change of [{quantity:2},{cost:10000},{frameId:'l02'},{rarity:'common'}])assert.throws(()=>shop.validateWallet({...replay,...change},{requestId,itemType:'frame'}),error=>error.status===503);
+});

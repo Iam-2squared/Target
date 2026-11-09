@@ -48,4 +48,4 @@ KGSの外部サイトページで、ランキングの右にある「G」からP
 
 `npm ci` → `npm run build`。ローカルサーバーは`npm start`、単体検証は`npm test`です。共有機能の環境変数は[.env.example](.env.example)を非公開で設定してください。
 
-教材の出典は[docs/materials.md](docs/materials.md)、APIは[docs/api.md](docs/api.md)、運用と無料枠は[docs/OPERATIONS.md](docs/OPERATIONS.md)、実測結果は[docs/VERIFICATION.md](docs/VERIFICATION.md)を参照してください。
+教材の出典は[docs/materials.md](docs/materials.md)、APIは[docs/api.md](docs/api.md)、運用と無料枠は[docs/OPERATIONS.md](docs/OPERATIONS.md)、実測結果は[docs/VERIFICATION.md](docs/VERIFICATION.md)を参照してください。金額の訂正と履歴保持は[ウォレット復元](docs/WALLET_RESTORATION.md)を参照してください。
