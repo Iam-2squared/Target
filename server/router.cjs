@@ -128,8 +128,7 @@ async function handler(req, res) {
     const gamesAction={'/api/integrations/kgs/games/state':'state','/api/integrations/kgs/games/play':'play','/api/integrations/kgs/games/batch':'batch'}[pathname];
     if(gamesAction&&req.method==='POST'){
       shop.authorize(req,config);
-      birthday.readQuery(req,pathname);
-      return send(res,200,await games.perform(gamesAction,await readJson(req),config));
+      throw new HttpError(410,'ギャンブル機能は終了しました。','GAMES_REMOVED');
     }
     if(pathname==='/api/birthday-gifts/cron'){
       birthday.authorizeCron(req);

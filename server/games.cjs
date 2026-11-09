@@ -1,5 +1,4 @@
 'use strict';
-const {getConfig}=require('./config.cjs');
 const {HttpError}=require('./errors.cjs');
 const {UUID}=require('./identity.cjs');
 const store=require('./store.cjs');
@@ -85,12 +84,8 @@ function parseResponse(action,value,input){
   }
   return value;
 }
-async function perform(action,input,config=getConfig()){
-  const parsed=parseInput(action,input);
-  // Posted funds remain valid during a source outage. Any late source delivery
-  // is monotonic and shares the same DB lock as the eventual game settlement.
-  await Promise.all([require('./calculus.cjs').refreshMembers([parsed.memberId],config).catch(()=>({syncPending:true})),require('./birthday.cjs').refresh({config})]);
-  return parseResponse(action,await store.gamesRpc(action,parsed),parsed);
+async function perform(){
+  throw new HttpError(410,'ギャンブル機能は終了しました。','GAMES_REMOVED');
 }
 async function snapshot(memberId){
   if(typeof memberId!=='string'||!UUID.test(memberId))throw unavailable();

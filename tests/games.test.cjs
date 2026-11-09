@@ -13,10 +13,10 @@ async function fixture(fn){
   for(const[key,value]of Object.entries(previous))if(value===undefined)delete process.env[key];else process.env[key]=value;}
 }
 function response(){return{headers:{},setHeader(key,value){this.headers[key.toLowerCase()]=value;},getHeader(key){return this.headers[key.toLowerCase()];},end(bytes){this.result=JSON.parse(String(bytes));this.writableEnded=true;}};}
-test('G service authenticates and validates rewrite metadata before touching a body or storage',()=>fixture(async values=>{
- for(const path of ['/api/integrations/kgs/games/state','/api/integrations/kgs/games/play','/api/integrations/kgs/games/batch']){
+test('removed G service authenticates then returns410 before touching a body or storage',()=>fixture(async values=>{
+ for(const path of ['/api/integrations/kgs/games/state','/api/integrations/kgs/games/play','/api/integrations/kgs/games/batch','/api/index?route=integrations/kgs/games/play&path=integrations/kgs/games/play']){
   let read=false;const res=response();await handler({url:path,method:'POST',headers:{authorization:'Bearer wrong'},get body(){read=true;throw Error('must not read');}},res);assert.equal(res.statusCode,404);assert.equal(read,false);
-  const rejected=response();await handler({url:path+'?payout=100000',method:'POST',headers:{authorization:'Bearer '+values.KGS_TARGET_INTEGRATION_SECRET},get body(){throw Error('query rejected before body');}},rejected);assert.equal(rejected.statusCode,400);
+  const rejected=response();await handler({url:path+(path.includes('?')?'&':'?')+'payout=100000',method:'POST',headers:{authorization:'Bearer '+values.KGS_TARGET_INTEGRATION_SECRET},get body(){throw Error('removed endpoint must not read a body');}},rejected);assert.equal(rejected.statusCode,410);assert.equal(rejected.result.error.code,'GAMES_REMOVED');
  }
 }));
 test('G inputs bind only a normalized identity and fixed rules; clients cannot assert results or credit',()=>{
@@ -104,10 +104,11 @@ test('photo Plinko v4 uses16 rows and the exact17-bin integer-tenths payout tabl
  assert.deepEqual(counts,[1,16,120,560,1820,4368,8008,11440,12870,11440,8008,4368,1820,560,120,16,1]);
  assert.equal(counts.reduce((sum,count,bin)=>sum+count*games.PLINKO_FOUR_TENTHS[bin],0),648652);
 });
-test('source outages retain valid posted game funds and do not stop receipt recovery',()=>fixture(async()=>{
- global.fetch=async()=>{throw Error('source offline');};let read=false;
- store.gamesRpc=async(action,input)=>{read=true;assert.equal(action,'play');assert.equal(input.memberId,memberId);return{rulesVersion:4,wallet:wallet(),round:round()};};
- const result=await games.perform('play',{memberId,name:'名前',requestId,game:'coin',stake:1000,choice:0,rulesVersion:1});assert.equal(read,true);assert.equal(result.wallet.balance,0);assert.equal(result.round.net,-1000);
+test('removed G actions reject before refreshing earnings or allocating a game transaction',()=>fixture(async()=>{
+ let sourceCalls=0,rpcCalls=0;global.fetch=async()=>{sourceCalls++;throw Error('removed games must not contact sources');};
+ store.gamesRpc=async()=>{rpcCalls++;throw Error('removed games must not access the game service');};
+ for(const action of ['state','play','batch'])await assert.rejects(games.perform(action,{memberId,name:'名前',requestId,game:'plinko',stake:1000,choice:null,rulesVersion:5,count:100}),error=>error.status===410&&error.code==='GAMES_REMOVED');
+ assert.equal(sourceCalls,0);assert.equal(rpcCalls,0);
 }));
 test('rules5 changes only the two shoulders of the central five while rules4 remains exact',()=>{
  const five=[10000,1300,260,90,40,20,10,2,2,2,10,20,40,90,260,1300,10000];assert.deepEqual(games.PLINKO_TENTHS,five);
