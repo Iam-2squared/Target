@@ -1,26 +1,146 @@
 {
-  "rulesVersion": 1,
+  "rulesVersion": 3,
   "minStake": 100,
   "maxStake": 100000,
   "stakeStep": 100,
   "moneyLimit": 10000000000000,
   "games": {
-    "coin": {"choice": [0, 1], "outcome": "one uniform integer0..1", "matchMultiplier": 2},
-    "dice": {"choice": [1, 2, 3, 4, 5, 6], "outcome": "one uniform integer1..6", "matchMultiplier": 6},
-    "slots": {"choice": null, "outcome": "three independent uniform integers0..5", "tripleMultiplier": 20, "pairMultiplier": 1, "otherMultiplier": 0}
+    "plinko": {
+      "choice": null,
+      "rows": 20,
+      "outcome": "20 independent uniform binary left/right decisions",
+      "bin": "sum(outcome)",
+      "multipliers": [
+        2.0,
+        1.8,
+        1.6,
+        1.4,
+        1.2,
+        1.0,
+        0.8,
+        0.6,
+        0.4,
+        0.2,
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0,
+        1.2,
+        1.4,
+        1.6,
+        1.8,
+        2.0
+      ],
+      "maxMultiplier": 2,
+      "payout": "stake*(abs(bin-10)*2)/10 using integer arithmetic"
+    }
   },
-  "wallet": {"balance": "money", "totalIncome": "money", "spent": "money", "walletRevision": "integer0..1e13", "gameNet": "signedmoney-1e13..1e13"},
-  "round": {"requestId": "uuid", "game": "coin|dice|slots", "stake": "money100..100000 step100", "choice": "game-specific integer or null", "rulesVersion": 1, "outcome": ["game-specific integer"], "multiplier": "integer0|1|2|6|20", "payout": "stake*multiplier", "net": "payout-stake", "createdAt": "timestamp"},
+  "wallet": {
+    "balance": "money",
+    "totalIncome": "money",
+    "spent": "money",
+    "walletRevision": "integer0..1e13",
+    "gameNet": "signedmoney-1e13..1e13"
+  },
+  "round": {
+    "requestId": "uuid",
+    "game": "plinko; historical coin|dice|slots under rulesVersion1 or2",
+    "stake": "money100..100000 step100",
+    "choice": "game-specific integer or null",
+    "rulesVersion": "1,2 or3; validate outcome and payout under its immutable version",
+    "outcome": [
+      "20 integers0/1 for current Plinko; historical game-specific outcomes"
+    ],
+    "multiplier": "v3 abs(bin-10)/5; historical1/2 multipliers unchanged",
+    "payout": "stake*multiplier",
+    "net": "payout-stake",
+    "createdAt": "timestamp"
+  },
   "storageRpc": {
     "name": "target_games_rpc",
     "credential": "TARGET_RPC_SECRET",
     "actions": {
-      "state": {"input": ["memberId", "name"], "output": {"rulesVersion": 1, "minStake": 100, "maxStake": 100000, "stakeStep": 100, "wallet": "wallet", "rounds": "own newest10 rounds"}},
-      "play": {"input": ["memberId", "name", "requestId", "game", "stake", "choice", "rulesVersion"], "output": {"rulesVersion": 1, "wallet": "CURRENT wallet", "round": "IMMUTABLE round"}},
-      "snapshot": {"input": ["memberId"], "output": "wallet directly; no remote source refresh"}
+      "state": {
+        "input": [
+          "memberId",
+          "name"
+        ],
+        "output": {
+          "rulesVersion": 3,
+          "minStake": 100,
+          "maxStake": 100000,
+          "stakeStep": 100,
+          "wallet": "wallet",
+          "rounds": "own newest10 rounds"
+        }
+      },
+      "play": {
+        "input": [
+          "memberId",
+          "name",
+          "requestId",
+          "game",
+          "stake",
+          "choice",
+          "rulesVersion"
+        ],
+        "output": {
+          "rulesVersion": 3,
+          "wallet": "CURRENT wallet",
+          "round": "IMMUTABLE round"
+        }
+      },
+      "snapshot": {
+        "input": [
+          "memberId"
+        ],
+        "output": "wallet directly; no remote source refresh"
+      }
     }
   },
-  "serviceRoutes": {"state": "/api/integrations/kgs/games/state", "play": "/api/integrations/kgs/games/play", "credential": "KGS_TARGET_INTEGRATION_SECRET"},
-  "businessErrors": {"INVALID_REQUEST": 400, "RULES_CHANGED": 409, "REQUEST_ID_CONFLICT": 409, "INSUFFICIENT_BALANCE": 409, "GAME_LIMIT": 409, "RATE_LIMITED": 429, "CAPACITY_LIMIT": 507},
-  "quizAnswer": "Existing result with totalPoints=current wallet.totalIncome, walletRevision=current wallet.walletRevision, balance=current wallet.balance; historical receipt total is not forwarded"
+  "serviceRoutes": {
+    "state": "/api/integrations/kgs/games/state",
+    "play": "/api/integrations/kgs/games/play",
+    "credential": "KGS_TARGET_INTEGRATION_SECRET"
+  },
+  "businessErrors": {
+    "INVALID_REQUEST": 400,
+    "RULES_CHANGED": 409,
+    "REQUEST_ID_CONFLICT": 409,
+    "INSUFFICIENT_BALANCE": 409,
+    "GAME_LIMIT": 409,
+    "RATE_LIMITED": 429,
+    "CAPACITY_LIMIT": 507
+  },
+  "quizAnswer": "Existing result with totalPoints=current wallet.totalIncome, walletRevision=current wallet.walletRevision, balance=current wallet.balance; historical receipt total is not forwarded",
+  "historicalRules": {
+    "1": {
+      "coin": 2,
+      "dice": 6,
+      "slotsTriple": 20,
+      "slotsPair": 1
+    },
+    "2": {
+      "coin": 1.5,
+      "dice": 2,
+      "slotsTriple": 3,
+      "slotsPair": 1
+    }
+  },
+  "moneyGrid": {
+    "balance": 10,
+    "totalIncome": 10,
+    "gameNet": 10,
+    "payout": 10,
+    "net": 10,
+    "stake": 100,
+    "spent": 100,
+    "mapSpent": 100,
+    "calculusIncome": 10000,
+    "birthdayIncome": 100000,
+    "rawStudy": 100
+  },
+  "replayPolicy": "Existing v1/v2 receipts replay exactly with original payout. Unseen v1/v2 requests return RULES_CHANGED. New requests are rulesVersion3/plinko/null only. State/play envelopes advertise current3."
 }

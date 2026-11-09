@@ -44,7 +44,7 @@
   }
   const validPoints=value=>Number.isSafeInteger(value)&&value>=0;
   const validRevision=value=>Number.isSafeInteger(value)&&value>=0&&value<=10000000000000;
-  const validMoney=value=>validRevision(value)&&value%100===0;
+  const validMoney=(value,step=10)=>validRevision(value)&&value%step===0;
   const gou=value=>value.toLocaleString('ja-JP')+'轟';
   function guestAward() {
     const limit=0x100000000-(0x100000000%100);let value;
@@ -235,7 +235,7 @@
   function parseIdentity(data) {
     if(data.member!==null&&(!data.member||typeof data.member!=='object'||typeof data.member.name!=='string'||data.member.name.length>20))throw appError('アカウントの情報を確認できませんでした。');
     if(data.member&&Object.hasOwn(data.member,'id')&&(typeof data.member.id!=='string'||!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(data.member.id)))throw appError('アカウントの情報を確認できませんでした。');
-    if(!Number.isSafeInteger(data.correctCount)||data.correctCount<0||!validMoney(data.totalPoints)||!validMoney(data.balance)||!validMoney(data.totalIncome)||!validMoney(data.spent)||data.totalIncome!==data.totalPoints||data.balance+data.spent!==data.totalIncome||
+    if(!Number.isSafeInteger(data.correctCount)||data.correctCount<0||!validMoney(data.totalPoints)||!validMoney(data.balance)||!validMoney(data.totalIncome)||!validMoney(data.spent,100)||data.totalIncome!==data.totalPoints||data.balance+data.spent!==data.totalIncome||
       (Object.hasOwn(data,'walletRevision')&&!validRevision(data.walletRevision)))throw appError('保有金額を確認できませんでした。');
     return {member:data.member===null?null:{name:data.member.name,...(data.member.id?{id:data.member.id.toLowerCase()}:{})},correctCount:data.correctCount,totalPoints:data.totalPoints,balance:data.balance,
       ...(Object.hasOwn(data,'walletRevision')?{walletRevision:data.walletRevision}:{}),bonus:checkedBonus(data.bonus),timing:data.__timing};
@@ -580,7 +580,7 @@
     if(typeof result.correct!=='boolean'||typeof result.correctChoiceId!=='string'||!correctChoice||typeof result.correctText!=='string'||result.correctText!==correctChoice.text||result.correct!==(quiz.pendingAnswer?.choiceId===result.correctChoiceId)||!Number.isSafeInteger(result.answeredCount)||result.answeredCount!==quiz.answeredCount+1||!Number.isSafeInteger(result.correctCount)||result.correctCount!==quiz.correctCount+(result.correct?1:0)||result.total!==quiz.total||result.finished!==(result.answeredCount===quiz.total))throw appError('回答結果を確認できませんでした。同じ回答を再送してください。');
     if(!validPoints(result.awardPoints)||![0,100,500,1000,10000,100000].includes(result.awardPoints)||(!result.correct&&result.awardPoints!==0)||!validPoints(result.quizPoints)||result.quizPoints!==quiz.quizPoints+result.awardPoints||!validMoney(result.totalPoints)||(!quiz.recorded&&result.totalPoints<result.quizPoints)||
       (Object.hasOwn(result,'walletRevision')&&!validRevision(result.walletRevision))||
-      (Object.hasOwn(result,'balance')&&(!validMoney(result.balance)||result.balance>result.totalPoints)))throw appError('得点を確認できませんでした。同じ回答を再送してください。');
+      (Object.hasOwn(result,'balance')&&(!validMoney(result.balance)||result.balance>result.totalPoints||(result.totalPoints-result.balance)%100!==0)))throw appError('得点を確認できませんでした。同じ回答を再送してください。');
     if(!result.finished)questionShape(result.nextQuestion);
     const bonusState=checkedBonus(result.bonus);if(quiz.recorded)bonus.update(bonusState,result.__timing);
     quiz.feedback=result;quiz.answeredCount=result.answeredCount;quiz.correctCount=result.correctCount;quiz.quizPoints=result.quizPoints;quiz.finished=result.finished;

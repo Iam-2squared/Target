@@ -57,14 +57,18 @@ async function fresh(browser,base,snapshot){
   try{for(const engine of engines){
     const browser=engine==='webkit'?await webkit.launch({headless:true,executablePath:process.env.IOS_WEBKIT_EXECUTABLE||'/workspace/scratch/webkit-runtime/pw-run.sh'}):await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',args:['--no-sandbox','--disable-dev-shm-usage']});
     try{
-      let{page,context}=await fresh(browser,base,identity(300000,10));await score(page,300000);
-      await startQuiz(page);state=identity(0,11);await page.locator('#questionChoices button').first().click();
+      let{page,context}=await fresh(browser,base,identity(300030,10));await score(page,300030);
+      await startQuiz(page);state=identity(30,11);await page.locator('#questionChoices button').first().click();
       await page.waitForFunction(()=>document.getElementById('quizMode').textContent==='ランキングに記録'&&document.getElementById('quizPoints').textContent==='100轟');
-      await score(page,0);eq(await page.locator('#quizError').isVisible(),false,'recorded quiz accepts net total below current quiz earnings');
-      await settings(page);await page.waitForFunction(()=>document.getElementById('settingsBalance').textContent==='0轟');
+      await score(page,30);eq(await page.locator('#quizError').isVisible(),false,'recorded quiz accepts a10-轟-grid net total below current quiz earnings');
+      await settings(page);await page.waitForFunction(()=>document.getElementById('settingsBalance').textContent==='30轟');
       for(const snapshot of[identity(50000,12),identity(1000,13),identity(900000,12),{...identity(900000,14),walletRevision:undefined}]){
         state=snapshot;await closeSettings(page);await settings(page);await page.waitForTimeout(100);
         await score(page,snapshot.walletRevision===12&&snapshot.totalPoints===50000?50000:1000);
+      }
+      for(const invalid of[identity(125,14),{...identity(150,14),balance:100,spent:50},{...identity(130,14),balance:100,spent:30}]){
+        state=invalid;await closeSettings(page);await settings(page);await page.locator('#settingsError').waitFor({state:'visible'});
+        await score(page,1000);checks++;
       }
       await closeSettings(page);
       const first=deferred();sessionPlans.push({value:identity(500,15),wait:first.wait},{value:identity(2000,14),wait:Promise.resolve()});
@@ -75,10 +79,10 @@ async function fresh(browser,base,snapshot){
       await context.close();
 
       ({page,context}=await fresh(browser,base,identity(10000,20)));await startQuiz(page);
-      const held=deferred();answerPlan={wait:held.wait,total:9000,revision:21};await page.locator('#questionChoices button').first().click();
-      state=identity(1000,22);await settings(page);await score(page,1000);held.release();
-      await page.waitForFunction(()=>document.getElementById('quizMode').textContent==='ランキングに記録');await score(page,1000);
-      eq(await page.locator('#settingsBalance').textContent(),'1,000轟','older answer cannot overwrite a newer loss snapshot');await context.close();
+      const held=deferred();answerPlan={wait:held.wait,total:9050,revision:21};await page.locator('#questionChoices button').first().click();
+      state=identity(1030,22);await settings(page);await score(page,1030);held.release();
+      await page.waitForFunction(()=>document.getElementById('quizMode').textContent==='ランキングに記録');await score(page,1030);
+      eq(await page.locator('#settingsBalance').textContent(),'1,030轟','older answer cannot overwrite a newer loss snapshot');await context.close();
 
       ({page,context}=await fresh(browser,base,identity(10000,20)));await startQuiz(page);
       const expiredAnswer=deferred();answerPlan={wait:expiredAnswer.wait,total:9000,revision:21};await page.locator('#questionChoices button').first().click();
@@ -87,11 +91,11 @@ async function fresh(browser,base,snapshot){
       eq(await page.locator('#homeScore').textContent(),'','an answer delayed past session expiry cannot restore account income');
       eq(await page.locator('#rewardCelebration').isVisible(),false,'expired session cannot restore a delayed reward');await context.close();
 
-      ({page,context}=await fresh(browser,base,identity(300000,100)));state=identity(100,1,B);await settings(page);await score(page,100);
-      eq(await page.locator('#settingsBalance').textContent(),'100轟','same-name account switch resets per-account revision');
+      ({page,context}=await fresh(browser,base,identity(300000,100)));state=identity(150,1,B);await settings(page);await score(page,150);
+      eq(await page.locator('#settingsBalance').textContent(),'150轟','same-name account switch resets per-account revision');
       await page.locator('#logoutButton').click();await page.locator('#loginForm').waitFor({state:'visible'});
-      state=identity(1000,0,A);await page.locator('#attendanceNumber').fill('1');await page.locator('#accountPin').fill('0000');await page.locator('#loginButton').click();
-      await score(page,1000);eq(await page.locator('#accountPin').inputValue(),'','PIN is cleared after login');await context.close();
+      state=identity(1030,0,A);await page.locator('#attendanceNumber').fill('1');await page.locator('#accountPin').fill('0000');await page.locator('#loginButton').click();
+      await score(page,1030);eq(await page.locator('#accountPin').inputValue(),'','PIN is cleared after login');await context.close();
 
       ({page,context}=await fresh(browser,base,guest()));const before=recordedPosts;await startQuiz(page);
       const number=Number((await page.locator('#questionNumber').textContent()).match(/No\. (\d+)/)[1]);

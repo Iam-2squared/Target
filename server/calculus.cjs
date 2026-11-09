@@ -9,7 +9,7 @@ const unavailable=()=>new HttpError(503,'今日の微積との連携に接続で
 const invalid=()=>new HttpError(400,'送信内容を確認してください。','INVALID_REQUEST');
 const exact=(value,keys)=>value&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).length===keys.length&&keys.every(key=>Object.hasOwn(value,key));
 const userId=value=>Number.isSafeInteger(value)&&value>=1&&value<=2147483647;
-const money=value=>Number.isSafeInteger(value)&&value>=0&&value<=MAX_MONEY&&value%100===0;
+const money=value=>Number.isSafeInteger(value)&&value>=0&&value<=MAX_MONEY&&value%10===0;
 function settings(config=getConfig(),required=true){
   const secret=process.env.CALCULUS_TARGET_INTEGRATION_SECRET;
   if(!secret){if(!required)return null;throw unavailable();}
@@ -39,7 +39,7 @@ function parseStatus(value){
     typeof value.linked!=='boolean'||value.conversionRate!==RATE||typeof value.syncPending!=='boolean')throw unavailable();
   if(!value.linked){if(['member','balance','totalIncome','calculusIncome'].some(key=>value[key]!==null))throw unavailable();}
   else if(!exact(value.member,['id','name'])||!identity.UUID.test(value.member.id||'')||typeof value.member.name!=='string'||!value.member.name.trim()||value.member.name.length>20||
-    !['balance','totalIncome','calculusIncome'].every(key=>money(value[key]))||value.balance>value.totalIncome||value.calculusIncome%RATE!==0)throw unavailable();
+    !['balance','totalIncome','calculusIncome'].every(key=>money(value[key]))||value.balance>value.totalIncome||(value.totalIncome-value.balance)%100!==0||value.calculusIncome%RATE!==0)throw unavailable();
   return value;
 }
 async function responseJson(response){

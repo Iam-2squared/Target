@@ -49,9 +49,9 @@ function validateQuantities(owned,quantities,catalog){
 }
 function validateModernWallet(value,{requestId,itemType}={}){
   const invalid=()=>new HttpError(503,'保有金額を確認できませんでした。再試行してください。','SHOP_UNAVAILABLE');
-  const points=n=>Number.isSafeInteger(n)&&n>=0&&n<=MAX_POINTS&&n%100===0;
+  const points=n=>Number.isSafeInteger(n)&&n>=0&&n<=MAX_POINTS&&n%10===0;
   const mapSpent=Object.hasOwn(value,'mapSpent')?value.mapSpent:0;
-  if(!points(mapSpent)||mapSpent>value.spent)throw invalid();
+  if(!points(mapSpent)||mapSpent%100!==0||value.spent%100!==0||mapSpent>value.spent)throw invalid();
   const stickers=validateQuantities(value.ownedStickers,value.stickerQuantities,STICKERS),frames=validateQuantities(value.ownedFrames,value.frameQuantities,FRAMES);
   if(!['balance','totalIncome','spent'].every(key=>points(value[key]))||value.balance+value.spent!==value.totalIncome||value.price!==PRICE||value.catalogSize!==17||value.frameCatalogSize!==33||value.duplicatesAllowed!==true||
       !Number.isSafeInteger(value.drawCount)||value.drawCount<0||value.drawCount>100000000||!Number.isSafeInteger(value.legacyDiscountedDraws)||value.legacyDiscountedDraws<0||value.legacyDiscountedDraws>4||
@@ -76,7 +76,7 @@ function validateWalletWithoutRevision(value,{requestId,itemType}={}){
   const catalogVersion=hasVersion?value.catalogVersion:1,catalogSize=hasSize?value.catalogSize:LEGACY_STICKERS.length;
   const catalog=catalogVersion===1?LEGACY_STICKERS:STICKERS;
   const legacyCount=ids=>ids.filter(id=>LEGACY_STICKERS.includes(id)).length;
-  const points=key=>Number.isSafeInteger(value?.[key])&&value[key]>=0&&value[key]<=MAX_POINTS&&value[key]%100===0;
+  const points=key=>Number.isSafeInteger(value?.[key])&&value[key]>=0&&value[key]<=MAX_POINTS&&value[key]%(key==='spent'?100:10)===0;
   if(!value||typeof value!=='object'||Array.isArray(value)||!['balance','totalIncome','spent'].every(points)||
       value.balance+value.spent!==value.totalIncome||![LEGACY_PRICE,PRICE].includes(value.price)||
       hasVersion!==hasSize||!((catalogVersion===1&&catalogSize===4)||(catalogVersion===2&&catalogSize===STICKERS.length))||
