@@ -113,13 +113,31 @@
           "memberId"
         ],
         "output": "wallet directly; no remote source refresh"
+      },
+      "batch": {
+        "input": [
+          "memberId",
+          "name",
+          "requestId",
+          "game",
+          "stake",
+          "choice",
+          "rulesVersion",
+          "count"
+        ],
+        "output": {
+          "rulesVersion": 4,
+          "wallet": "CURRENT wallet",
+          "batch": "IMMUTABLE batch"
+        }
       }
     }
   },
   "serviceRoutes": {
     "state": "/api/integrations/kgs/games/state",
     "play": "/api/integrations/kgs/games/play",
-    "credential": "KGS_TARGET_INTEGRATION_SECRET"
+    "credential": "KGS_TARGET_INTEGRATION_SECRET",
+    "batch": "/api/integrations/kgs/games/batch"
   },
   "businessErrors": {
     "INVALID_REQUEST": 400,
@@ -186,5 +204,30 @@
     "birthdayIncome": 100000,
     "rawStudy": 100
   },
-  "replayPolicy": "Existing v1/v2/v3 receipts replay exactly with original payouts. Unseen v1/v2/v3 requests return RULES_CHANGED. New requests are rulesVersion4/plinko/null only; state/play envelopes advertise current4."
+  "replayPolicy": "Existing v1/v2/v3 receipts replay exactly with original payouts. Unseen v1/v2/v3 requests return RULES_CHANGED. New requests are rulesVersion4/plinko/null only; state/play envelopes advertise current4.",
+  "batch": {
+    "requestId": "uuid",
+    "game": "plinko",
+    "stake": "per-ball stake100..100000 step100",
+    "choice": null,
+    "rulesVersion": 4,
+    "count": "integer1..20",
+    "totalStake": "stake*count",
+    "totalPayout": "sum(rounds.payout)",
+    "net": "totalPayout-totalStake",
+    "createdAt": "one timestamp shared by every ordered child",
+    "rounds": "ordered existing Round4 DTOs; count entries"
+  },
+  "batchChildId": "Normalize parent UUID to32 lowercase hex chars; retain first24; XOR final8 hex uint32 with ordinal1..count; rebuild canonical UUID. No extra child DTO fields.",
+  "batchNamespace": "Parent and every derived child are preflighted against all member single rounds and batch parents. Exact replay checks precede quota/balance/RNG; other collisions return REQUEST_ID_CONFLICT.",
+  "ballRate": {
+    "limit": 120,
+    "periodSeconds": 60,
+    "scope": "member; shared existing games-play bucket for single and batch",
+    "weight": "one per ball",
+    "rejectedRequests": "no quota charge",
+    "retries": "bypass"
+  },
+  "batchStartingFunds": "balance >= stake*count before any RNG; no credit from early wins",
+  "batchCap": "maxnet999*totalStake; minnet-0.8*totalStake; storage checked before quota or entropy"
 }

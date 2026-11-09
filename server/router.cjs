@@ -125,7 +125,7 @@ async function handler(req, res) {
       (typeof helperRoute === 'string' ? helperRoute : Array.isArray(helperRoute) && typeof helperRoute[0] === 'string' ? helperRoute[0] : null) : null;
     const pathname = route ? '/api/' + route.replace(/^\/+/, '') : url.pathname;
     if (!['GET', 'POST'].includes(req.method)) throw new HttpError(405, 'この操作には対応していません。', 'METHOD');
-    const gamesAction={'/api/integrations/kgs/games/state':'state','/api/integrations/kgs/games/play':'play'}[pathname];
+    const gamesAction={'/api/integrations/kgs/games/state':'state','/api/integrations/kgs/games/play':'play','/api/integrations/kgs/games/batch':'batch'}[pathname];
     if(gamesAction&&req.method==='POST'){
       shop.authorize(req,config);
       birthday.readQuery(req,pathname);
