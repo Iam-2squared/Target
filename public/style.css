@@ -55,6 +55,12 @@ strong { font-weight: 600; }
 .mastery-row progress { height: 5px; }
 .mastery-row progress::-webkit-progress-value { background: #8baeb8; }
 .mastery-row progress::-moz-progress-bar { background: #8baeb8; }
+.mastery-achievement-note { margin-bottom: 12px; color: var(--muted); font-size: 12px; }
+.mastery-achievers { margin-top: 12px; }
+.mastery-achievers-heading { margin-bottom: 6px; color: var(--ink); font-size: 12px; font-weight: 600; }
+.mastery-achiever-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.mastery-achiever { max-width: 100%; padding: 3px 10px; border-radius: 6px; background: #edf3f4; color: #315b63; overflow-wrap: anywhere; font-size: 12px; }
+.mastery-achievers-empty { color: var(--muted); font-size: 12px; }
 #masteryStatus:not(:empty), #masteryError { margin-bottom: 14px; }
 .review-notice { margin-bottom: 16px; }
 #reviewLogin { margin: 0 0 20px; }

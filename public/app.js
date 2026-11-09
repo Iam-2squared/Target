@@ -358,6 +358,13 @@
     for(let index=0;index<sectionCount;index++){
       const row=data.sections[index],from=index*100+1,to=Math.min(from+99,total),size=to-from+1;
       if(!row||row.section!==index+1||row.from!==from||row.to!==to||row.total!==size||!Number.isSafeInteger(row.mastered)||row.mastered<0||row.mastered>size||row.percent!==Math.floor(row.mastered*100/size)||!Number.isSafeInteger(row.reviewCount)||row.reviewCount<0||row.reviewCount>size-row.mastered||row.reviewCount!==data.reviewNumbers.filter(number=>number>=from&&number<=to).length)throw appError('定着率の内容を確認できませんでした。もう一度お試しください。');
+      if(row.achievers!==undefined){
+        const seen=new Set();
+        if(!Array.isArray(row.achievers)||row.achievers.length>500||row.achievers.some(person=>{
+          if(!person||typeof person.memberId!=='string'||!/^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i.test(person.memberId)||seen.has(person.memberId.toLowerCase())||typeof person.name!=='string'||!person.name.trim()||Array.from(person.name).length>20||typeof person.achievedAt!=='string'||person.achievedAt.length>64||!Number.isFinite(Date.parse(person.achievedAt)))return true;
+          seen.add(person.memberId.toLowerCase());return false;
+        }))throw appError('定着率の内容を確認できませんでした。もう一度お試しください。');
+      }
     }
     return data.sections;
   }
@@ -390,7 +397,18 @@
         const item=element('li','mastery-row'),heading=element('div','mastery-row-heading'),progress=element('progress');
         item.dataset.section=String(row.section);heading.append(element('strong','mastery-section','Section '+row.section),element('span','mastery-percent',row.percent+'%'));
         progress.max=row.total;progress.value=row.mastered;progress.setAttribute('aria-label','Section '+row.section+'の定着率 '+row.percent+'%');
-        item.append(heading,element('span','mastery-count',row.mastered+' / '+row.total),progress);fragment.append(item);
+        item.append(heading,element('span','mastery-count',row.mastered+' / '+row.total),progress);
+        if(row.achievers!==undefined){
+          const achievers=element('div','mastery-achievers');
+          achievers.append(element('p','mastery-achievers-heading','100%達成者'));
+          if(row.achievers.length){
+            const names=element('ul','mastery-achiever-list');names.setAttribute('aria-label','Section '+row.section+'の100%達成者');
+            for(const person of row.achievers)names.append(element('li','mastery-achiever',person.name));
+            achievers.append(names);
+          }else achievers.append(element('p','mastery-achievers-empty','まだいません'));
+          item.append(achievers);
+        }
+        fragment.append(item);
       }
       $('masteryList').replaceChildren(fragment);$('masteryStatus').textContent='2回連続で正解すると定着します。';
     }catch(error){

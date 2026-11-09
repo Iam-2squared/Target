@@ -56,7 +56,10 @@ async function runRpc(functionName, action, input = {}, options = {}) {
       throw new HttpError(503, '共有サーバーに接続できませんでした。時間をおいて再試行してください。', 'STORAGE_UNAVAILABLE');
     }
     const raw = map?await mapResponseText(response,territory?256*1024:512*1024):await response.text();
-    if (Buffer.byteLength(raw) > 1024 * 1024) throw new Error('response limit');
+    // Section achievements can list all 500 supported members in 19 Sections.
+    // Keep their bounded, text-only response readable without truncating names.
+    const responseLimit = functionName === 'target_rpc' && action === 'mastery' ? 3 * 1024 * 1024 : 1024 * 1024;
+    if (Buffer.byteLength(raw) > responseLimit) throw new Error('response limit');
     return unpack(JSON.parse(raw));
   } catch (error) {
     if (error instanceof HttpError) throw error;
