@@ -40,3 +40,36 @@ The existing 100 MiB logical storage ceiling covers this feature. A new match re
 Historical wallet restoration is refused for a member with funded active soccer escrow. It also refuses a historical cutoff between that member's reserve and settlement events, including a match that has already finished, because that would restore a debit without its corresponding escrow. Cancel/refund active matches and choose a cutoff before reservation or after settlement. Existing explicit current-time income corrections with `cutoff_at = prepared_at` continue to work; no automatic money adjustment is introduced.
 
 For verification, run the local-only `/workspace/2player/tests/e2e-soccer.cjs` harness and the read-only `supabase/tests/two_player_soccer_verify.sql` postflight. The harness requires `NODE_ENV=test`, a loopback-only disposable PostgreSQL database, and synthetic identities. It never accepts a hosted database URL.
+
+## Online opponents and FIFO matchmaking
+
+`20261109221928_target_two_player_matchmaking.sql` adds a separate `public.two_player_lobby_rpc(secret, action, input)` using the existing dedicated soccer credential. It does not replace the soccer RPC, financial projection, settlement, source integration, or retired gambling functions. Existing active and historical matches remain unchanged. Room codes remain an internal compatibility field; new clients choose opponents and resume by match ID.
+
+Every lobby action receives `memberId`, `name`, and `sessionId` from the trusted server after KGS identity verification. `sessionId` is a server-derived HMAC digest of the opaque KGS session, never the token itself. The browser cannot supply those actor fields. Mutations also require a UUID `requestId`. Their hash excludes display name and session metadata, so a successful intent can be checked after a rename or re-login without changing its meaning.
+
+| Lobby action | Additional input | Result |
+| --- | --- | --- |
+| `snapshot` | None | Online opponents, pending invitations, own queue position, shared wallet, and own active match summary |
+| `heartbeat` | None | Refresh this session's presence, then return the snapshot |
+| `leave` | None | Mark only this session offline; remove queued/invited state if no other session is online |
+| `logout` | None | Internal server action that permanently fences the logging-out session before KGS token revocation |
+| `challenge` | `requestId`, `targetId`, `stake`, `formation` | Invite a specific online, available user using the sender's preselected settings |
+| `accept` | `requestId`, `invitationId`, `stake`, `formation` | Recipient accepts and retains their own preselected settings |
+| `decline` | `requestId`, `invitationId` | Recipient declines an incoming invitation |
+| `invite_cancel` | `requestId`, `invitationId` | Sender cancels their outgoing invitation |
+| `queue` | `requestId`, `stake`, `formation` | Join the random queue, pairing the oldest available users first |
+| `queue_cancel` | `requestId` | Leave the random queue |
+
+Snapshots return `lobby:{online:[{memberId,name,busy}],queue:{joinedAt,position,stake,formation}|null,incoming:[],outgoing:[]}`. Incoming entries include `id`, `from:{memberId,name}`, `stake`, `formation`, `createdAt`, and `expiresAt`; outgoing entries use `to` instead of `from`. Online results contain at most 100 other users. An active match is a bounded summary without replay frames; the existing game endpoint owns full replay and processing recovery.
+
+Presence expires 60 seconds after a heartbeat. Clients normally heartbeat every 20 seconds while visible. Presence is tracked separately for each session, so leaving one device does not remove a user active on another. Logout tombstones last eight days, exceeding the KGS token's seven-day lifetime; a heartbeat verified before logout cannot restore that revoked session. Existing-session leave/logout cleanup bypasses ordinary wallet polling limits. The snapshot does not extend presence by itself.
+
+Invitations expire after 60 seconds, allow one outgoing request per sender and at most five incoming per recipient, and never charge or reserve funds. They do not prevent the recipient from joining a random game. Accepting an invitation and random matching serialize through the existing global lock `991101`; only one can claim either user. Pairing clears both users' queued and pending invitation state. Offline users, insufficient queue balances, and users already in an active match are removed from matchmaking eligibility.
+
+The random queue is global, not separated by stake. Its database sequence defines FIFO order. The oldest user pairs with the oldest eligible opponent. If one player has exhausted the existing host-only limit of 20 created matches per UTC day, the other eligible player becomes the internal host while preserving both players' settings. Two host-ineligible users wait for an eligible counterpart without blocking later eligible pairings. Queue settings are fixed until cancellation; an exact retry keeps the original place.
+
+Match creation calls the unchanged soccer `create`, `join`, and necessary `offer`/`formation` actions within one transaction. A JSON error from any wrapped call raises a private SQL exception caught only by the outer lobby RPC, rolling back the whole attempted pair before returning the error. The resulting match is still unfunded. Both players must explicitly confirm matching stakes through the existing ready flow. There is no automatic wallet debit, payout, or change to the eight-piece physics.
+
+Accepted lobby mutation receipts are permanent and hashed. Retrying an old queued or invitation request returns the current snapshot instead of reenqueuing, reinviting, or creating another match. Ephemeral presence, queue, and invitation rows are separately bounded and reclaimed. Each session and queue row reserves 512 logical bytes, an invitation reserves 1,024, a reusable rate row reserves 256, and a permanent request receipt reserves 512. All allocations use the existing 100 MiB ceiling, with exact releases on deletion. Expired ordinary sessions are removed after a day; revoked sessions remain for eight days. Requests are limited to 30 new mutations per minute, 1,000 per UTC day, and 20 challenge attempts per day. Actual cancellation/decline operations may free existing resources after ordinary mutation limits are exhausted; empty repeated release spam does not bypass those limits.
+
+All new tables use private-schema RLS and explicit API-role revokes. Only the credential-gated public lobby RPC is exposed. Check `supabase/tests/two_player_lobby_verify.sql` after deployment, and run the local-only `tests/e2e-matchmaking.cjs` harness against synthetic identities and a disposable loopback database for concurrency and end-to-end behavior.
