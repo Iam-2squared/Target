@@ -14,8 +14,10 @@ BEGIN
         RAISE EXCEPTION 'API role has private lobby access: % %',role_name,relation; END IF;
     END LOOP;
   END LOOP;
+  -- The shared-formation migration adds only an early FORMATION_FIXED rejection
+  -- to the previously reviewed b7a4c7594a8191dce5b6f677773616df soccer body.
   IF (SELECT md5(prosrc) FROM pg_proc WHERE oid='public.two_player_rpc(text,text,jsonb)'::regprocedure)
-      IS DISTINCT FROM 'b7a4c7594a8191dce5b6f677773616df' OR
+      IS DISTINCT FROM '640f070ee4aae1d25910ab58b8284648' OR
     (SELECT md5(prosrc) FROM pg_proc WHERE oid='target_private.wallet_finance_projection(timestamptz)'::regprocedure)
       IS DISTINCT FROM '8e69577732c1f54b2dae637b87aa3fd6' OR
     (SELECT md5(prosrc) FROM pg_proc WHERE oid='public.target_games_rpc(text,text,jsonb)'::regprocedure)
