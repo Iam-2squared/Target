@@ -34,6 +34,11 @@ BEGIN
       (NOT EXISTS(SELECT 1 FROM target_private.two_player_participants a WHERE a.match_id=m.id AND a.member_id=m.host_id) OR
         (m.guest_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM target_private.two_player_participants a WHERE a.match_id=m.id AND a.member_id=m.guest_id)))) THEN
     RAISE EXCEPTION 'Soccer active participant slots disagree with matches'; END IF;
+  IF EXISTS(SELECT 1 FROM target_private.two_player_matches WHERE version=2 AND
+      (jsonb_array_length(state->'players')<>16 OR host_formation NOT BETWEEN 0 AND 2 OR guest_formation NOT BETWEEN 0 AND 2)) OR
+    EXISTS(SELECT 1 FROM target_private.two_player_moves x JOIN target_private.two_player_matches m ON m.id=x.match_id
+      WHERE x.version<>m.version OR x.piece NOT BETWEEN 0 AND 7) THEN
+    RAISE EXCEPTION 'Soccer V2 formation, piece or version differs from its match'; END IF;
   IF EXISTS(SELECT 1 FROM target_private.wallet_finance_projection(NULL) l JOIN target_private.profiles p USING(member_id)
     WHERE (p.total_points,p.spent_points,p.calculus_points,p.birthday_points,p.casino_net,p.calculus_forgiven_points)
       IS DISTINCT FROM (l.total_points,l.spent_points,l.calculus_points,l.birthday_points,l.casino_net,l.calculus_forgiven_points)) THEN
