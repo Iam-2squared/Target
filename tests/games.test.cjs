@@ -27,7 +27,7 @@ test('G inputs bind only a normalized identity and fixed rules; clients cannot a
 });
 test('batch payloads and ordered child receipts bind count, UUIDs, timestamps and exact aggregate amounts',()=>{
  const input={memberId,name:'名前',requestId,game:'plinko',stake:100,choice:null,rulesVersion:4,count:20};assert.deepEqual(games.parseInput('batch',input),input);
- for(const count of [0,21,1.5,'20',null])assert.throws(()=>games.parseInput('batch',{...input,count}),error=>error.status===400);
+ for(const count of [0,101,1.5,'20',null])assert.throws(()=>games.parseInput('batch',{...input,count}),error=>error.status===400);
  for(const change of [{rulesVersion:3},{totalStake:2000},{outcome:[0]},{game:'coin',choice:0}])assert.throws(()=>games.parseInput('batch',{...input,...change}),error=>error.status===400);
  const createdAt='2026-11-09T00:00:00.000Z',rounds=Array.from({length:20},(_,i)=>({requestId:games.childId(requestId,i+1),game:'plinko',stake:100,choice:null,rulesVersion:4,outcome:Array(16).fill(0),multiplier:1000,payout:100000,net:99900,createdAt}));
  const batch={requestId,game:'plinko',stake:100,choice:null,rulesVersion:4,count:20,totalStake:2000,totalPayout:2000000,net:1998000,createdAt,rounds};
@@ -35,6 +35,20 @@ test('batch payloads and ordered child receipts bind count, UUIDs, timestamps an
  for(const changed of [{count:19},{totalStake:100},{totalPayout:2000001},{net:0},{rounds:rounds.slice(1)},{rounds:[rounds[1],rounds[0],...rounds.slice(2)]},{rounds:[{...rounds[0],createdAt:'2026-11-09T00:00:01.000Z'},...rounds.slice(1)]}])assert.throws(()=>games.parseBatch({...batch,...changed},input),error=>error.status===503);
  assert.equal(games.childId('ffffffff-ffff-4fff-afff-ffffffffffff',1),'ffffffff-ffff-4fff-afff-fffffffffffe');
  assert.equal(games.childId('00000000-0000-4000-8000-000000000000',20),'00000000-0000-4000-8000-000000000014');
+});
+test('a hundred-ball maximum preserves independent ordered IDs and exact ten-billion payout totals',()=>{
+ const input={memberId,name:'名前',requestId,game:'plinko',stake:100000,choice:null,rulesVersion:4,count:100};
+ assert.deepEqual(games.parseInput('batch',input),input);
+ const createdAt='2026-11-09T00:00:00.000Z',rounds=Array.from({length:100},(_,i)=>({requestId:games.childId(requestId,i+1),game:'plinko',stake:100000,choice:null,rulesVersion:4,outcome:Array(16).fill(0),multiplier:1000,payout:100000000,net:99900000,createdAt}));
+ const batch={requestId,game:'plinko',stake:100000,choice:null,rulesVersion:4,count:100,totalStake:10000000,totalPayout:10000000000,net:9990000000,createdAt,rounds};
+ const response={rulesVersion:4,wallet:{balance:10000000000,totalIncome:10000000000,spent:0,walletRevision:1,gameNet:9990000000},batch};
+ assert.deepEqual(games.parseResponse('batch',response,input),response);
+ assert.equal(new Set(rounds.map(row=>row.requestId)).size,100);assert(!rounds.some(row=>row.requestId===requestId));
+ const bytes=Buffer.byteLength(JSON.stringify(response));assert(bytes>16384&&bytes<65536);
+ assert.equal(games.childId('00000000-0000-4000-8000-000000000000',100),'00000000-0000-4000-8000-000000000064');
+ for(const count of [101,0,'100',null])assert.throws(()=>games.parseInput('batch',{...input,count}),error=>error.status===400);
+ for(const ordinal of [0,101,'100',null])assert.throws(()=>games.childId(requestId,ordinal),error=>error.status===503);
+ for(const changed of [{count:99},{totalStake:1000000},{totalPayout:10000000001},{net:9990000001},{rounds:rounds.slice(1)}])assert.throws(()=>games.parseBatch({...batch,...changed},input),error=>error.status===503);
 });
 test('G validators check signed net, exact payout formula, private history order and current wallet',()=>{
  const input={requestId,game:'coin',stake:1000,choice:0,rulesVersion:1},value={rulesVersion:4,wallet:wallet(),round:round()};

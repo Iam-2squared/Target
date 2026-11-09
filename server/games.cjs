@@ -31,11 +31,11 @@ function parseInput(action,value){
   if(action!=='state'&&(typeof value.requestId!=='string'||!UUID.test(value.requestId)||!['coin','dice','slots','plinko'].includes(value.game)||
     !integer(value.stake,100,100000)||value.stake%100!==0||!validChoice(value.game,value.choice)||![1,2,3,4].includes(value.rulesVersion)||
     (value.rulesVersion>=3?value.game!=='plinko':value.game==='plinko')))throw invalid();
-  if(action==='batch'&&(value.game!=='plinko'||value.choice!==null||value.rulesVersion!==4||!integer(value.count,1,20)))throw invalid();
+  if(action==='batch'&&(value.game!=='plinko'||value.choice!==null||value.rulesVersion!==4||!integer(value.count,1,100)))throw invalid();
   return {...value,memberId:value.memberId.toLowerCase(),name:value.name.trim(),...(action!=='state'?{requestId:value.requestId.toLowerCase()}:{} )};
 }
 function childId(parent,ordinal){
-  if(typeof parent!=='string'||!UUID.test(parent)||!integer(ordinal,1,20))throw unavailable();
+  if(typeof parent!=='string'||!UUID.test(parent)||!integer(ordinal,1,100))throw unavailable();
   const hex=parent.toLowerCase().replace(/-/g,''),tail=((parseInt(hex.slice(24),16)^ordinal)>>>0).toString(16).padStart(8,'0'),value=hex.slice(0,24)+tail;
   return [value.slice(0,8),value.slice(8,12),value.slice(12,16),value.slice(16,20),value.slice(20)].join('-');
 }
@@ -57,7 +57,7 @@ function parseRound(value){
 function parseBatch(value,input){
   if(!exact(value,['requestId','game','stake','choice','rulesVersion','count','totalStake','totalPayout','net','createdAt','rounds'])||
     typeof value.requestId!=='string'||!UUID.test(value.requestId)||value.game!=='plinko'||!integer(value.stake,100,100000)||value.stake%100!==0||value.choice!==null||value.rulesVersion!==4||
-    !integer(value.count,1,20)||value.totalStake!==value.stake*value.count||typeof value.createdAt!=='string'||!Number.isFinite(Date.parse(value.createdAt))||
+    !integer(value.count,1,100)||value.totalStake!==value.stake*value.count||typeof value.createdAt!=='string'||!Number.isFinite(Date.parse(value.createdAt))||
     !Array.isArray(value.rounds)||value.rounds.length!==value.count)throw unavailable();
   let payout=0,net=0;
   for(let index=0;index<value.rounds.length;index++){

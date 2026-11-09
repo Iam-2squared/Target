@@ -211,7 +211,7 @@
     "stake": "per-ball stake100..100000 step100",
     "choice": null,
     "rulesVersion": 4,
-    "count": "integer1..20",
+    "count": "integer1..100",
     "totalStake": "stake*count",
     "totalPayout": "sum(rounds.payout)",
     "net": "totalPayout-totalStake",
@@ -229,5 +229,11 @@
     "retries": "bypass"
   },
   "batchStartingFunds": "balance >= stake*count before any RNG; no credit from early wins",
-  "batchCap": "maxnet999*totalStake; minnet-0.8*totalStake; storage checked before quota or entropy"
+  "batchCap": "maxnet999*totalStake; minnet-0.8*totalStake; storage checked before quota or entropy",
+  "batchMaximums": {
+    "totalStake": 10000000,
+    "grossPayout": 10000000000,
+    "netWin": 9990000000
+  },
+  "batchResponseLimitBytes": 65536
 }
