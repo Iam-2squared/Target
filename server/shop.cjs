@@ -52,24 +52,28 @@ function validateModernWallet(value,{requestId,itemType}={}){
   const points=n=>Number.isSafeInteger(n)&&n>=0&&n<=MAX_POINTS&&n%10===0;
   const mapSpent=Object.hasOwn(value,'mapSpent')?value.mapSpent:0;
   const refundedSpend=Object.hasOwn(value,'refundedSpend')?value.refundedSpend:0;
+  const voidedDrawCount=Object.hasOwn(value,'voidedDrawCount')?value.voidedDrawCount:0;
   if(!points(mapSpent)||mapSpent%100!==0||value.spent%100!==0||mapSpent>value.spent||!points(refundedSpend)||refundedSpend%100!==0)throw invalid();
   const stickers=validateQuantities(value.ownedStickers,value.stickerQuantities,STICKERS),frames=validateQuantities(value.ownedFrames,value.frameQuantities,FRAMES);
   if(!['balance','totalIncome','spent'].every(key=>points(value[key]))||value.balance+value.spent!==value.totalIncome||value.price!==PRICE||value.catalogSize!==17||value.frameCatalogSize!==33||value.duplicatesAllowed!==true||
-      !Number.isSafeInteger(value.drawCount)||value.drawCount<0||value.drawCount>100000000||!Number.isSafeInteger(value.legacyDiscountedDraws)||value.legacyDiscountedDraws<0||value.legacyDiscountedDraws>4||
-      !stickers||!frames||stickers.total+frames.total!==value.drawCount||value.legacyDiscountedDraws>LEGACY_STICKERS.reduce((sum,id)=>sum+(stickers?.map.get(id)||0),0)||
+      !Number.isSafeInteger(value.drawCount)||value.drawCount<0||value.drawCount>100000000||!Number.isSafeInteger(voidedDrawCount)||voidedDrawCount<0||voidedDrawCount>value.drawCount||!Number.isSafeInteger(value.legacyDiscountedDraws)||value.legacyDiscountedDraws<0||value.legacyDiscountedDraws>4||
+      !stickers||!frames||stickers.total+frames.total!==value.drawCount-voidedDrawCount||value.legacyDiscountedDraws>LEGACY_STICKERS.reduce((sum,id)=>sum+(stickers?.map.get(id)||0),0)||
       refundedSpend>value.drawCount*PRICE-value.legacyDiscountedDraws*(PRICE-LEGACY_PRICE)||
       value.spent+refundedSpend!==value.drawCount*PRICE-value.legacyDiscountedDraws*(PRICE-LEGACY_PRICE)+mapSpent||
       !value.frameOdds||typeof value.frameOdds!=='object'||Array.isArray(value.frameOdds)||Object.keys(value.frameOdds).length!==4||!Object.entries(FRAME_ODDS).every(([key,n])=>value.frameOdds[key]===n))throw invalid();
   const result={balance:value.balance,totalIncome:value.totalIncome,spent:value.spent,price:PRICE,catalogVersion:CATALOG_VERSION,catalogSize:17,frameCatalogSize:33,duplicatesAllowed:true,ownedStickers:stickers.ids,ownedFrames:frames.ids,stickerQuantities:stickers.rows,frameQuantities:frames.rows,drawCount:value.drawCount,legacyDiscountedDraws:value.legacyDiscountedDraws,frameOdds:{...FRAME_ODDS}};
   if(Object.hasOwn(value,'mapSpent'))result.mapSpent=mapSpent;
   if(Object.hasOwn(value,'refundedSpend'))result.refundedSpend=refundedSpend;
+  if(Object.hasOwn(value,'voidedDrawCount'))result.voidedDrawCount=voidedDrawCount;
   if(requestId!==undefined){
     const pool=itemType||'sticker',ids=pool==='sticker'?STICKERS:FRAMES,owned=pool==='sticker'?stickers:frames;
+    const receiptVoided=Object.hasOwn(value,'receiptVoided');
+    if(receiptVoided&&(value.receiptVoided!==true||voidedDrawCount<1))throw invalid();
     if(typeof requestId!=='string'||!UUID.test(requestId)||typeof value.requestId!=='string'||value.requestId.toLowerCase()!==requestId.toLowerCase()||value.itemType!==pool||!ids.includes(value.itemId)||value[pool==='sticker'?'stickerId':'frameId']!==value.itemId||
-      !owned.map.has(value.itemId)||value.quantity!==owned.map.get(value.itemId)||![LEGACY_PRICE,PRICE].includes(value.cost)||value.drawCount<1||value.spent+refundedSpend<value.cost||
+      !receiptVoided&&!owned.map.has(value.itemId)||value.quantity!==(owned.map.get(value.itemId)??0)||![LEGACY_PRICE,PRICE].includes(value.cost)||value.drawCount<1||value.spent+refundedSpend<value.cost||
       (value.cost===LEGACY_PRICE&&(pool!=='sticker'||!LEGACY_STICKERS.includes(value.itemId)||value.legacyDiscountedDraws<1))||
       (pool==='frame'&&(value.rarity!==FRAME_RARITY[value.itemId[0]]||Object.hasOwn(value,'stickerId')))||(pool==='sticker'&&Object.hasOwn(value,'frameId')))throw invalid();
-    Object.assign(result,{requestId:requestId.toLowerCase(),itemType:pool,itemId:value.itemId,[pool==='sticker'?'stickerId':'frameId']:value.itemId,quantity:value.quantity,cost:value.cost,...(pool==='frame'?{rarity:value.rarity}:{})});
+    Object.assign(result,{requestId:requestId.toLowerCase(),itemType:pool,itemId:value.itemId,[pool==='sticker'?'stickerId':'frameId']:value.itemId,quantity:value.quantity,cost:value.cost,...(pool==='frame'?{rarity:value.rarity}:{}),...(receiptVoided?{receiptVoided:true}:{})});
   }
   return result;
 }

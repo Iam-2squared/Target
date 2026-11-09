@@ -37,3 +37,16 @@ test('v3 restoration refunds spending while retaining every item and replaying i
   assert.deepEqual(shop.validateWallet(replay,{requestId,itemType:'frame'}),replay);
   for(const change of [{quantity:2},{cost:10000},{frameId:'l02'},{rarity:'common'}])assert.throws(()=>shop.validateWallet({...replay,...change},{requestId,itemType:'frame'}),error=>error.status===503);
 });
+test('inventory tombstones retain historical spend proof and acknowledge voided receipts without ownership',()=>{
+  const base={...shop.guestWallet(),balance:100000,totalIncome:100000,spent:0,refundedSpend:200000,drawCount:2,voidedDrawCount:2,walletRevision:20};
+  assert.deepEqual(shop.validateWallet(base),base);
+  for(const voidedDrawCount of [undefined,null,-1,1,3,1.5,'2',100000001])assert.throws(()=>shop.validateWallet({...base,voidedDrawCount}),error=>error.status===503);
+  const zero={...shop.guestWallet(),voidedDrawCount:0};assert.deepEqual(shop.validateWallet(zero),zero);
+  const requestId=id(),voided={...base,requestId,itemType:'frame',itemId:'c01',frameId:'c01',rarity:'common',quantity:0,cost:100000,receiptVoided:true};
+  assert.deepEqual(shop.validateWallet(voided,{requestId,itemType:'frame'}),voided);
+  for(const patch of [{receiptVoided:false},{receiptVoided:null},{receiptVoided:'true'},{quantity:1},{cost:10000},{frameId:'c02'}])assert.throws(()=>shop.validateWallet({...voided,...patch},{requestId,itemType:'frame'}),error=>error.status===503);
+  const nonvoided={...voided};delete nonvoided.receiptVoided;assert.throws(()=>shop.validateWallet(nonvoided,{requestId,itemType:'frame'}),error=>error.status===503);
+  const copy={...voided,ownedFrames:['c01'],frameQuantities:[{id:'c01',quantity:1}],voidedDrawCount:1,spent:100000,balance:0,refundedSpend:100000,quantity:1};
+  assert.deepEqual(shop.validateWallet(copy,{requestId,itemType:'frame'}),copy);
+  const noVoid={...copy,drawCount:1,voidedDrawCount:0,refundedSpend:0};assert.throws(()=>shop.validateWallet(noVoid,{requestId,itemType:'frame'}),error=>error.status===503);
+});

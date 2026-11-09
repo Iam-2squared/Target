@@ -182,7 +182,7 @@ async function handler(req, res) {
       }
       const profile = await store.rpc('profile', {memberId: member.id, name: member.name});
       const wallet=await shop.wallet(member);
-      return send(res, 200, {member: {id:member.id,name: member.name}, correctCount: profile.correctCount, totalPoints: wallet.totalIncome,bonus:profile.bonus??null,...wallet});
+      return send(res, 200, {member: {id:member.id,name: member.name}, correctCount: profile.correctCount, totalPoints: wallet.totalIncome,bonus:profile.bonus??null,...(profile.rewardLock?{rewardLock:profile.rewardLock}:{}),...wallet});
     }
     if (pathname === '/api/ranking' && req.method === 'GET') return send(res, 200, await store.rpc('ranking'));
     if (pathname === '/api/mastery' && req.method === 'GET') {
@@ -205,7 +205,7 @@ async function handler(req, res) {
       const profile = await store.rpc('profile', {memberId: result.member.id, name: result.member.name});
       const wallet=await shop.wallet(result.member);
       identity.setSession(res, result.token, result.expiresAt, config);
-      return send(res, 200, {member: {id:result.member.id,name: result.member.name}, correctCount: profile.correctCount, totalPoints: wallet.totalIncome,bonus:profile.bonus??null,...wallet});
+      return send(res, 200, {member: {id:result.member.id,name: result.member.name}, correctCount: profile.correctCount, totalPoints: wallet.totalIncome,bonus:profile.bonus??null,...(profile.rewardLock?{rewardLock:profile.rewardLock}:{}),...wallet});
     }
     if (pathname === '/api/logout' && req.method === 'POST') {
       const body = await readJson(req);

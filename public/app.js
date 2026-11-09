@@ -16,6 +16,7 @@
   let memoryPage=0, memoryBook='target1900', meaningsHidden=false, memoryTicket=0;
   let memoryPages=[], memoryColumns=[], memoryLayoutKey='', memoryLayoutFrame=0,memorySelectionKey='',memoryRange={from:1,to:100};
   let quiz=null, startRetry=null, starting=false, loginPending=false, logoutPending=false;
+  let guestRewardLock=window.TargetRewardLock.initial();
   const SOUND_KEY='target-sound-enabled';
   let soundEnabled=readSoundSetting(),soundPlayers,soundGeneration=0,activeSound=null,soundSessionLease=null;
   let toastTimer, resultTimer, resultGeneration=0, resultDisplay=null, resultPointer=null, lastAdvanceTap=null;
@@ -525,11 +526,11 @@
         if(!currentSetup())return;
         if(typeof data.quizId!=='string'||!data.quizId||!Number.isSafeInteger(data.total)||data.total<1||data.total>count||data.answeredCount!==0||data.correctCount!==0||data.quizPoints!==0)throw appError('テストの準備結果を確認できませんでした。');
         bonus.update(checkedBonus(data.bonus),data.__timing);
-        created={recorded:true,id:data.quizId,total:data.total,answeredCount:0,correctCount:0,quizPoints:0,question:questionShape(data.question)};
+        created={recorded:true,id:data.quizId,total:data.total,answeredCount:0,correctCount:0,quizPoints:0,question:questionShape(data.question),rewardLock:window.TargetRewardLock.parse(data.rewardLock)||window.TargetRewardLock.initial()};
       }else{
         const questions=guestQuestions(await dataset(settings.book),settings);
         if(!currentSetup())return;
-        created={recorded:false,id:uuid(),total:questions.length,answeredCount:0,correctCount:0,quizPoints:0,question:questions[0],questions};
+        created={recorded:false,id:uuid(),total:questions.length,answeredCount:0,correctCount:0,quizPoints:0,question:questions[0],questions,rewardLock:{...guestRewardLock}};
       }
       quiz={...created,settings:{...settings,review},pending:false,pendingAnswer:null,feedback:null,localFeedback:null,finished:false,sessionEpoch:epoch};startRetry=null;lastAdvanceTap=null;
       show('quiz');renderQuestion();
@@ -549,7 +550,7 @@
     $('questionPrompt').textContent=question.prompt;$('questionPrompt').closest('.question-card').classList.toggle('english-prompt',quiz.settings.direction==='japanese');
     question.choices.forEach((choice,index)=>{const button=element('button','choice-button');button.type='button';button.dataset.choiceId=choice.id;button.setAttribute('aria-pressed','false');button.append(element('span','choice-letter',String.fromCharCode(65+index)),element('span','choice-text',choice.text));button.addEventListener('click',event=>selectChoice(choice.id,event));fragment.append(button);});
     $('questionChoices').replaceChildren(fragment);$('answerFeedback').hidden=true;$('answerRetry').hidden=true;setError('quizError');
-    quiz.feedback=null;quiz.localFeedback=null;quiz.pendingAnswer=null;quiz.pendingGuestResult=null;quiz.soundPlayed=false;clearRewardCelebration();
+    quiz.feedback=null;quiz.localFeedback=null;quiz.pendingAnswer=null;quiz.pendingGuestResult=null;quiz.soundPlayed=false;clearRewardCelebration();renderRewardLock();
     requestAnimationFrame(()=>{if(activeView==='quiz')$('questionPrompt').focus({preventScroll:true});});
   }
   function selectChoice(choiceId,event){
@@ -573,6 +574,10 @@
     for(const button of $('questionChoices').querySelectorAll('button')){button.disabled=true;button.classList.toggle('is-correct',button.dataset.choiceId===result.correctChoiceId);button.classList.toggle('is-wrong',!result.correct&&button.dataset.choiceId===quiz.pendingAnswer?.choiceId);}
     $('feedbackTitle').textContent=result.correct?'正解':'不正解';$('feedbackAnswer').textContent=result.correct?'':'正解：'+result.correctText;$('answerFeedback').classList.toggle('is-wrong',!result.correct);$('answerFeedback').hidden=false;
   }
+  function renderRewardLock(resumed=false){
+    const text=window.TargetRewardLock.notice(quiz?.rewardLock,resumed),node=$('rewardLockStatus');
+    node.textContent=text;node.hidden=!text;
+  }
   function showAnswerResult(result) {
     if(!quiz)return;
     const question=quiz.question;
@@ -582,9 +587,11 @@
       (Object.hasOwn(result,'walletRevision')&&!validRevision(result.walletRevision))||
       (Object.hasOwn(result,'balance')&&(!validMoney(result.balance)||result.balance>result.totalPoints||(result.totalPoints-result.balance)%100!==0)))throw appError('得点を確認できませんでした。同じ回答を再送してください。');
     if(!result.finished)questionShape(result.nextQuestion);
+    const rewardLock=window.TargetRewardLock.parse(result.rewardLock),resumed=!!(quiz.rewardLock?.locked&&rewardLock&&!rewardLock.locked&&result.correct&&result.awardPoints===0);
     const bonusState=checkedBonus(result.bonus);if(quiz.recorded)bonus.update(bonusState,result.__timing);
+    if(rewardLock)quiz.rewardLock=rewardLock;
     quiz.feedback=result;quiz.answeredCount=result.answeredCount;quiz.correctCount=result.correctCount;quiz.quizPoints=result.quizPoints;quiz.finished=result.finished;
-    renderAnswerFeedback(result);feedbackSound(quiz,result.correct);
+    renderAnswerFeedback(result);renderRewardLock(resumed);feedbackSound(quiz,result.correct);
     $('quizPoints').textContent=gou(quiz.quizPoints);
     if(quiz.recorded){clearMastery();sessionTicket++;applyWallet(result);renderIdentity();if($('settingsDialog').open)void refreshSession({notify:false,walletFeedback:true});}
     $('quizCorrect').textContent=quiz.correctCount+'問 正解';$('quizProgress').value=quiz.answeredCount;
@@ -609,9 +616,10 @@
       if(current.recorded){result=await api('/quiz/answer',current.pendingAnswer);}
       else{
         if(!current.pendingGuestResult){
-          const correct=choiceId===current.question.correctChoiceId,answered=current.answeredCount+1,awardPoints=correct?(bonus.active()?500:guestAward()):0,quizPoints=current.quizPoints+awardPoints;
+          const correct=choiceId===current.question.correctChoiceId,answered=current.answeredCount+1,gate=window.TargetRewardLock.transition(guestRewardLock,correct),awardPoints=gate.canAward?(bonus.active()?500:guestAward()):0,quizPoints=current.quizPoints+awardPoints;
+          guestRewardLock=gate.state;
           if(awardPoints===100000)bonus.startGuest();
-          current.pendingGuestResult={correct,correctChoiceId:current.question.correctChoiceId,correctText:current.question.correctText,answeredCount:answered,correctCount:current.correctCount+(correct?1:0),awardPoints,quizPoints,totalPoints:quizPoints,bonus:bonus.snapshot(),total:current.total,finished:answered===current.total,nextQuestion:current.questions[answered]||null};
+          current.pendingGuestResult={correct,correctChoiceId:current.question.correctChoiceId,correctText:current.question.correctText,answeredCount:answered,correctCount:current.correctCount+(correct?1:0),awardPoints,quizPoints,totalPoints:quizPoints,bonus:bonus.snapshot(),rewardLock:{...guestRewardLock},total:current.total,finished:answered===current.total,nextQuestion:current.questions[answered]||null};
         }
         result=current.pendingGuestResult;
       }
