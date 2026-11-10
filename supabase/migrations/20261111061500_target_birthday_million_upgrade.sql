@@ -137,7 +137,7 @@ BEGIN
   END LOOP;
   UPDATE target_private.system_state SET logical_bytes=logical_bytes+bytes_value WHERE singleton;
   RETURN jsonb_build_object('granted',granted);
-END $function$
+END $function$;
 
 CREATE OR REPLACE FUNCTION target_private.wallet_finance_projection(p_cutoff timestamp with time zone DEFAULT NULL::timestamp with time zone)
  RETURNS TABLE(member_id uuid, total_points bigint, spent_points bigint, calculus_points bigint, birthday_points bigint, casino_net bigint, calculus_forgiven_points bigint, raw_study_points bigint, map_spent bigint)
@@ -183,7 +183,7 @@ AS $function$
      LEFT JOIN gifts b USING(member_id) LEFT JOIN games g USING(member_id)
      LEFT JOIN spending x USING(member_id) LEFT JOIN corrections r USING(member_id))
  SELECT member_id,study+calculus+birthday+casino+forgiven,spent,calculus,birthday,casino,forgiven,study,map_spent FROM components;
-$function$
+$function$;
 
 -- Credit old already-issued same-day receipts once, retaining the original
 -- seen/amount metadata. A single advisory lock covers gift RPC and adjustment.
