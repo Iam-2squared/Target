@@ -15,7 +15,9 @@ BEGIN
     ('target_private.wallet_finance_projection(timestamptz)','8e69577732c1f54b2dae637b87aa3fd6'),
     ('public.target_games_rpc(text,text,jsonb)','71ddbc56e79a79dcd8a046d556b73a59')
   ) x(signature,hash) LOOP
-    IF (SELECT md5(prosrc) FROM pg_proc WHERE oid=expected.signature::regprocedure) IS DISTINCT FROM expected.hash THEN
+    IF (SELECT md5(prosrc) FROM pg_proc WHERE oid=expected.signature::regprocedure) IS DISTINCT FROM expected.hash AND NOT
+      (expected.signature='public.two_player_rpc(text,text,jsonb)' AND
+        (SELECT md5(prosrc) FROM pg_proc WHERE oid=expected.signature::regprocedure)='a31ef2f093dc1dc3204cd9683047c17d') THEN
       RAISE EXCEPTION 'Turn-rule or unchanged financial boundary differs: %',expected.signature; END IF;
   END LOOP;
   IF NOT EXISTS(SELECT 1 FROM pg_trigger WHERE tgname='two_player_turn_clock' AND NOT tgisinternal AND tgenabled='O'

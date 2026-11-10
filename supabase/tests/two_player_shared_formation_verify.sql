@@ -10,10 +10,11 @@ BEGIN
     '  END IF;'||chr(10),'');
   -- Both reviewed generations are accepted so the historical migration suite
   -- remains runnable; the current turn-clock postflight pins every new helper.
-  IF md5(current_source) NOT IN ('640f070ee4aae1d25910ab58b8284648','625162362bf7d46fa98b19f254ee5671') OR
+  IF md5(current_source) NOT IN ('640f070ee4aae1d25910ab58b8284648','625162362bf7d46fa98b19f254ee5671','a31ef2f093dc1dc3204cd9683047c17d') OR
     (md5(current_source)='640f070ee4aae1d25910ab58b8284648' AND md5(previous_source) IS DISTINCT FROM 'b7a4c7594a8191dce5b6f677773616df') OR
     (SELECT md5(prosrc) FROM pg_proc WHERE oid='target_private.two_player_lobby_pair(text,uuid,uuid,integer,integer,integer,integer)'::regprocedure)
-      IS DISTINCT FROM '5161a2f3b98b94e07d0927a28093893f' OR
+      IS DISTINCT FROM (CASE WHEN md5(current_source)='a31ef2f093dc1dc3204cd9683047c17d'
+        THEN 'ec2f3a2af81c9ec2f90b28dd4c68d71a' ELSE '5161a2f3b98b94e07d0927a28093893f' END) OR
     (SELECT md5(prosrc) FROM pg_proc WHERE oid='target_private.two_player_shared_formation()'::regprocedure)
       IS DISTINCT FROM 'e64bb7f29197d8ff6df1b19983dc7704' OR
     (SELECT md5(prosrc) FROM pg_proc WHERE oid='target_private.two_player_initial_state(integer,integer)'::regprocedure)
