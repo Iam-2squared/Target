@@ -2,7 +2,8 @@
 const test=require('node:test'),assert=require('node:assert/strict'),crypto=require('node:crypto');
 const shop=require('../server/shop.cjs');
 const id=()=>crypto.randomUUID();
-const wallet=()=>({...shop.guestWallet(),totalIncome:2000000,balance:1670000,spent:330000,ownedStickers:['youth','sunglasses','night'],stickerQuantities:[{id:'youth',quantity:2},{id:'sunglasses',quantity:1},{id:'night',quantity:1}],ownedFrames:['c01','l03'],frameQuantities:[{id:'c01',quantity:1},{id:'l03',quantity:1}],drawCount:6,legacyDiscountedDraws:3});
+const historicalGuest=()=>{const value=shop.guestWallet();delete value.stickersRetired;return {...value,catalogVersion:3,catalogSize:17};};
+const wallet=()=>({...historicalGuest(),totalIncome:2000000,balance:1670000,spent:330000,ownedStickers:['youth','sunglasses','night'],stickerQuantities:[{id:'youth',quantity:2},{id:'sunglasses',quantity:1},{id:'night',quantity:1}],ownedFrames:['c01','l03'],frameQuantities:[{id:'c01',quantity:1},{id:'l03',quantity:1}],drawCount:6,legacyDiscountedDraws:3});
 test('v3 counts every paid duplicate while preserving historical discounted receipts',()=>{
   const value=wallet();assert.deepEqual(shop.validateWallet(value),value);
   for(const change of [{spent:320000,balance:1680000},{drawCount:5},{legacyDiscountedDraws:4},{ownedFrames:['c01']},{ownedStickers:['youth','sunglasses','night','love']},{stickerQuantities:[{id:'youth',quantity:1},{id:'sunglasses',quantity:1},{id:'night',quantity:1}]},{frameQuantities:[{id:'c01',quantity:1},{id:'c01',quantity:1}]},{duplicatesAllowed:false},{frameOdds:{common:61,rare:25,epic:10,legendary:4}},{frameCatalogSize:34}])assert.throws(()=>shop.validateWallet({...value,...change}),error=>error.status===503);
@@ -38,10 +39,10 @@ test('v3 restoration refunds spending while retaining every item and replaying i
   for(const change of [{quantity:2},{cost:10000},{frameId:'l02'},{rarity:'common'}])assert.throws(()=>shop.validateWallet({...replay,...change},{requestId,itemType:'frame'}),error=>error.status===503);
 });
 test('inventory tombstones retain historical spend proof and acknowledge voided receipts without ownership',()=>{
-  const base={...shop.guestWallet(),balance:100000,totalIncome:100000,spent:0,refundedSpend:200000,drawCount:2,voidedDrawCount:2,walletRevision:20};
+  const base={...historicalGuest(),balance:100000,totalIncome:100000,spent:0,refundedSpend:200000,drawCount:2,voidedDrawCount:2,walletRevision:20};
   assert.deepEqual(shop.validateWallet(base),base);
   for(const voidedDrawCount of [undefined,null,-1,1,3,1.5,'2',100000001])assert.throws(()=>shop.validateWallet({...base,voidedDrawCount}),error=>error.status===503);
-  const zero={...shop.guestWallet(),voidedDrawCount:0};assert.deepEqual(shop.validateWallet(zero),zero);
+  const zero={...historicalGuest(),voidedDrawCount:0};assert.deepEqual(shop.validateWallet(zero),zero);
   const requestId=id(),voided={...base,requestId,itemType:'frame',itemId:'c01',frameId:'c01',rarity:'common',quantity:0,cost:100000,receiptVoided:true};
   assert.deepEqual(shop.validateWallet(voided,{requestId,itemType:'frame'}),voided);
   for(const patch of [{receiptVoided:false},{receiptVoided:null},{receiptVoided:'true'},{quantity:1},{cost:10000},{frameId:'c02'}])assert.throws(()=>shop.validateWallet({...voided,...patch},{requestId,itemType:'frame'}),error=>error.status===503);

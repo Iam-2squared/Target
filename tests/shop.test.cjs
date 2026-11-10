@@ -62,8 +62,8 @@ test('acknowledged purchase prices are exact and legacy receipts can retain thei
 
 test('catalog rollout binds acknowledged versions and normalizes only legacy four-item receipts',()=>{
   const member={memberId:id(),name:'表示名'},requestId=id();
-  for(const expectedCatalogVersion of [1,2,3])assert.equal(shop.parseInput('draw',{...member,requestId,expectedPrice:100000,expectedCatalogVersion}).expectedCatalogVersion,expectedCatalogVersion);
-  for(const expectedCatalogVersion of [null,undefined,'2',0,4])assert.throws(()=>shop.parseInput('draw',{...member,requestId,expectedCatalogVersion}),error=>error.status===400);
+  for(const expectedCatalogVersion of [1,2,3,4])assert.equal(shop.parseInput('draw',{...member,requestId,expectedPrice:100000,expectedCatalogVersion}).expectedCatalogVersion,expectedCatalogVersion);
+  for(const expectedCatalogVersion of [null,undefined,'2',0,5])assert.throws(()=>shop.parseInput('draw',{...member,requestId,expectedCatalogVersion}),error=>error.status===400);
   const legacy={...wallet()};delete legacy.catalogVersion;delete legacy.catalogSize;
   assert.deepEqual(shop.validateWallet(legacy),wallet());
   for(const patch of [{catalogVersion:2},{catalogSize:17},{catalogVersion:3,catalogSize:17},{catalogVersion:1,catalogSize:17}])assert.throws(()=>shop.validateWallet({...wallet(),...patch}),error=>error.status===503);
