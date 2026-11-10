@@ -69,7 +69,7 @@ AS $function$
     ELSE coalesce((SELECT sum(w.amount)::bigint FROM target_private.manual_receipt_writeoffs w
       WHERE w.member_id=p_member AND w.request_id=p_request),0) END
   FROM target_private.gacha_receipts(p_member) d WHERE d.request_id=p_request;
-$function$
+$function$;
 
 
 -- Adapt existing canonical function: target_private.wallet_finance_projection
@@ -115,7 +115,7 @@ AS $function$
      LEFT JOIN gifts b USING(member_id) LEFT JOIN games g USING(member_id)
      LEFT JOIN spending x USING(member_id) LEFT JOIN corrections r USING(member_id))
  SELECT member_id,study+calculus+birthday+casino+forgiven,spent,calculus,birthday,casino,forgiven,study,map_spent FROM components;
-$function$
+$function$;
 
 
 -- Adapt existing canonical function: target_private.wallet_snapshot
@@ -144,7 +144,7 @@ AS $function$
     ||CASE WHEN voids.amount>0 THEN jsonb_build_object('voidedDrawCount',voids.amount) ELSE '{}'::jsonb END
   
   FROM target_private.profiles p CROSS JOIN refunds CROSS JOIN voids WHERE p.member_id=p_member;
-$function$
+$function$;
 
 
 -- Adapt existing canonical function: target_private.validate_manual_receipt_writeoff
@@ -173,7 +173,7 @@ BEGIN
     RAISE EXCEPTION 'Manual spending write-off does not match an active unrefunded purchase' USING ERRCODE='23514';
   END IF;
   RETURN NEW;
-END $function$
+END $function$;
 
 
 -- Adapt existing canonical function: target_private.assert_receipt_refund_coverage
@@ -192,7 +192,7 @@ BEGIN
       FROM target_private.gacha_receipts(p_member) d),0) THEN
     RAISE EXCEPTION 'Financial refund coverage does not match exact receipt amounts' USING ERRCODE='23514';
   END IF;
-END $function$
+END $function$;
 
 
 -- Adapt existing canonical function: target_private.validate_inventory_void
@@ -220,7 +220,7 @@ BEGIN
     RAISE EXCEPTION 'Inventory refund must equal the exact receipt residual and proof event' USING ERRCODE='23514';
   END IF;
   RETURN NEW;
-END $function$
+END $function$;
 
 
 -- Adapt existing canonical function: target_private.zero_wallet_income
@@ -387,7 +387,7 @@ BEGIN
     RAISE EXCEPTION 'Income correction does not reconcile with the permanent ledger' USING ERRCODE='23514';
   END IF;
   RETURN jsonb_build_object('operationId',p_operation_id,'members',members,'replayed',false);
-END $function$
+END $function$;
 
 
 -- Adapt existing canonical function: target_private.restore_inventory
@@ -470,7 +470,7 @@ BEGIN
       IS DISTINCT FROM(l.total_points,l.spent_points,l.calculus_points,l.birthday_points,l.casino_net,l.calculus_forgiven_points)) THEN
     RAISE EXCEPTION 'Inventory restoration does not reconcile with active receipts and financial history' USING ERRCODE='23514'; END IF;
   RETURN jsonb_build_object('resetId',p_reset_id,'cutoffAt',p_cutoff,'members',members,'voidedDraws',draws,'additionalRefund',new_refund,'replayed',false);
-END $function$
+END $function$;
 
 
 -- Adapt existing canonical function: target_private.retire_stickers
@@ -604,7 +604,7 @@ BEGIN
     RAISE EXCEPTION 'Wallet history does not reconcile after sticker retirement' USING ERRCODE='23514'; END IF;
   RETURN jsonb_build_object('operationId',operation_id,'members',members,'voidedDraws',draws,'refundedAmount',refund_total,
     'replayed',false,'totalIncomeUnchanged',true,'framesPreserved',true);
-END $function$
+END $function$;
 
 
 -- Adapt existing canonical function: public.target_shop_rpc
@@ -704,7 +704,7 @@ BEGIN
     THEN jsonb_build_object('duplicateRefund',10000) ELSE '{}'::jsonb END;
 EXCEPTION WHEN invalid_text_representation OR invalid_parameter_value OR numeric_value_out_of_range OR check_violation OR not_null_violation THEN
   RETURN target_private.error_result(400,'INVALID_REQUEST','送信内容を確認してください。');
-END $function$
+END $function$;
 
 
 -- Credit each still-owned extra once, omitting fully refunded receipts. The
