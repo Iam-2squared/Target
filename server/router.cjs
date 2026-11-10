@@ -151,7 +151,7 @@ async function handler(req, res) {
       shop.authorize(req,config);
       return send(res,200,await calculus.wealth(await readJson(req,16384),config));
     }
-    const shopAction={'/api/integrations/kgs/wallet':'wallet','/api/integrations/kgs/gacha':'draw'}[pathname];
+    const shopAction={'/api/integrations/kgs/wallet':'wallet','/api/integrations/kgs/gacha':'draw','/api/integrations/kgs/sell':'sell'}[pathname];
     if(shopAction&&req.method==='POST'){
       // Only the KGS service may assert an already authenticated class member.
       // Authorize before parsing body, rate allocation or the Origin bypass.

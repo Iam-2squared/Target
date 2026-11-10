@@ -11,7 +11,7 @@ const LEGACY_STICKERS=Object.freeze(STICKERS.slice(0,4)),CATALOG_VERSION=5;
 const FRAMES=Object.freeze([['c',15],['r',10],['e',5],['l',3]].flatMap(([prefix,count])=>Array.from({length:count},(_,i)=>prefix+String(i+1).padStart(2,'0'))));
 const FRAME_ODDS=Object.freeze({common:62,rare:25,epic:10,legendary:3});
 const FRAME_RARITY=Object.freeze({c:'common',r:'rare',e:'epic',l:'legendary'});
-const PRICE=100000,LEGACY_PRICE=10000,MAX_POINTS=10000000000000;
+const PRICE=100000,LEGACY_PRICE=10000,SELL_PRICE=10000,MAX_POINTS=10000000000000;
 function authorize(req,config=getConfig()){
   const supplied=typeof req.headers?.authorization==='string'&&req.headers.authorization.length<=8192?req.headers.authorization:'';
   const expected=crypto.createHash('sha256').update('Bearer '+config.integrationSecret).digest();
@@ -19,21 +19,23 @@ function authorize(req,config=getConfig()){
   if(!crypto.timingSafeEqual(expected,actual))throw new HttpError(404,'見つかりません。','NOT_FOUND');
 }
 function parseInput(action,input){
-  const keys=action==='draw'?['memberId','name','requestId']:['memberId','name'];
+  const keys=action==='draw'?['memberId','name','requestId']:action==='sell'?['memberId','name','requestId','itemType','itemId']:['memberId','name'];
   if(action==='draw'&&input&&Object.hasOwn(input,'expectedPrice'))keys.push('expectedPrice');
   if(action==='draw'&&input&&Object.hasOwn(input,'expectedCatalogVersion'))keys.push('expectedCatalogVersion');
   if(action==='draw'&&input&&Object.hasOwn(input,'itemType'))keys.push('itemType');
-  if(!['wallet','draw'].includes(action)||!input||typeof input!=='object'||Array.isArray(input)||
+  if(!['wallet','draw','sell'].includes(action)||!input||typeof input!=='object'||Array.isArray(input)||
       Object.keys(input).length!==keys.length||keys.some(key=>!Object.hasOwn(input,key))||
       typeof input.memberId!=='string'||!UUID.test(input.memberId)||typeof input.name!=='string'||
       !input.name.trim()||input.name.trim().length>20||
       (action==='draw'&&(typeof input.requestId!=='string'||!UUID.test(input.requestId)||
         (Object.hasOwn(input,'expectedPrice')&&![LEGACY_PRICE,PRICE].includes(input.expectedPrice))||
         (Object.hasOwn(input,'expectedCatalogVersion')&&![1,2,3,4,CATALOG_VERSION].includes(input.expectedCatalogVersion))||
-        (Object.hasOwn(input,'itemType')&&!['sticker','frame'].includes(input.itemType))))){
+        (Object.hasOwn(input,'itemType')&&!['sticker','frame'].includes(input.itemType))))||
+      (action==='sell'&&(!UUID.test(input.requestId||'')||!['sticker','frame'].includes(input.itemType)||
+        typeof input.itemId!=='string'||input.itemId.length<1||input.itemId.length>80))){
     throw new HttpError(400,'送信内容を確認してください。','INVALID_REQUEST');
   }
-  return{memberId:input.memberId,name:input.name.trim(),...(action==='draw'?{requestId:input.requestId,...(Object.hasOwn(input,'expectedPrice')?{expectedPrice:input.expectedPrice}:{}),...(Object.hasOwn(input,'expectedCatalogVersion')?{expectedCatalogVersion:input.expectedCatalogVersion}:{}),...(Object.hasOwn(input,'itemType')?{itemType:input.itemType}:{})}:{})};
+  return{memberId:input.memberId,name:input.name.trim(),...(action==='draw'?{requestId:input.requestId,...(Object.hasOwn(input,'expectedPrice')?{expectedPrice:input.expectedPrice}:{}),...(Object.hasOwn(input,'expectedCatalogVersion')?{expectedCatalogVersion:input.expectedCatalogVersion}:{}),...(Object.hasOwn(input,'itemType')?{itemType:input.itemType}:{})}:action==='sell'?{requestId:input.requestId,itemType:input.itemType,itemId:input.itemId}:{})};
 }
 // Only the original four may have historical10k receipts. New catalog items
 // always cost100k; this still accepts every authentic mixed-price history.
@@ -55,6 +57,7 @@ function validateModernWallet(value,{requestId,itemType}={}){
   const mapSpent=Object.hasOwn(value,'mapSpent')?value.mapSpent:0;
   const refundedSpend=Object.hasOwn(value,'refundedSpend')?value.refundedSpend:0;
   const voidedDrawCount=Object.hasOwn(value,'voidedDrawCount')?value.voidedDrawCount:0;
+  const soldItemCount=Object.hasOwn(value,'soldItemCount')?value.soldItemCount:0;
   const retired=value.catalogVersion===4,current=value.catalogVersion===CATALOG_VERSION,catalog=current?ACTIVE_STICKERS:STICKERS;
   if(retired&&(value.catalogSize!==0||value.stickersRetired!==true||value.ownedStickers?.length!==0||value.stickerQuantities?.length!==0))throw invalid();
   if(!retired&&(![3,CATALOG_VERSION].includes(value.catalogVersion)||value.catalogSize!==catalog.length||Object.hasOwn(value,'stickersRetired')))throw invalid();
@@ -62,12 +65,12 @@ function validateModernWallet(value,{requestId,itemType}={}){
   const stickers=validateQuantities(value.ownedStickers,value.stickerQuantities,catalog),frames=validateQuantities(value.ownedFrames,value.frameQuantities,FRAMES);
   if(!['balance','totalIncome','spent'].every(key=>points(value[key]))||value.balance+value.spent!==value.totalIncome||value.price!==PRICE||value.frameCatalogSize!==33||value.duplicatesAllowed!==true||
       !Number.isSafeInteger(value.drawCount)||value.drawCount<0||value.drawCount>100000000||!Number.isSafeInteger(voidedDrawCount)||voidedDrawCount<0||voidedDrawCount>value.drawCount||!Number.isSafeInteger(value.legacyDiscountedDraws)||value.legacyDiscountedDraws<0||value.legacyDiscountedDraws>4||
-      !stickers||!frames||stickers.total+frames.total!==value.drawCount-voidedDrawCount||value.legacyDiscountedDraws>value.drawCount||
+      !stickers||!frames||!Number.isSafeInteger(soldItemCount)||soldItemCount<0||soldItemCount>value.drawCount-voidedDrawCount||stickers.total+frames.total!==value.drawCount-voidedDrawCount-soldItemCount||value.legacyDiscountedDraws>value.drawCount||
       (retired||current?value.legacyDiscountedDraws>voidedDrawCount:value.legacyDiscountedDraws>LEGACY_STICKERS.reduce((sum,id)=>sum+(stickers?.map.get(id)||0),0))||
       refundedSpend>value.drawCount*PRICE-value.legacyDiscountedDraws*(PRICE-LEGACY_PRICE)||
       value.spent+refundedSpend!==value.drawCount*PRICE-value.legacyDiscountedDraws*(PRICE-LEGACY_PRICE)+mapSpent||
       !value.frameOdds||typeof value.frameOdds!=='object'||Array.isArray(value.frameOdds)||Object.keys(value.frameOdds).length!==4||!Object.entries(FRAME_ODDS).every(([key,n])=>value.frameOdds[key]===n))throw invalid();
-  const result={balance:value.balance,totalIncome:value.totalIncome,spent:value.spent,price:PRICE,catalogVersion:value.catalogVersion,catalogSize:retired?0:catalog.length,...(retired?{stickersRetired:true}:{}),frameCatalogSize:33,duplicatesAllowed:true,ownedStickers:stickers.ids,ownedFrames:frames.ids,stickerQuantities:stickers.rows,frameQuantities:frames.rows,drawCount:value.drawCount,legacyDiscountedDraws:value.legacyDiscountedDraws,frameOdds:{...FRAME_ODDS}};
+  const result={balance:value.balance,totalIncome:value.totalIncome,spent:value.spent,price:PRICE,catalogVersion:value.catalogVersion,catalogSize:retired?0:catalog.length,...(retired?{stickersRetired:true}:{}),frameCatalogSize:33,duplicatesAllowed:true,ownedStickers:stickers.ids,ownedFrames:frames.ids,stickerQuantities:stickers.rows,frameQuantities:frames.rows,drawCount:value.drawCount,...(soldItemCount>0?{soldItemCount}:{}),legacyDiscountedDraws:value.legacyDiscountedDraws,frameOdds:{...FRAME_ODDS}};
   if(Object.hasOwn(value,'mapSpent'))result.mapSpent=mapSpent;
   if(Object.hasOwn(value,'refundedSpend'))result.refundedSpend=refundedSpend;
   if(Object.hasOwn(value,'voidedDrawCount'))result.voidedDrawCount=voidedDrawCount;
@@ -77,7 +80,7 @@ function validateModernWallet(value,{requestId,itemType}={}){
     if(receiptVoided&&(value.receiptVoided!==true||voidedDrawCount<1))throw invalid();
     if(pool==='sticker'&&(retired||current&&!ACTIVE_STICKERS.includes(value.itemId))&&(!receiptVoided||value.quantity!==0))throw invalid();
     if(typeof requestId!=='string'||!UUID.test(requestId)||typeof value.requestId!=='string'||value.requestId.toLowerCase()!==requestId.toLowerCase()||value.itemType!==pool||!ids.includes(value.itemId)||value[pool==='sticker'?'stickerId':'frameId']!==value.itemId||
-      !receiptVoided&&!owned.map.has(value.itemId)||value.quantity!==(owned.map.get(value.itemId)??0)||![LEGACY_PRICE,PRICE].includes(value.cost)||value.drawCount<1||value.spent+refundedSpend<value.cost||
+      (!receiptVoided&&soldItemCount===0)&&!owned.map.has(value.itemId)||value.quantity!==(owned.map.get(value.itemId)??0)||![LEGACY_PRICE,PRICE].includes(value.cost)||value.drawCount<1||value.spent+refundedSpend<value.cost||
       (value.cost===LEGACY_PRICE&&(pool!=='sticker'||!LEGACY_STICKERS.includes(value.itemId)||value.legacyDiscountedDraws<1))||
       (pool==='frame'&&(value.rarity!==FRAME_RARITY[value.itemId[0]]||Object.hasOwn(value,'stickerId')))||(pool==='sticker'&&Object.hasOwn(value,'frameId')))throw invalid();
     Object.assign(result,{requestId:requestId.toLowerCase(),itemType:pool,itemId:value.itemId,[pool==='sticker'?'stickerId':'frameId']:value.itemId,quantity:value.quantity,cost:value.cost,...(pool==='frame'?{rarity:value.rarity}:{}),...(receiptVoided?{receiptVoided:true}:{})});
@@ -127,6 +130,11 @@ async function wallet(member){
 async function perform(action,input){
   const parsed=parseInput(action,input);
   await Promise.all([require('./calculus.cjs').refreshMembers([parsed.memberId]),require('./birthday.cjs').refresh()]);
+  if(action==='sell'){
+    const res=await store.sellRpc('sell',parsed),result=validateWallet(res);
+    if(res.requestId?.toLowerCase()!==parsed.requestId.toLowerCase()||res.itemType!==parsed.itemType||res.itemId!==parsed.itemId||res.soldAmount!==SELL_PRICE||result.catalogVersion!==CATALOG_VERSION||result.soldItemCount<1)throw new HttpError(503,'売却結果を確認できませんでした。','SHOP_UNAVAILABLE');
+    return {...result,requestId:parsed.requestId.toLowerCase(),itemType:parsed.itemType,itemId:parsed.itemId,soldAmount:SELL_PRICE};
+  }
   // Historical acknowledgements remain compatible with old DB versions.
   // New purchases require an explicit price, catalog and pool acknowledgment.
   const forwarded={...parsed};if(forwarded.expectedPrice===LEGACY_PRICE)delete forwarded.expectedPrice;
