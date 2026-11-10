@@ -32,7 +32,7 @@ function parseInput(action,input){
         (Object.hasOwn(input,'expectedCatalogVersion')&&![1,2,3,4,CATALOG_VERSION].includes(input.expectedCatalogVersion))||
         (Object.hasOwn(input,'itemType')&&!['sticker','frame'].includes(input.itemType))))||
       (action==='sell'&&(!UUID.test(input.requestId||'')||!['sticker','frame'].includes(input.itemType)||
-        typeof input.itemId!=='string'||input.itemId.length<1||input.itemId.length>80)))){
+        typeof input.itemId!=='string'||input.itemId.length<1||input.itemId.length>80))){
     throw new HttpError(400,'送信内容を確認してください。','INVALID_REQUEST');
   }
   return{memberId:input.memberId,name:input.name.trim(),...(action==='draw'?{requestId:input.requestId,...(Object.hasOwn(input,'expectedPrice')?{expectedPrice:input.expectedPrice}:{}),...(Object.hasOwn(input,'expectedCatalogVersion')?{expectedCatalogVersion:input.expectedCatalogVersion}:{}),...(Object.hasOwn(input,'itemType')?{itemType:input.itemType}:{})}:action==='sell'?{requestId:input.requestId,itemType:input.itemType,itemId:input.itemId}:{})};
