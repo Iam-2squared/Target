@@ -8,14 +8,16 @@ BEGIN
     '  IF p_action=''formation'' THEN'||chr(10)||
     '    RETURN target_private.error_result(409,''FORMATION_FIXED'',''陣形は対戦ごとに自動で決まります。'');'||chr(10)||
     '  END IF;'||chr(10),'');
-  IF md5(current_source) IS DISTINCT FROM '640f070ee4aae1d25910ab58b8284648' OR
-    md5(previous_source) IS DISTINCT FROM 'b7a4c7594a8191dce5b6f677773616df' OR
+  -- Both reviewed generations are accepted so the historical migration suite
+  -- remains runnable; the current turn-clock postflight pins every new helper.
+  IF md5(current_source) NOT IN ('640f070ee4aae1d25910ab58b8284648','625162362bf7d46fa98b19f254ee5671') OR
+    (md5(current_source)='640f070ee4aae1d25910ab58b8284648' AND md5(previous_source) IS DISTINCT FROM 'b7a4c7594a8191dce5b6f677773616df') OR
     (SELECT md5(prosrc) FROM pg_proc WHERE oid='target_private.two_player_lobby_pair(text,uuid,uuid,integer,integer,integer,integer)'::regprocedure)
       IS DISTINCT FROM '5161a2f3b98b94e07d0927a28093893f' OR
     (SELECT md5(prosrc) FROM pg_proc WHERE oid='target_private.two_player_shared_formation()'::regprocedure)
       IS DISTINCT FROM 'e64bb7f29197d8ff6df1b19983dc7704' OR
     (SELECT md5(prosrc) FROM pg_proc WHERE oid='target_private.two_player_initial_state(integer,integer)'::regprocedure)
-      IS DISTINCT FROM '2358e90576964049d2979b1c7d1b81d5' OR
+      NOT IN ('2358e90576964049d2979b1c7d1b81d5','cac093826b5065ce31f96840cfa493ac') OR
     (SELECT md5(prosrc) FROM pg_proc WHERE oid='target_private.wallet_finance_projection(timestamptz)'::regprocedure)
       IS DISTINCT FROM '8e69577732c1f54b2dae637b87aa3fd6' OR
     (SELECT md5(prosrc) FROM pg_proc WHERE oid='public.target_games_rpc(text,text,jsonb)'::regprocedure)
