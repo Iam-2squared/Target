@@ -5,7 +5,9 @@ const {getConfig}=require('./config.cjs');
 const store=require('./store.cjs');
 const UUID=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 const STICKERS=Object.freeze(['youth','sunglasses','night','love','goodnight','hang-in-there','can-you-hear','go','sleepy','screenshot','love-first','no-showoff','chuckle','red-face','whoa','secret','how-about-it']);
-const LEGACY_STICKERS=Object.freeze(STICKERS.slice(0,4)),CATALOG_VERSION=4;
+// Retired IDs remain receipt identities, never the current purchase pool.
+const ACTIVE_STICKERS=Object.freeze(['photo-boss','photo-high-ground','photo-wait','photo-limit','photo-best','photo-secret','photo-hmm','photo-ready','photo-proud','photo-hold-on','photo-hello']);
+const LEGACY_STICKERS=Object.freeze(STICKERS.slice(0,4)),CATALOG_VERSION=5;
 const FRAMES=Object.freeze([['c',15],['r',10],['e',5],['l',3]].flatMap(([prefix,count])=>Array.from({length:count},(_,i)=>prefix+String(i+1).padStart(2,'0'))));
 const FRAME_ODDS=Object.freeze({common:62,rare:25,epic:10,legendary:3});
 const FRAME_RARITY=Object.freeze({c:'common',r:'rare',e:'epic',l:'legendary'});
@@ -27,7 +29,7 @@ function parseInput(action,input){
       !input.name.trim()||input.name.trim().length>20||
       (action==='draw'&&(typeof input.requestId!=='string'||!UUID.test(input.requestId)||
         (Object.hasOwn(input,'expectedPrice')&&![LEGACY_PRICE,PRICE].includes(input.expectedPrice))||
-        (Object.hasOwn(input,'expectedCatalogVersion')&&![1,2,3,CATALOG_VERSION].includes(input.expectedCatalogVersion))||
+        (Object.hasOwn(input,'expectedCatalogVersion')&&![1,2,3,4,CATALOG_VERSION].includes(input.expectedCatalogVersion))||
         (Object.hasOwn(input,'itemType')&&!['sticker','frame'].includes(input.itemType))))){
     throw new HttpError(400,'送信内容を確認してください。','INVALID_REQUEST');
   }
@@ -53,27 +55,27 @@ function validateModernWallet(value,{requestId,itemType}={}){
   const mapSpent=Object.hasOwn(value,'mapSpent')?value.mapSpent:0;
   const refundedSpend=Object.hasOwn(value,'refundedSpend')?value.refundedSpend:0;
   const voidedDrawCount=Object.hasOwn(value,'voidedDrawCount')?value.voidedDrawCount:0;
-  const retired=value.catalogVersion===CATALOG_VERSION;
+  const retired=value.catalogVersion===4,current=value.catalogVersion===CATALOG_VERSION,catalog=current?ACTIVE_STICKERS:STICKERS;
   if(retired&&(value.catalogSize!==0||value.stickersRetired!==true||value.ownedStickers?.length!==0||value.stickerQuantities?.length!==0))throw invalid();
-  if(!retired&&(value.catalogVersion!==3||value.catalogSize!==STICKERS.length||Object.hasOwn(value,'stickersRetired')))throw invalid();
+  if(!retired&&(![3,CATALOG_VERSION].includes(value.catalogVersion)||value.catalogSize!==catalog.length||Object.hasOwn(value,'stickersRetired')))throw invalid();
   if(!points(mapSpent)||mapSpent%100!==0||value.spent%100!==0||mapSpent>value.spent||!points(refundedSpend)||refundedSpend%100!==0)throw invalid();
-  const stickers=validateQuantities(value.ownedStickers,value.stickerQuantities,STICKERS),frames=validateQuantities(value.ownedFrames,value.frameQuantities,FRAMES);
+  const stickers=validateQuantities(value.ownedStickers,value.stickerQuantities,catalog),frames=validateQuantities(value.ownedFrames,value.frameQuantities,FRAMES);
   if(!['balance','totalIncome','spent'].every(key=>points(value[key]))||value.balance+value.spent!==value.totalIncome||value.price!==PRICE||value.frameCatalogSize!==33||value.duplicatesAllowed!==true||
       !Number.isSafeInteger(value.drawCount)||value.drawCount<0||value.drawCount>100000000||!Number.isSafeInteger(voidedDrawCount)||voidedDrawCount<0||voidedDrawCount>value.drawCount||!Number.isSafeInteger(value.legacyDiscountedDraws)||value.legacyDiscountedDraws<0||value.legacyDiscountedDraws>4||
       !stickers||!frames||stickers.total+frames.total!==value.drawCount-voidedDrawCount||value.legacyDiscountedDraws>value.drawCount||
-      (retired?value.legacyDiscountedDraws>voidedDrawCount:value.legacyDiscountedDraws>LEGACY_STICKERS.reduce((sum,id)=>sum+(stickers?.map.get(id)||0),0))||
+      (retired||current?value.legacyDiscountedDraws>voidedDrawCount:value.legacyDiscountedDraws>LEGACY_STICKERS.reduce((sum,id)=>sum+(stickers?.map.get(id)||0),0))||
       refundedSpend>value.drawCount*PRICE-value.legacyDiscountedDraws*(PRICE-LEGACY_PRICE)||
       value.spent+refundedSpend!==value.drawCount*PRICE-value.legacyDiscountedDraws*(PRICE-LEGACY_PRICE)+mapSpent||
       !value.frameOdds||typeof value.frameOdds!=='object'||Array.isArray(value.frameOdds)||Object.keys(value.frameOdds).length!==4||!Object.entries(FRAME_ODDS).every(([key,n])=>value.frameOdds[key]===n))throw invalid();
-  const result={balance:value.balance,totalIncome:value.totalIncome,spent:value.spent,price:PRICE,catalogVersion:value.catalogVersion,catalogSize:retired?0:STICKERS.length,...(retired?{stickersRetired:true}:{}),frameCatalogSize:33,duplicatesAllowed:true,ownedStickers:stickers.ids,ownedFrames:frames.ids,stickerQuantities:stickers.rows,frameQuantities:frames.rows,drawCount:value.drawCount,legacyDiscountedDraws:value.legacyDiscountedDraws,frameOdds:{...FRAME_ODDS}};
+  const result={balance:value.balance,totalIncome:value.totalIncome,spent:value.spent,price:PRICE,catalogVersion:value.catalogVersion,catalogSize:retired?0:catalog.length,...(retired?{stickersRetired:true}:{}),frameCatalogSize:33,duplicatesAllowed:true,ownedStickers:stickers.ids,ownedFrames:frames.ids,stickerQuantities:stickers.rows,frameQuantities:frames.rows,drawCount:value.drawCount,legacyDiscountedDraws:value.legacyDiscountedDraws,frameOdds:{...FRAME_ODDS}};
   if(Object.hasOwn(value,'mapSpent'))result.mapSpent=mapSpent;
   if(Object.hasOwn(value,'refundedSpend'))result.refundedSpend=refundedSpend;
   if(Object.hasOwn(value,'voidedDrawCount'))result.voidedDrawCount=voidedDrawCount;
   if(requestId!==undefined){
-    const pool=itemType||'sticker',ids=pool==='sticker'?STICKERS:FRAMES,owned=pool==='sticker'?stickers:frames;
+    const pool=itemType||'sticker',ids=pool==='sticker'?(current?[...STICKERS,...ACTIVE_STICKERS]:STICKERS):FRAMES,owned=pool==='sticker'?stickers:frames;
     const receiptVoided=Object.hasOwn(value,'receiptVoided');
     if(receiptVoided&&(value.receiptVoided!==true||voidedDrawCount<1))throw invalid();
-    if(retired&&pool==='sticker'&&(!receiptVoided||value.quantity!==0))throw invalid();
+    if(pool==='sticker'&&(retired||current&&!ACTIVE_STICKERS.includes(value.itemId))&&(!receiptVoided||value.quantity!==0))throw invalid();
     if(typeof requestId!=='string'||!UUID.test(requestId)||typeof value.requestId!=='string'||value.requestId.toLowerCase()!==requestId.toLowerCase()||value.itemType!==pool||!ids.includes(value.itemId)||value[pool==='sticker'?'stickerId':'frameId']!==value.itemId||
       !receiptVoided&&!owned.map.has(value.itemId)||value.quantity!==(owned.map.get(value.itemId)??0)||![LEGACY_PRICE,PRICE].includes(value.cost)||value.drawCount<1||value.spent+refundedSpend<value.cost||
       (value.cost===LEGACY_PRICE&&(pool!=='sticker'||!LEGACY_STICKERS.includes(value.itemId)||value.legacyDiscountedDraws<1))||
@@ -83,7 +85,7 @@ function validateModernWallet(value,{requestId,itemType}={}){
   return result;
 }
 function validateWalletWithoutRevision(value,{requestId,itemType}={}){
-  if([3,CATALOG_VERSION].includes(value?.catalogVersion))return validateModernWallet(value,{requestId,itemType});
+  if([3,4,CATALOG_VERSION].includes(value?.catalogVersion))return validateModernWallet(value,{requestId,itemType});
   const hasVersion=!!value&&Object.hasOwn(value,'catalogVersion'),hasSize=!!value&&Object.hasOwn(value,'catalogSize');
   const catalogVersion=hasVersion?value.catalogVersion:1,catalogSize=hasSize?value.catalogSize:LEGACY_STICKERS.length;
   const catalog=catalogVersion===1?LEGACY_STICKERS:STICKERS;
@@ -127,5 +129,5 @@ async function perform(action,input){
   if(forwarded.expectedCatalogVersion===1)delete forwarded.expectedCatalogVersion;
   return validateWallet(await store.shopRpc(action,forwarded),action==='draw'?{requestId:parsed.requestId,itemType:parsed.itemType||'sticker'}:{});
 }
-function guestWallet(){return{balance:0,totalIncome:0,spent:0,ownedStickers:[],ownedFrames:[],stickerQuantities:[],frameQuantities:[],drawCount:0,legacyDiscountedDraws:0,price:PRICE,catalogVersion:CATALOG_VERSION,catalogSize:0,stickersRetired:true,frameCatalogSize:FRAMES.length,duplicatesAllowed:true,frameOdds:{...FRAME_ODDS}};}
-module.exports={authorize,parseInput,validateWallet,wallet,perform,guestWallet,STICKERS,LEGACY_STICKERS,FRAMES,FRAME_ODDS,CATALOG_VERSION,PRICE,LEGACY_PRICE,validHistoricalSpend};
+function guestWallet(){return{balance:0,totalIncome:0,spent:0,ownedStickers:[],ownedFrames:[],stickerQuantities:[],frameQuantities:[],drawCount:0,legacyDiscountedDraws:0,price:PRICE,catalogVersion:CATALOG_VERSION,catalogSize:ACTIVE_STICKERS.length,frameCatalogSize:FRAMES.length,duplicatesAllowed:true,frameOdds:{...FRAME_ODDS}};}
+module.exports={authorize,parseInput,validateWallet,wallet,perform,guestWallet,STICKERS,ACTIVE_STICKERS,LEGACY_STICKERS,FRAMES,FRAME_ODDS,CATALOG_VERSION,PRICE,LEGACY_PRICE,validHistoricalSpend};

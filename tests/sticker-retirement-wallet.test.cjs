@@ -3,14 +3,14 @@ const test=require('node:test'),assert=require('node:assert/strict'),crypto=requ
 const shop=require('../server/shop.cjs');
 // One discounted legacy stamp, two paid stamp duplicates and two frame copies.
 // The refund includes all prior write-offs plus only the remaining stamp cost.
-const retired=()=>({...shop.guestWallet(),totalIncome:1000000,balance:800000,spent:200000,
+const retired=()=>({...shop.guestWallet(),catalogVersion:4,catalogSize:0,stickersRetired:true,totalIncome:1000000,balance:800000,spent:200000,
   drawCount:5,legacyDiscountedDraws:1,voidedDrawCount:3,refundedSpend:210000,
   ownedFrames:['c01'],frameQuantities:[{id:'c01',quantity:2}],walletRevision:14});
 test('retirement preserves frame ownership and historical discounted cost while refunding stamp spending',()=>{
   const value=retired();assert.deepEqual(shop.validateWallet(value),value);
   assert.equal(value.balance+value.spent,value.totalIncome);
   assert.equal(value.spent+value.refundedSpend,410000);
-  assert.equal(shop.validateWallet(shop.guestWallet()).stickersRetired,true);
+  assert.equal(shop.validateWallet(retired()).stickersRetired,true);
 });
 test('retired stamps cannot reappear through malformed inventory, counts or refund proofs',()=>{
   for(const change of [{catalogSize:17},{stickersRetired:false},{stickersRetired:undefined},
