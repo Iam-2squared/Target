@@ -19,9 +19,9 @@ BEGIN
     RAISE EXCEPTION 'Soccer balance plus escrow is not conserved'; END IF;
   IF EXISTS(SELECT 1 FROM target_private.two_player_wallet_events e JOIN target_private.two_player_matches m ON m.id=e.match_id
     WHERE e.member_id NOT IN (m.host_id,m.guest_id) OR
-      (e.phase='reserve' AND e.delta<>-m.stake) OR
-      (e.phase='settle' AND e.delta<>(CASE WHEN m.winner='host' THEN CASE WHEN e.member_id=m.host_id THEN 2*m.stake ELSE 0 END
-        WHEN m.winner='guest' THEN CASE WHEN e.member_id=m.guest_id THEN 2*m.stake ELSE 0 END ELSE m.stake END))) THEN
+      (e.phase='reserve' AND e.delta<>-CASE WHEN e.member_id=m.host_id THEN m.stake ELSE coalesce((to_jsonb(m)->>'guest_stake')::bigint,m.stake) END) OR
+      (e.phase='settle' AND e.delta<>(CASE WHEN m.winner='host' THEN CASE WHEN e.member_id=m.host_id THEN m.stake+coalesce((to_jsonb(m)->>'guest_stake')::bigint,m.stake) ELSE 0 END
+        WHEN m.winner='guest' THEN CASE WHEN e.member_id=m.guest_id THEN m.stake+coalesce((to_jsonb(m)->>'guest_stake')::bigint,m.stake) ELSE 0 END ELSE CASE WHEN e.member_id=m.host_id THEN m.stake ELSE coalesce((to_jsonb(m)->>'guest_stake')::bigint,m.stake) END END))) THEN
     RAISE EXCEPTION 'Soccer ledger event differs from the agreed stake or winner'; END IF;
   IF EXISTS(SELECT 1 FROM target_private.two_player_matches m WHERE m.stake IS NOT NULL AND
     ((SELECT count(*) FROM target_private.two_player_wallet_events e WHERE e.match_id=m.id AND e.phase='reserve')<>2 OR

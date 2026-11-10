@@ -25,7 +25,13 @@ BEGIN
     ('target_private.wallet_finance_projection(timestamptz)','8e69577732c1f54b2dae637b87aa3fd6'),
     ('public.target_games_rpc(text,text,jsonb)','71ddbc56e79a79dcd8a046d556b73a59')
   ) x(signature,hash) LOOP
-    IF (SELECT md5(prosrc) FROM pg_proc WHERE oid=expected.signature::regprocedure) IS DISTINCT FROM expected.hash THEN
+    IF (SELECT md5(prosrc) FROM pg_proc WHERE oid=expected.signature::regprocedure) IS DISTINCT FROM expected.hash AND NOT EXISTS(
+      SELECT 1 FROM (VALUES
+        ('public.two_player_rpc(text,text,jsonb)','07bd70771529b5749c49810f8feb2f08'),
+        ('target_private.two_player_settle(uuid,text,text,text)','21c21d2d34d4ffda68263fde9e9aa7ba'),
+        ('target_private.two_player_match_dto(uuid,boolean)','47fb22ebd189fe67249b1ba2bb127f35')
+      ) newer(signature,hash) WHERE newer.signature=expected.signature AND
+        newer.hash=(SELECT md5(prosrc) FROM pg_proc WHERE oid=expected.signature::regprocedure)) THEN
       RAISE EXCEPTION 'Wallet stake or unchanged gameplay/financial boundary differs: %',expected.signature; END IF;
   END LOOP;
   FOR expected IN SELECT * FROM (VALUES

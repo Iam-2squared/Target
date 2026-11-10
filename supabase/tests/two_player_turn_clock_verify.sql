@@ -16,8 +16,10 @@ BEGIN
     ('public.target_games_rpc(text,text,jsonb)','71ddbc56e79a79dcd8a046d556b73a59')
   ) x(signature,hash) LOOP
     IF (SELECT md5(prosrc) FROM pg_proc WHERE oid=expected.signature::regprocedure) IS DISTINCT FROM expected.hash AND NOT
-      (expected.signature='public.two_player_rpc(text,text,jsonb)' AND
-        (SELECT md5(prosrc) FROM pg_proc WHERE oid=expected.signature::regprocedure)='a31ef2f093dc1dc3204cd9683047c17d') THEN
+      ((expected.signature='public.two_player_rpc(text,text,jsonb)' AND
+        (SELECT md5(prosrc) FROM pg_proc WHERE oid=expected.signature::regprocedure) IN ('a31ef2f093dc1dc3204cd9683047c17d','07bd70771529b5749c49810f8feb2f08')) OR
+       (expected.signature='target_private.two_player_match_dto(uuid,boolean)' AND
+        (SELECT md5(prosrc) FROM pg_proc WHERE oid=expected.signature::regprocedure)='47fb22ebd189fe67249b1ba2bb127f35')) THEN
       RAISE EXCEPTION 'Turn-rule or unchanged financial boundary differs: %',expected.signature; END IF;
   END LOOP;
   IF NOT EXISTS(SELECT 1 FROM pg_trigger WHERE tgname='two_player_turn_clock' AND NOT tgisinternal AND tgenabled='O'

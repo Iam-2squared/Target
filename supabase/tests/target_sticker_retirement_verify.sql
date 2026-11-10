@@ -18,7 +18,9 @@ BEGIN
     ('target_private.receipt_financial_refund_event(uuid,uuid)','002f6d82596f19f7e5df072b6f7c18a0'),
     ('public.two_player_rpc(text,text,jsonb)','a31ef2f093dc1dc3204cd9683047c17d')
   ) v(signature,hash) LOOP
-    IF (SELECT md5(prosrc) FROM pg_proc WHERE oid=expected.signature::regprocedure) IS DISTINCT FROM expected.hash THEN
+    IF (SELECT md5(prosrc) FROM pg_proc WHERE oid=expected.signature::regprocedure) IS DISTINCT FROM expected.hash AND NOT
+      (expected.signature='public.two_player_rpc(text,text,jsonb)' AND
+        (SELECT md5(prosrc) FROM pg_proc WHERE oid=expected.signature::regprocedure)='07bd70771529b5749c49810f8feb2f08') THEN
       RAISE EXCEPTION 'Reviewed retirement or unchanged financial boundary differs: %',expected.signature; END IF;
   END LOOP;
   SELECT * INTO STRICT e FROM target_private.inventory_restoration_events WHERE reset_id=operation_id;
