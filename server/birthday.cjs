@@ -4,7 +4,7 @@ const {getConfig}=require('./config.cjs');
 const {HttpError}=require('./errors.cjs');
 const {UUID}=require('./identity.cjs');
 const store=require('./store.cjs');
-const AMOUNT=100000,MAX_BATCH=100,FOREGROUND_MS=8000,CRON_MS=22000;
+const AMOUNT=1000000,LEGACY_AMOUNT=100000,CUTOVER='2026-11-11',MAX_BATCH=100,FOREGROUND_MS=8000,CRON_MS=22000;
 const exact=(value,keys)=>!!value&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).length===keys.length&&keys.every(key=>Object.hasOwn(value,key));
 const invalid=()=>new HttpError(400,'送信内容を確認してください。','INVALID_REQUEST');
 const unavailable=()=>new HttpError(503,'誕生日プレゼントを確認できませんでした。時間をおいて再試行してください。','BIRTHDAY_GIFT_UNAVAILABLE');
@@ -39,7 +39,7 @@ function parseStatus(value){
   if(!exact(value,['gift']))throw unavailable();
   const gift=value.gift;
   if(gift!==null&&(!exact(gift,['giftYear','birthdayDate','amount','seen'])||!Number.isSafeInteger(gift.giftYear)||gift.giftYear<1000||gift.giftYear>9999||
-    !date(gift.birthdayDate)||Number(gift.birthdayDate.slice(0,4))!==gift.giftYear||gift.amount!==AMOUNT||typeof gift.seen!=='boolean'))throw unavailable();
+    !date(gift.birthdayDate)||Number(gift.birthdayDate.slice(0,4))!==gift.giftYear||![LEGACY_AMOUNT,...(gift.birthdayDate>=CUTOVER?[AMOUNT]:[])].includes(gift.amount)||typeof gift.seen!=='boolean'))throw unavailable();
   return value;
 }
 function parseSource(value){
