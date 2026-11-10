@@ -81,6 +81,12 @@ function validateModernWallet(value,{requestId,itemType}={}){
       (value.cost===LEGACY_PRICE&&(pool!=='sticker'||!LEGACY_STICKERS.includes(value.itemId)||value.legacyDiscountedDraws<1))||
       (pool==='frame'&&(value.rarity!==FRAME_RARITY[value.itemId[0]]||Object.hasOwn(value,'stickerId')))||(pool==='sticker'&&Object.hasOwn(value,'frameId')))throw invalid();
     Object.assign(result,{requestId:requestId.toLowerCase(),itemType:pool,itemId:value.itemId,[pool==='sticker'?'stickerId':'frameId']:value.itemId,quantity:value.quantity,cost:value.cost,...(pool==='frame'?{rarity:value.rarity}:{}),...(receiptVoided?{receiptVoided:true}:{})});
+    // Server-signed receipt marker. The real Target ledger alone decides if
+    // this purchase earned a 10,000-todō duplicate rebate (including replay).
+    if(Object.hasOwn(value,'duplicateRefund')){
+      if(value.duplicateRefund!==10000)throw invalid();
+      result.duplicateRefund=10000;
+    }
   }
   return result;
 }
