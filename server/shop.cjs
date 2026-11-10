@@ -70,7 +70,7 @@ function validateModernWallet(value,{requestId,itemType}={}){
       refundedSpend>value.drawCount*PRICE-value.legacyDiscountedDraws*(PRICE-LEGACY_PRICE)||
       value.spent+refundedSpend!==value.drawCount*PRICE-value.legacyDiscountedDraws*(PRICE-LEGACY_PRICE)+mapSpent||
       !value.frameOdds||typeof value.frameOdds!=='object'||Array.isArray(value.frameOdds)||Object.keys(value.frameOdds).length!==4||!Object.entries(FRAME_ODDS).every(([key,n])=>value.frameOdds[key]===n))throw invalid();
-  const result={balance:value.balance,totalIncome:value.totalIncome,spent:value.spent,price:PRICE,catalogVersion:value.catalogVersion,catalogSize:retired?0:catalog.length,...(retired?{stickersRetired:true}:{}),frameCatalogSize:33,duplicatesAllowed:true,ownedStickers:stickers.ids,ownedFrames:frames.ids,stickerQuantities:stickers.rows,frameQuantities:frames.rows,drawCount:value.drawCount,soldItemCount,legacyDiscountedDraws:value.legacyDiscountedDraws,frameOdds:{...FRAME_ODDS}};
+  const result={balance:value.balance,totalIncome:value.totalIncome,spent:value.spent,price:PRICE,catalogVersion:value.catalogVersion,catalogSize:retired?0:catalog.length,...(retired?{stickersRetired:true}:{}),frameCatalogSize:33,duplicatesAllowed:true,ownedStickers:stickers.ids,ownedFrames:frames.ids,stickerQuantities:stickers.rows,frameQuantities:frames.rows,drawCount:value.drawCount,...(Object.hasOwn(value,'soldItemCount')?{soldItemCount}:{}),legacyDiscountedDraws:value.legacyDiscountedDraws,frameOdds:{...FRAME_ODDS}};
   if(Object.hasOwn(value,'mapSpent'))result.mapSpent=mapSpent;
   if(Object.hasOwn(value,'refundedSpend'))result.refundedSpend=refundedSpend;
   if(Object.hasOwn(value,'voidedDrawCount'))result.voidedDrawCount=voidedDrawCount;
@@ -143,5 +143,5 @@ async function perform(action,input){
   if(forwarded.expectedCatalogVersion===1)delete forwarded.expectedCatalogVersion;
   return validateWallet(await store.shopRpc(action,forwarded),action==='draw'?{requestId:parsed.requestId,itemType:parsed.itemType||'sticker'}:{});
 }
-function guestWallet(){return{balance:0,totalIncome:0,spent:0,ownedStickers:[],ownedFrames:[],stickerQuantities:[],frameQuantities:[],drawCount:0,soldItemCount:0,legacyDiscountedDraws:0,price:PRICE,catalogVersion:CATALOG_VERSION,catalogSize:ACTIVE_STICKERS.length,frameCatalogSize:FRAMES.length,duplicatesAllowed:true,frameOdds:{...FRAME_ODDS}};}
+function guestWallet(){return{balance:0,totalIncome:0,spent:0,ownedStickers:[],ownedFrames:[],stickerQuantities:[],frameQuantities:[],drawCount:0,legacyDiscountedDraws:0,price:PRICE,catalogVersion:CATALOG_VERSION,catalogSize:ACTIVE_STICKERS.length,frameCatalogSize:FRAMES.length,duplicatesAllowed:true,frameOdds:{...FRAME_ODDS}};}
 module.exports={authorize,parseInput,validateWallet,wallet,perform,guestWallet,STICKERS,ACTIVE_STICKERS,LEGACY_STICKERS,FRAMES,FRAME_ODDS,CATALOG_VERSION,PRICE,LEGACY_PRICE,validHistoricalSpend};
