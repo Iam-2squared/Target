@@ -211,5 +211,6 @@ EXCEPTION WHEN invalid_text_representation OR invalid_parameter_value OR numeric
  RETURN target_private.error_result(400,'INVALID_REQUEST','送信内容を確認してください。');
 END $sell$;
 REVOKE ALL ON FUNCTION public.target_sell_rpc(text,text,jsonb) FROM PUBLIC,anon,authenticated;
--- GRANT only service_role and postgres; never allow direct public/user calls.
-GRANT EXECUTE ON FUNCTION public.target_sell_rpc(text,text,jsonb) TO service_role;
+-- Supabase publishable-key transports run under anon. Same as target_shop_rpc,
+-- execution is always protected by the in-function hashed integration secret.
+GRANT EXECUTE ON FUNCTION public.target_sell_rpc(text,text,jsonb) TO anon,service_role;
