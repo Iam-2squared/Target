@@ -137,3 +137,6 @@ BEGIN
     END IF;
   END IF;
 END $cron$;
+
+-- Make the new guarded read-only RPC discoverable by the existing PostgREST API.
+NOTIFY pgrst, 'reload schema';
