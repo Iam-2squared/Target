@@ -8,7 +8,7 @@ const STICKERS=Object.freeze(['youth','sunglasses','night','love','goodnight','h
 // Retired IDs remain receipt identities, never the current purchase pool.
 const ACTIVE_STICKERS=Object.freeze(['photo-boss','photo-high-ground','photo-wait','photo-limit','photo-best','photo-secret','photo-hmm','photo-ready','photo-proud','photo-hold-on','photo-hello']);
 const LEGACY_STICKERS=Object.freeze(STICKERS.slice(0,4)),CATALOG_VERSION=5;
-const FRAMES=Object.freeze([['c',15],['r',10],['e',5],['l',3]].flatMap(([prefix,count])=>Array.from({length:count},(_,i)=>prefix+String(i+1).padStart(2,'0'))));
+const FRAMES=Object.freeze([['c',15],['r',15],['e',10],['l',8]].flatMap(([prefix,count])=>Array.from({length:count},(_,i)=>prefix+String(i+1).padStart(2,'0'))));
 const FRAME_ODDS=Object.freeze({common:62,rare:25,epic:10,legendary:3});
 const FRAME_RARITY=Object.freeze({c:'common',r:'rare',e:'epic',l:'legendary'});
 const PRICE=100000,LEGACY_PRICE=10000,SELL_PRICE=10000,MAX_POINTS=10000000000000;
@@ -63,14 +63,14 @@ function validateModernWallet(value,{requestId,itemType}={}){
   if(!retired&&(![3,CATALOG_VERSION].includes(value.catalogVersion)||value.catalogSize!==catalog.length||Object.hasOwn(value,'stickersRetired')))throw invalid();
   if(!points(mapSpent)||mapSpent%100!==0||value.spent%100!==0||mapSpent>value.spent||!points(refundedSpend)||refundedSpend%100!==0)throw invalid();
   const stickers=validateQuantities(value.ownedStickers,value.stickerQuantities,catalog),frames=validateQuantities(value.ownedFrames,value.frameQuantities,FRAMES);
-  if(!['balance','totalIncome','spent'].every(key=>points(value[key]))||value.balance+value.spent!==value.totalIncome||value.price!==PRICE||value.frameCatalogSize!==33||value.duplicatesAllowed!==true||
+  if(!['balance','totalIncome','spent'].every(key=>points(value[key]))||value.balance+value.spent!==value.totalIncome||value.price!==PRICE||![33,48].includes(value.frameCatalogSize)||value.duplicatesAllowed!==true||
       !Number.isSafeInteger(value.drawCount)||value.drawCount<0||value.drawCount>100000000||!Number.isSafeInteger(voidedDrawCount)||voidedDrawCount<0||voidedDrawCount>value.drawCount||!Number.isSafeInteger(value.legacyDiscountedDraws)||value.legacyDiscountedDraws<0||value.legacyDiscountedDraws>4||
       !stickers||!frames||!Number.isSafeInteger(soldItemCount)||soldItemCount<0||soldItemCount>value.drawCount-voidedDrawCount||stickers.total+frames.total!==value.drawCount-voidedDrawCount-soldItemCount||value.legacyDiscountedDraws>value.drawCount||
       (retired||current?value.legacyDiscountedDraws>voidedDrawCount:value.legacyDiscountedDraws>LEGACY_STICKERS.reduce((sum,id)=>sum+(stickers?.map.get(id)||0),0))||
       refundedSpend>value.drawCount*PRICE-value.legacyDiscountedDraws*(PRICE-LEGACY_PRICE)||
       value.spent+refundedSpend!==value.drawCount*PRICE-value.legacyDiscountedDraws*(PRICE-LEGACY_PRICE)+mapSpent||
       !value.frameOdds||typeof value.frameOdds!=='object'||Array.isArray(value.frameOdds)||Object.keys(value.frameOdds).length!==4||!Object.entries(FRAME_ODDS).every(([key,n])=>value.frameOdds[key]===n))throw invalid();
-  const result={balance:value.balance,totalIncome:value.totalIncome,spent:value.spent,price:PRICE,catalogVersion:value.catalogVersion,catalogSize:retired?0:catalog.length,...(retired?{stickersRetired:true}:{}),frameCatalogSize:33,duplicatesAllowed:true,ownedStickers:stickers.ids,ownedFrames:frames.ids,stickerQuantities:stickers.rows,frameQuantities:frames.rows,drawCount:value.drawCount,...(soldItemCount>0?{soldItemCount}:{}),legacyDiscountedDraws:value.legacyDiscountedDraws,frameOdds:{...FRAME_ODDS}};
+  const result={balance:value.balance,totalIncome:value.totalIncome,spent:value.spent,price:PRICE,catalogVersion:value.catalogVersion,catalogSize:retired?0:catalog.length,...(retired?{stickersRetired:true}:{}),frameCatalogSize:value.frameCatalogSize,duplicatesAllowed:true,ownedStickers:stickers.ids,ownedFrames:frames.ids,stickerQuantities:stickers.rows,frameQuantities:frames.rows,drawCount:value.drawCount,...(soldItemCount>0?{soldItemCount}:{}),legacyDiscountedDraws:value.legacyDiscountedDraws,frameOdds:{...FRAME_ODDS}};
   if(Object.hasOwn(value,'mapSpent'))result.mapSpent=mapSpent;
   if(Object.hasOwn(value,'refundedSpend'))result.refundedSpend=refundedSpend;
   if(Object.hasOwn(value,'voidedDrawCount'))result.voidedDrawCount=voidedDrawCount;
