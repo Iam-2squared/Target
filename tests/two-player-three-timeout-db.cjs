@@ -85,7 +85,7 @@ async function main(){
  admin=new Client({connectionString:aurl.href});await admin.connect();
  await admin.query('CREATE DATABASE "'+databaseName+'"');created=true;
  url.pathname='/'+databaseName;db=new Client({connectionString:url.href});await db.connect();
- await db.query("DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname='anon') THEN CREATE ROLE anon NOLOGIN; END IF; IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname='authenticated') THEN CREATE ROLE authenticated NOLOGIN; END IF; END $$");
+ await db.query("DO $ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname='anon') THEN CREATE ROLE anon NOLOGIN; END IF; IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname='authenticated') THEN CREATE ROLE authenticated NOLOGIN; END IF; IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname='service_role') THEN CREATE ROLE service_role NOLOGIN; END IF; END $");
  const dir=path.join(root,'supabase/migrations');
  for(const file of (await fs.readdir(dir)).filter(f=>/^[0-9]+_.*\.sql$/.test(f)).sort()){
    await db.query(await fs.readFile(path.join(dir,file),'utf8'));
