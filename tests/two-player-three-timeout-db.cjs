@@ -60,7 +60,7 @@ async function shot(matchId){
  return result.match;
 }
 async function miss(id){
- await db.query("UPDATE target_private.two_player_matches SET turn_started_at=clock_timestamp()-interval '61 seconds',turn_expires_at=clock_timestamp()-interval '1 second' WHERE id=$1",[id]);
+ await db.query("WITH t AS MATERIALIZED(SELECT clock_timestamp()-interval '1 second' AS due) UPDATE target_private.two_player_matches SET turn_started_at=t.due-interval '60 seconds',turn_expires_at=t.due FROM t WHERE id=$1",[id]);
  await db.query('SELECT target_private.two_player_advance_turn(NULL,100)');
  return row(id);
 }
@@ -143,7 +143,7 @@ async function main(){
 
  // Unattended games are not arbitrarily awarded to either absent person.
  m=await start();
- await db.query("UPDATE target_private.two_player_matches SET turn_started_at=clock_timestamp()-interval '8 minutes',turn_expires_at=clock_timestamp()-interval '7 minutes' WHERE id=$1",[m.id]);
+ await db.query("WITH t AS MATERIALIZED(SELECT clock_timestamp()-interval '7 minutes' AS due) UPDATE target_private.two_player_matches SET turn_started_at=t.due-interval '60 seconds',turn_expires_at=t.due FROM t WHERE id=$1",[m.id]);
  await db.query('SELECT target_private.two_player_advance_turn(NULL,100)');
  let idle=await row(m.id);
  eq(idle.status,'playing','two idle sides cannot earn payouts');
@@ -159,7 +159,7 @@ async function main(){
  const active=actor(m);
  const accepted=await rpc(active,'input',{matchId:m.id,round:m.round,version:2,piece:0,angle:0,power:0});
  ok(accepted._processing,'pending shot');
- await db.query("UPDATE target_private.two_player_matches SET turn_started_at=clock_timestamp()-interval '61 seconds',turn_expires_at=clock_timestamp()-interval '1 second' WHERE id=$1",[m.id]);
+ await db.query("WITH t AS MATERIALIZED(SELECT clock_timestamp()-interval '1 second' AS due) UPDATE target_private.two_player_matches SET turn_started_at=t.due-interval '60 seconds',turn_expires_at=t.due FROM t WHERE id=$1",[m.id]);
  await db.query('SELECT target_private.two_player_advance_turn(NULL,100)');
  const pending=await row(m.id);
  eq(pending.round,m.round,'pending shot not skipped');
