@@ -12,7 +12,7 @@ BEGIN
     WHERE oid='target_private.two_player_social_stamps'::regclass AND relrowsecurity)
  THEN RAISE EXCEPTION 'Social tables require RLS'; END IF;
  IF EXISTS(SELECT 1 FROM target_private.two_player_social_stamps
-   WHERE stamp_id NOT BETWEEN 1 AND 5 OR actor_side NOT IN ('host','guest'))
+   WHERE stamp_id NOT BETWEEN 1 AND 8 OR actor_side NOT IN ('host','guest'))
  THEN RAISE EXCEPTION 'Unexpected stamp record'; END IF;
  IF EXISTS(SELECT 1 FROM target_private.two_player_social_viewers v
    JOIN target_private.two_player_matches m ON m.id=v.match_id
