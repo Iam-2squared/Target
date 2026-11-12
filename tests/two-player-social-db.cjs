@@ -87,9 +87,9 @@ async function main(){
  eq(presence.social.viewers,[people[2].name]);
  const unauthStamp=await social(people[2],'stamp',{matchId:id,stampId:2});
  eq(unauthStamp.error.code,'NOT_PARTICIPANT');
- for(const stampId of [0,6,'1','<b>Custom</b>']){
+ for(const stampId of [0,9,'1','<b>Custom</b>']){
   const invalid=await social(people[0],'stamp',{matchId:id,stampId});
-  eq(invalid.error.code,'INVALID_REQUEST','only five fixed stamp codes');
+  eq(invalid.error.code,'INVALID_REQUEST','only eight fixed stamp codes');
  }
  const first=await social(people[0],'stamp',{matchId:id,stampId:1});
  ok(first.ok,'player sends approved stamp');
@@ -103,6 +103,16 @@ async function main(){
  eq(feed.social.viewers,[people[2].name]);
  const seen=await social(people[2],'watch',{matchId:id,afterRound:0});
  eq(seen.social.stamp.id,first.stamp.id);
+ for(const stampId of [6,7,8]){
+   // Fast-forward the sender cooldown in this isolated fixture; production
+   // enforces the same five-second gap.
+   await db.query("UPDATE target_private.two_player_social_stamps SET sent_at=clock_timestamp()-interval '6 seconds' WHERE match_id=$1 AND actor=$2",[id,people[0].id]);
+   const receipt=await social(people[0],'stamp',{matchId:seen.match.id,stampId:stampId});
+   ok(receipt.ok,'extended fixed stamp ID '+stampId+' is authorized');
+   eq(receipt.stamp.stampId,stampId,'saved approved stamp ID');
+   eq((await social(people[1],'feed',{matchId:seen.match.id} )).social.stamp.stampId,stampId,'opponent sees newest text stamp');
+ }
+ 
  eq((await social(people[2],'stamp',{matchId:id,stampId:1})).error.code,'NOT_PARTICIPANT');
  const invalidAction=await social(people[2],'resolve',{matchId:id});
  eq(invalidAction.error.code,'INVALID_REQUEST');
