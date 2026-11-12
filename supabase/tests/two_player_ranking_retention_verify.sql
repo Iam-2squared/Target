@@ -20,17 +20,18 @@ BEGIN
   END IF;
   IF EXISTS (
     SELECT 1 FROM target_private.two_player_matches
-    WHERE status='finished' AND winner IN ('host','guest')
+    WHERE status='finished' AND winner IN ('host','guest') AND reason IS DISTINCT FROM 'three_timeouts'
       AND ((winner='host' AND host_score<>3) OR (winner='guest' AND guest_score<>3))
   ) THEN
     RAISE EXCEPTION 'A finished win lacks three goals; review ranking before publishing';
   END IF;
   WITH victories AS (
     SELECT CASE WHEN winner='host' THEN host_id ELSE guest_id END AS member_id,
-      3-CASE WHEN winner='host' THEN guest_score ELSE host_score END AS points
+      CASE WHEN reason='three_timeouts' THEN 1 ELSE 3-CASE WHEN winner='host' THEN guest_score ELSE host_score END END AS points
     FROM target_private.two_player_matches
     WHERE status='finished' AND settled_at IS NOT NULL AND escrow=0
-      AND ((winner='host' AND host_score=3 AND guest_score BETWEEN 0 AND 2)
+      AND ((reason='three_timeouts' AND winner IN ('host','guest') AND host_score BETWEEN 0 AND 2 AND guest_score BETWEEN 0 AND 2)
+        OR (winner='host' AND host_score=3 AND guest_score BETWEEN 0 AND 2)
         OR (winner='guest' AND guest_score=3 AND host_score BETWEEN 0 AND 2))
   ) SELECT COUNT(*),COALESCE(SUM(points),0) INTO source_wins,source_points FROM victories;
   IF source_points<source_wins OR source_points>source_wins*3 THEN
