@@ -110,7 +110,7 @@ async function main(){
  eq(final.winner,winnerSeat,'other player wins');
  eq(final[loserSeat+'_timeout_streak'],3,'final streak retained');
  eq([final.host_score,final.guest_score],[0,0],'never forge goals');
- eq(final.escrow,0,'funding released');
+ eq(Number(final.escrow),0,'funding released');
  const endBalances=await balances();
  eq(endBalances[people.findIndex(p=>p.id===loser)],9900,'loser loses only their original stake');
  eq(endBalances[people.findIndex(p=>p.id===winner)],10100,'winner gets exact two-player pot');
