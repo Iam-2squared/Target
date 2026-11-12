@@ -193,10 +193,12 @@ REVOKE ALL ON FUNCTION target_private.two_player_social_cleanup()
  FROM PUBLIC,anon,authenticated,service_role;
 DO $cron$
 BEGIN
- IF EXISTS(SELECT 1 FROM pg_extension WHERE extname='pg_cron') AND
-    NOT EXISTS(SELECT 1 FROM cron.job WHERE jobname='two-player-social-cleanup')
- THEN PERFORM cron.schedule('two-player-social-cleanup','*/5 * * * *',
-    'SELECT target_private.two_player_social_cleanup()'); END IF;
+ IF EXISTS(SELECT 1 FROM pg_extension WHERE extname='pg_cron') THEN
+   IF NOT EXISTS(SELECT 1 FROM cron.job WHERE jobname='two-player-social-cleanup') THEN
+     PERFORM cron.schedule('two-player-social-cleanup','*/5 * * * *',
+       'SELECT target_private.two_player_social_cleanup()');
+   END IF;
+ END IF;
 END $cron$;
 NOTIFY pgrst,'reload schema';
 COMMIT;
