@@ -157,7 +157,13 @@ async function handler(req, res) {
       // by deployment. This endpoint uses only the authenticated JSON body,
       // never query values. Keep authorization before parsing and ignore
       // transport query keys rather than rejecting a valid internal rewrite.
-      return send(res,200,await require('./badges.cjs').perform(await readJson(req,2048)));
+      try{
+        return send(res,200,await require('./badges.cjs').perform(await readJson(req,2048)));
+      }catch(error){
+        // Never log member identifiers, body values or bearer credentials.
+        if(error instanceof HttpError)console.error('[mastery-badges] Target validation:',error.code);
+        throw error;
+      }
     }
     const shopAction={'/api/integrations/kgs/wallet':'wallet','/api/integrations/kgs/gacha':'draw','/api/integrations/kgs/sell':'sell'}[pathname];
     if(shopAction&&req.method==='POST'){
