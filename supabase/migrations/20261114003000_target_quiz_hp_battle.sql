@@ -141,6 +141,34 @@ BEGIN
    'SELECT member_id,delta,created_at FROM target_private.battle_wallet_events) a');
 END $projection$;
 
+
+-- A player cannot reserve stakes in soccer and quiz HP battles simultaneously.
+-- Both writers already take advisory lock 991101; triggers fence even old
+-- compiled soccer writers that began before this migration committed.
+CREATE FUNCTION target_private.battle_no_soccer_overlap()
+RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=pg_catalog AS $
+BEGIN
+ IF NEW.status='playing' AND OLD.status IS DISTINCT FROM 'playing' AND EXISTS(
+   SELECT 1 FROM target_private.two_player_matches s WHERE s.status='playing'
+    AND (s.host_id IN (NEW.host_id,NEW.guest_id) OR s.guest_id IN (NEW.host_id,NEW.guest_id))
+ ) THEN RAISE EXCEPTION 'Participant has a funded soccer game' USING ERRCODE='23514'; END IF;
+ RETURN NEW;
+END $;
+CREATE TRIGGER battle_no_soccer_overlap BEFORE UPDATE OF status ON target_private.battle_matches
+ FOR EACH ROW EXECUTE FUNCTION target_private.battle_no_soccer_overlap();
+
+CREATE FUNCTION target_private.soccer_no_battle_overlap()
+RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=pg_catalog AS $
+BEGIN
+ IF NEW.status='playing' AND OLD.status IS DISTINCT FROM 'playing' AND EXISTS(
+   SELECT 1 FROM target_private.battle_matches b WHERE b.status='playing'
+    AND (b.host_id IN (NEW.host_id,NEW.guest_id) OR b.guest_id IN (NEW.host_id,NEW.guest_id))
+ ) THEN RAISE EXCEPTION 'Participant has a funded quiz HP battle' USING ERRCODE='23514'; END IF;
+ RETURN NEW;
+END $;
+CREATE TRIGGER soccer_no_battle_overlap BEFORE UPDATE OF status ON target_private.two_player_matches
+ FOR EACH ROW EXECUTE FUNCTION target_private.soccer_no_battle_overlap();
+
 CREATE FUNCTION target_private.battle_wallet_headroom()
 RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=pg_catalog AS $$
 DECLARE pending bigint;
@@ -404,7 +432,9 @@ BEGIN
  IF previous.request_id IS NOT NULL THEN
    IF previous.action<>p_action OR previous.payload_hash<>payload_digest THEN
      RETURN target_private.error_result(409,'BATTLE_REQUEST_CONFLICT','この操作は内容が変更されています。'); END IF;
-   RETURN previous.response||jsonb_build_object('replayed',true);
+   RETURN (previous.response-'match'-'wallet')||jsonb_build_object(
+     'match',target_private.battle_dto(previous.match_id,actor),
+     'wallet',target_private.games_wallet(actor),'replayed',true);
  END IF;
 
  IF p_action='challenge' THEN
@@ -465,6 +495,10 @@ BEGIN
              p.casino_net-m.stake< -10000000000000 OR
              p.wallet_revision>=9999999999999)) THEN
          RETURN target_private.error_result(409,'BATTLE_INSUFFICIENT_BALANCE','2人の残高または受取上限が不足しています。');
+       END IF;
+       IF EXISTS(SELECT 1 FROM target_private.two_player_matches s WHERE s.status='playing'
+          AND (s.host_id IN (m.host_id,m.guest_id) OR s.guest_id IN (m.host_id,m.guest_id))) THEN
+         RETURN target_private.error_result(409,'BATTLE_SOCCER_BUSY','2playerの対戦中は開始できません。');
        END IF;
        UPDATE target_private.battle_matches SET status='playing',escrow=2*stake,
           host_ready=true,guest_ready=true,updated_at=clock_timestamp(),
