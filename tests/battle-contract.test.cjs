@@ -3,6 +3,7 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
+const root=path.resolve(__dirname,'..');
 const {settings,input,matchIdInUrl,BOOK_SECTIONS,HP_OPTIONS}=require('../server/battle.cjs');
 const UUID='123e4567-e89b-42d3-a456-426614174000';
 const OPPONENT='123e4567-e89b-42d3-a456-426614174001';
