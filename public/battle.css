@@ -1,0 +1,73 @@
+
+/* Quiz HP battle: center-origin paired health bars, mobile-first Target palette. */
+#battleView { max-width:900px; margin-inline:auto; }
+#battleView h2 { color:#283c51; font-size:18px; line-height:1.45; }
+.battle-intro { color:#637588; font-size:13px; line-height:1.8; margin:10px 0; }
+.battle-status { min-height:22px; margin:10px 0; font-size:13px; color:#315971; line-height:1.5; overflow-wrap:anywhere; }
+.battle-status.is-error { color:#b04840; }
+.battle-heading { display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e3e8eb; padding:12px 0; }
+.battle-heading>span { color:#718191; font-size:12px; }
+.battle-people { display:grid; gap:9px; margin:15px 0 24px; }
+.battle-person { display:flex; gap:12px; align-items:center; min-height:62px; padding:8px 12px; border:1px solid #e1e5e9; border-radius:10px; background:#fff; }
+.battle-person>strong { flex:1; min-width:0; overflow-wrap:anywhere; font-size:15px; color:#263b52; }
+.battle-person>.secondary-button { flex:0 0 auto; margin:0; min-height:44px; padding:8px 14px; font-size:13px; }
+.battle-avatar { display:grid; place-items:center; flex:0 0 auto; height:46px; width:46px; border-radius:50%; border:2px solid #b6cadd; background:#eaf0f7; color:#294e76; font-size:17px; font-weight:700; }
+#battleInvitations,#battleSentInvitations { margin-top:20px; }
+#battleInvitations>h2,#battleSentInvitations>h2 { margin:0 0 10px; }
+.battle-invite { padding:14px; border:1px solid #e3e7ec; border-radius:10px; margin-bottom:10px; background:#fff; }
+.battle-invite>button { margin-right:10px; min-height:42px; padding:9px 15px; }
+.battle-box { padding:18px; border:1px solid #dfe5e9; background:#fff; border-radius:12px; margin:16px 0; }
+.battle-box h2 { margin:0 0 8px; }
+.battle-form { display:grid; gap:16px; margin-top:16px; }
+.battle-form label { display:grid; gap:8px; color:#2f4357; font-size:13px; font-weight:600; }
+.battle-form select,.battle-form input {
+  width:100%; min-width:0; min-height:50px; padding:10px 12px;
+  border:1px solid #d9e0e5; border-radius:8px; background:#fafbfc;
+  font:inherit; font-weight:500; color:#263c52;
+}
+.battle-range { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.battle-pot-preview { margin:0; font-size:14px; color:#395d7d; font-weight:700; }
+#battleOfferBack { display:block; margin:15px auto 0; min-height:44px; }
+#battleApprovalsBlock { margin-top:20px; padding-top:16px; border-top:1px solid #e2e6e9; }
+#battleApprovals { margin-bottom:12px; font-weight:600; }
+.battle-caution { margin:12px 0; font-size:11px; line-height:1.8; color:#697c8c; }
+.battle-board { margin:16px 0 22px; padding:16px 10px; border:1px solid #dfe6ee; border-radius:12px; background:linear-gradient(180deg,#f7faff,#fff); }
+.battle-names { display:grid; grid-template-columns:minmax(0,1fr) minmax(110px,1fr) minmax(0,1fr); align-items:start; gap:6px; }
+.battle-names>strong { min-width:0; color:#253c52; font-size:13px; overflow-wrap:anywhere; line-height:1.5; }
+.battle-names>strong:last-child { text-align:right; }
+.battle-pot { display:grid; gap:4px; justify-items:center; color:#1d456b; min-width:0; }
+.battle-pot small { font-size:10px; font-weight:500; color:#748296; }
+.battle-pot strong { font-size:clamp(12px,3.4vw,18px); font-weight:750; text-align:center; overflow-wrap:anywhere; }
+.battle-bars { display:grid; grid-template-columns:minmax(0,1fr) 4px minmax(0,1fr); height:20px; margin:18px 0 12px; gap:0; }
+.battle-half { position:relative; overflow:hidden; background:#e1e9f0; }
+.battle-left { border-radius:8px 0 0 8px; }
+.battle-right { border-radius:0 8px 8px 0; }
+.battle-half>span { position:absolute; display:block; top:0; bottom:0; transition:width 260ms ease; }
+.battle-left>span { right:0; background:#5e9bc3; }
+.battle-right>span { left:0; background:#b78c78; }
+.battle-mid { background:#334960; z-index:1; border-radius:2px; }
+.battle-avatars { display:flex; align-items:start; justify-content:space-between; }
+.battle-avatars>div { display:grid; gap:6px; justify-items:center; }
+.battle-avatars>div:last-child { justify-items:center; }
+.battle-avatars b { font-size:11px; color:#4e6984; font-variant-numeric:tabular-nums; }
+.battle-avatars .battle-avatar { height:52px; width:52px; }
+.battle-question { margin:28px 0 10px; }
+.battle-question>small { color:#6c8195; font-size:12px; }
+.battle-question h2 { margin:12px 0 22px; text-align:center; font-size:clamp(21px,5vw,29px)!important; }
+.battle-choices { display:grid; gap:10px; }
+.battle-choice { display:flex; align-items:center; gap:12px; width:100%; min-height:66px; padding:12px 16px; text-align:left; background:#fff; border:1.5px solid #dce3ea; border-radius:10px; color:#243a52; font-size:19px; font-weight:650; overflow-wrap:anywhere; }
+.battle-choice:focus-visible,.battle-person button:focus-visible { outline:3px solid #5491ba; outline-offset:2px; }
+.battle-choice:disabled { opacity:.52; }
+.battle-letter { display:grid; place-items:center; width:28px; height:28px; border-radius:7px; background:#e8eff5; color:#54738d; font-size:13px; flex:0 0 auto; }
+.battle-feedback { min-height:28px; font-size:15px; font-weight:650; color:#305d87; }
+.battle-forfeit { margin-top:20px; min-height:44px; }
+#battleDoneTitle { font-size:28px!important; }
+#battleDoneMessage { font-size:15px; line-height:1.8; }
+#battleAgain { margin-top:18px; }
+@media (max-width:380px) {
+  .battle-range { gap:8px; }
+  .battle-board { padding:12px 6px; }
+  .battle-names { grid-template-columns:minmax(0,1fr) minmax(94px,1fr) minmax(0,1fr); }
+  .battle-choice { min-height:60px; font-size:17px; padding:12px; }
+}
+@media (prefers-reduced-motion:reduce) { .battle-half>span { transition:none; } }
