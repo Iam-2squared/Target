@@ -16,6 +16,14 @@ async function request(url){
  return {status:res.statusCode,data:JSON.parse(res.body)};
 }
 test('internal Vercel route parameter is accepted; unexpected query is denied',async()=>{
+ const vars=['NODE_ENV','VERCEL','TARGET_RPC_SECRET','TARGET_COOKIE_SECRET','KGS_TARGET_INTEGRATION_SECRET','KGS_IDENTITY_URL','TARGET_ALLOWED_ORIGINS','TARGET_SUPABASE_URL','TARGET_SUPABASE_PUBLISHABLE_KEY'];
+ const original=Object.fromEntries(vars.map(key=>[key,process.env[key]]));
+ Object.assign(process.env,{
+  NODE_ENV:'test',VERCEL:'',TARGET_RPC_SECRET:'r'.repeat(40),TARGET_COOKIE_SECRET:'c'.repeat(40),
+  KGS_TARGET_INTEGRATION_SECRET:'k'.repeat(40),KGS_IDENTITY_URL:'http://127.0.0.1:3000',
+  TARGET_ALLOWED_ORIGINS:'http://127.0.0.1:3000',
+  TARGET_SUPABASE_URL:'https://fixture.supabase.co',TARGET_SUPABASE_PUBLISHABLE_KEY:'fixture-test-key'.repeat(4)
+ });
  shop.authorize=()=>{};
  badges.perform=async()=>({ok:true,earnedIds:[],completedSections:0,sectionTotal:33});
  try{
@@ -33,5 +41,5 @@ test('internal Vercel route parameter is accepted; unexpected query is denied',a
    const r=await request(url);assert.equal(r.status,400,url);
    assert.equal(r.data.error.code,'INVALID_REQUEST');
   }
- }finally{shop.authorize=originalAuthorize;badges.perform=originalPerform;}
+ }finally{shop.authorize=originalAuthorize;badges.perform=originalPerform;for(const key of vars){if(original[key]===undefined)delete process.env[key];else process.env[key]=original[key];}}
 });
