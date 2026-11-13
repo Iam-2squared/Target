@@ -250,6 +250,35 @@ BEGIN
  DELETE FROM target_private.battle_current_questions WHERE match_id=p_match;
 END $$;
 
+
+-- A disconnected pair must not leave reserved wallets locked forever.
+-- If pg_cron is available, process expiries every minute even without any
+-- visiting browser. A local PostgreSQL test can call this function directly.
+CREATE FUNCTION target_private.battle_expire(p_limit integer DEFAULT 100)
+RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
+DECLARE record_id uuid; expired integer:=0;
+BEGIN
+ IF p_limit IS NULL OR p_limit NOT BETWEEN 1 AND 100 THEN
+   RAISE EXCEPTION 'Invalid battle expiration batch limit' USING ERRCODE='22023'; END IF;
+ PERFORM pg_advisory_xact_lock(991101);
+ FOR record_id IN SELECT id FROM target_private.battle_matches
+   WHERE status IN ('invited','setup','playing') AND expires_at<=clock_timestamp()
+   ORDER BY expires_at,id LIMIT p_limit FOR UPDATE LOOP
+   PERFORM target_private.battle_settle(record_id,NULL,'idle_timeout');
+   expired:=expired+1;
+ END LOOP;
+ RETURN expired;
+END $$;
+REVOKE ALL ON FUNCTION target_private.battle_expire(integer)
+ FROM PUBLIC,anon,authenticated,service_role;
+DO $battle_schedule$
+BEGIN
+ IF to_regprocedure('cron.schedule(text,text,text)') IS NOT NULL THEN
+   PERFORM cron.schedule('target_quiz_hp_battle_expire','* * * * *',
+     'SELECT target_private.battle_expire(100)');
+ END IF;
+END $battle_schedule$;
+
 -- One accepted answer per question and no client-provided grading.
 CREATE FUNCTION public.target_battle_rpc(p_secret text,p_action text,p_input jsonb)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
