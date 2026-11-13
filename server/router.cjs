@@ -153,7 +153,13 @@ async function handler(req, res) {
     }
     if(pathname==='/api/integrations/kgs/mastery-badges'&&req.method==='POST'){
       shop.authorize(req,config);
-      if(url.searchParams.size)throw new HttpError(400,'送信内容を確認してください。','INVALID_REQUEST');
+      // Vercel rewrites /api/integrations/kgs/mastery-badges to
+      // /api/index?route=integrations/kgs/mastery-badges. That internal route
+      // parameter is not a user-supplied query. Reject any additional keys.
+      const queryKeys=[...url.searchParams.keys()];
+      if(queryKeys.some(key=>key!=='route' || !route) ||
+         queryKeys.filter(key=>key==='route').length>1)
+        throw new HttpError(400,'送信内容を確認してください。','INVALID_REQUEST');
       return send(res,200,await require('./badges.cjs').perform(await readJson(req,2048)));
     }
     const shopAction={'/api/integrations/kgs/wallet':'wallet','/api/integrations/kgs/gacha':'draw','/api/integrations/kgs/sell':'sell'}[pathname];
