@@ -32,5 +32,6 @@ jobs:
           cache: npm
       - run: npm ci
       - run: node tests/mastery-badges-db.cjs
+      - run: node tests/quiz-battle-db.cjs
       - run: npm test
       - run: npm run build
