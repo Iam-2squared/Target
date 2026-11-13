@@ -57,8 +57,18 @@ function input(action,body) {
   if(['challenge','propose'].includes(action))settings(body);
   return body;
 }
+function queryArguments(url,action) {
+  const expectedRoute='battle/'+action;
+  const entries=[];
+  for(const [key,value] of url.searchParams.entries()){
+    if(key==='route'||key==='path'){
+      if(value!==expectedRoute)throw invalid();
+    }else entries.push([key,value]);
+  }
+  return entries;
+}
 function matchIdInUrl(url) {
-  const pairs=[...url.searchParams.entries()];
+  const pairs=queryArguments(url,'state');
   if(pairs.length!==1||pairs[0][0]!=='matchId'||!uuid(pairs[0][1]))throw invalid('試合を選び直してください。');
   return pairs[0][1];
 }
@@ -86,12 +96,12 @@ async function dispatch({pathname,req,res,url,config,readJson}) {
   const sessionHash=identity.digest(token,'target-battle-session',config);
   const actor={memberId:member.id,name:member.name};
   if(action==='lobby') {
-    if([...url.searchParams].length)throw invalid();
+    if(queryArguments(url,action).length)throw invalid();
     await store.rpc('profile',actor);
     return await store.battleRpc('lobby',{...actor,sessionHash});
   }
   if(action==='state')return state(actor,matchIdInUrl(url),sessionHash);
-  if([...url.searchParams].length)throw invalid();
+  if(queryArguments(url,action).length)throw invalid();
   const body=input(action,await readJson(req));
   return await store.battleRpc(action,{...actor,...body,sessionHash});
 }
