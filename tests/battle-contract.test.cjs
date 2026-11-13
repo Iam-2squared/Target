@@ -3,6 +3,7 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
+const root=path.resolve(__dirname,'..');
 const {settings,input,matchIdInUrl,BOOK_SECTIONS,HP_OPTIONS}=require('../server/battle.cjs');
 const UUID='123e4567-e89b-42d3-a456-426614174000';
 const OPPONENT='123e4567-e89b-42d3-a456-426614174001';
@@ -65,4 +66,24 @@ test('Study hub buttons and separate memorization Section selectors exist withou
   assert(!javascript.includes('homeSectionFrom')&&!javascript.includes('homeSectionTo'));
   assert(fs.existsSync(path.join(__dirname,'../public/battle.js')));
   assert(fs.existsSync(path.join(__dirname,'../public/battle.css')));
+});
+
+
+test('Battle lobby shows logged-in self, online refresh and victory ranking independent of study points',()=>{
+  const js=fs.readFileSync(path.join(root,'public/battle.js'),'utf8');
+  const css=fs.readFileSync(path.join(root,'public/battle.css'),'utf8');
+  assert.doesNotThrow(()=>new Function(js),'battle script parses');
+  for(const token of ['ログイン中','battleLobbyRefresh','battleOnlineCount',
+    'battleOnlineList','battleRankingTitle','battleRankingList','battleRankingEmpty',
+    "replaceChildren(person(identity,false))","row.classList.add('is-self')",
+    "entry.wins+'勝'"]){
+    assert(js.includes(token),token+' is included in battle lobby');
+  }
+  assert(js.includes("make('span','battle-online-dot')"),'green online presence dot is rendered');
+  assert(js.includes("ranking=Array.isArray(snapshot.ranking)?snapshot.ranking:[]"),
+    'only server supplied ranking is displayed');
+  assert(!js.includes("battleMe"),'self appears only in the member list');
+  for(const token of ['.battle-online-dot','.battle-ranking-row.is-self','.battle-refresh']){
+    assert(css.includes(token),token+' has styling');
+  }
 });

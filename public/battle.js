@@ -8,7 +8,7 @@
   const first=name=>[...String(name||'?')][0];
   const freshId=()=>crypto.randomUUID();
   let active=false,identity=null,epoch=0,syncRevision=0,timer=null,fetching=false,busy=false,matchId=null,match=null;
-  let online=[],incoming=[],outgoing=[],selected=null,offerVersion=null,questionId=null,pendingAnswer=null,feedback='';
+  let online=[],ranking=[],incoming=[],outgoing=[],selected=null,offerVersion=null,questionId=null,pendingAnswer=null,feedback='';
   function status(message,error=false){const el=$('battleStatus');if(el){el.textContent=message;el.classList.toggle('is-error',error);}}
   async function api(action,body){
     const controller=new AbortController(),t=setTimeout(()=>controller.abort(),14000);
@@ -62,11 +62,15 @@
       "<p class='battle-intro'>4択に正解すると相手のHP -5、不正解なら自分のHP -10。</p>",
       "<p id='battleStatus' class='battle-status' role='status' aria-live='polite'></p>",
       "<section id='battleLobby'>",
-      "<div class='battle-heading'><h2>ログイン中のユーザー</h2><span id='battleOnlineCount'></span></div>",
-      "<p class='battle-intro'>あなた：<strong id='battleMe'></strong></p>",
-      "<div id='battleOnlineList' class='battle-people'></div>",
+      "<div class='battle-heading battle-online-heading'><div class='battle-heading-title'><h2>ログイン中</h2><small id='battleOnlineCount' aria-live='polite'>—</small></div><button id='battleLobbyRefresh' class='battle-refresh' type='button' aria-label='ログイン中のユーザーとランキングを更新' title='更新'>↻</button></div>",
+      "<div id='battleOnlineList' class='battle-people' aria-label='ログイン中のユーザー一覧'></div>",
+      "<p id='battleOnlineEmpty' class='battle-intro' hidden>ほかのオンラインユーザーはいません。</p>",
       "<div id='battleInvitations' hidden><h2>届いた招待</h2><div id='battleIncomingList'></div></div>",
       "<div id='battleSentInvitations' hidden><h2>送信中の招待</h2><div id='battleOutgoingList'></div></div>",
+      "<section id='battleRankingPanel' class='battle-ranking-panel' aria-labelledby='battleRankingTitle'>",
+      "<div class='battle-heading battle-ranking-heading'><h2 id='battleRankingTitle'>ランキング</h2><span>勝利回数順</span></div>",
+      "<div id='battleRankingList' class='battle-ranking-list' role='list' aria-label='リアタイバトル勝利回数ランキング'></div>",
+      "<p id='battleRankingEmpty' class='battle-intro' hidden>まだ勝利記録はありません。</p></section>",
       "</section>",
       "<section id='battleOffer' class='battle-box' hidden>",
       "<h2 id='battleOfferTitle'>対戦設定</h2><p id='battleOfferSub' class='battle-intro'></p>",
@@ -101,7 +105,7 @@
     selectOptions($('battleBook'),Object.entries(books).map(([key,value])=>[key,value[0]]));
     $('battleBook').value=books[$('bookSelect')?.value]?$('bookSelect').value:'target1900';
     selectOptions($('battleHp'),[50,100,150,200,300].map(n=>[n,n+' HP']));$('battleHp').value='100';
-    updateSections(true);potPreview();$('battleMe').textContent=identity.name;
+    updateSections(true);potPreview();
     $('battleBook').addEventListener('change',()=>updateSections(true));
     $('battleStake').addEventListener('input',potPreview);
     for(const [a,b] of [['battleFrom','battleTo'],['battleTo','battleFrom']]){
@@ -113,6 +117,7 @@
     $('battleForfeit').addEventListener('click',()=>void forfeit());
     $('battleAnswerRetry').addEventListener('click',()=>void submitAnswer());
     $('battleAgain').addEventListener('click',()=>{matchId=null;match=null;selected=null;offerVersion=null;render();void refresh();});
+    $('battleLobbyRefresh').addEventListener('click',()=>void refresh());
     $('battleOnlineList').addEventListener('click',event=>{
       const id=event.target.closest('[data-person]')?.dataset.person;
       if(!validId(id)||busy)return;selected=online.find(x=>x.id===id)||null;render();
@@ -128,16 +133,43 @@
     });
   }
   function person(person,selectable){
-    const row=make('div','battle-person'),avatar=make('span','battle-avatar',first(person.name));
-    row.append(avatar,make('strong','',person.name));
-    if(selectable){const b=make('button','secondary-button','指定');b.type='button';b.dataset.person=person.id;row.append(b);}
+    const row=make('div','battle-person');
+    const dot=make('span','battle-online-dot');
+    dot.setAttribute('aria-hidden','true');
+    row.append(dot,make('strong','battle-online-name',person.name));
+    if(selectable){
+      const b=make('button','secondary-button','対戦する');
+      b.type='button';b.dataset.person=person.id;row.append(b);
+    }else{
+      row.classList.add('is-self');
+      row.append(make('span','battle-self-label','自分'));
+    }
     return row;
   }
+  function renderRanking(){
+    const list=$('battleRankingList');
+    list.replaceChildren();
+    for(const entry of ranking){
+      if(!entry||!validId(entry.id)||typeof entry.name!=='string'||
+        !Number.isSafeInteger(entry.wins)||entry.wins<0||
+        !Number.isSafeInteger(entry.rank)||entry.rank<1)continue;
+      const row=make('div','battle-ranking-row');
+      row.setAttribute('role','listitem');
+      if(entry.id===identity?.id)row.classList.add('is-self');
+      row.append(make('span','battle-ranking-place',entry.rank),
+        make('strong','battle-ranking-name',entry.name),
+        make('span','battle-ranking-wins',entry.wins+'勝'));
+      list.append(row);
+    }
+    $('battleRankingEmpty').hidden=list.childElementCount>0;
+  }
   function renderLobby(){
-    $('battleOnlineCount').textContent=online.length+'人';
-    $('battleOnlineList').replaceChildren();
-    for(const p of online)if(p&&validId(p.id)&&typeof p.name==='string')$('battleOnlineList').append(person(p,true));
-    if(!online.length)$('battleOnlineList').append(make('p','battle-intro','ほかのオンラインユーザーがいません。'));
+    const visible=online.filter(p=>p&&validId(p.id)&&p.id!==identity?.id&&typeof p.name==='string');
+    $('battleOnlineCount').textContent=String(visible.length+1);
+    $('battleOnlineList').replaceChildren(person(identity,false));
+    for(const p of visible)$('battleOnlineList').append(person(p,true));
+    $('battleOnlineEmpty').hidden=visible.length>0;
+    renderRanking();
     $('battleInvitations').hidden=!incoming.length;$('battleIncomingList').replaceChildren();
     for(const m of incoming){
       if(!validId(m?.id))continue;
@@ -233,6 +265,7 @@
       const snapshot=await api('lobby');
       if(!active||epoch!==lease||revision!==syncRevision)return;
       online=Array.isArray(snapshot.online)?snapshot.online:[];
+      ranking=Array.isArray(snapshot.ranking)?snapshot.ranking:[];
       incoming=Array.isArray(snapshot.incoming)?snapshot.incoming:[];
       outgoing=Array.isArray(snapshot.outgoing)?snapshot.outgoing:[];
       if(validId(snapshot.match?.id))matchId=snapshot.match.id;
@@ -300,7 +333,7 @@
   }
   function close(){
     active=false;epoch++;syncRevision++;if(timer)clearInterval(timer);timer=null;
-    identity=null;matchId=null;match=null;online=[];incoming=[];outgoing=[];
+    identity=null;matchId=null;match=null;online=[];ranking=[];incoming=[];outgoing=[];
     selected=null;offerVersion=null;questionId=null;pendingAnswer=null;feedback='';busy=false;fetching=false;
     if($('battleApp'))$('battleApp').replaceChildren();
   }
