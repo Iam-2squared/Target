@@ -146,26 +146,26 @@ END $projection$;
 -- Both writers already take advisory lock 991101; triggers fence even old
 -- compiled soccer writers that began before this migration committed.
 CREATE FUNCTION target_private.battle_no_soccer_overlap()
-RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=pg_catalog AS $
+RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=pg_catalog AS $$
 BEGIN
  IF NEW.status='playing' AND OLD.status IS DISTINCT FROM 'playing' AND EXISTS(
    SELECT 1 FROM target_private.two_player_matches s WHERE s.status='playing'
     AND (s.host_id IN (NEW.host_id,NEW.guest_id) OR s.guest_id IN (NEW.host_id,NEW.guest_id))
  ) THEN RAISE EXCEPTION 'Participant has a funded soccer game' USING ERRCODE='23514'; END IF;
  RETURN NEW;
-END $;
+END $$;
 CREATE TRIGGER battle_no_soccer_overlap BEFORE UPDATE OF status ON target_private.battle_matches
  FOR EACH ROW EXECUTE FUNCTION target_private.battle_no_soccer_overlap();
 
 CREATE FUNCTION target_private.soccer_no_battle_overlap()
-RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=pg_catalog AS $
+RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=pg_catalog AS $$
 BEGIN
  IF NEW.status='playing' AND OLD.status IS DISTINCT FROM 'playing' AND EXISTS(
    SELECT 1 FROM target_private.battle_matches b WHERE b.status='playing'
     AND (b.host_id IN (NEW.host_id,NEW.guest_id) OR b.guest_id IN (NEW.host_id,NEW.guest_id))
  ) THEN RAISE EXCEPTION 'Participant has a funded quiz HP battle' USING ERRCODE='23514'; END IF;
  RETURN NEW;
-END $;
+END $$;
 CREATE TRIGGER soccer_no_battle_overlap BEFORE UPDATE OF status ON target_private.two_player_matches
  FOR EACH ROW EXECUTE FUNCTION target_private.soccer_no_battle_overlap();
 
