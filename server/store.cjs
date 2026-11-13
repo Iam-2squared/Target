@@ -74,6 +74,7 @@ async function closeStore() {
 }
 
 const rpc=(action,input={})=>runRpc('target_rpc',action,input);
+const badgesRpc=(action,input={})=>runRpc('target_badge_rpc',action,input);
 const shopRpc=(action,input={})=>runRpc('target_shop_rpc',action,input);
 const sellRpc=(action,input={})=>runRpc('target_sell_rpc',action,input);
 const mapRpc=(action,input={})=>runRpc('target_map_rpc',action,input);
@@ -81,4 +82,4 @@ const territoryRpc=(action,input={})=>runRpc('target_territory_rpc',action,input
 const calculusRpc=(action,input={})=>runRpc('target_calculus_rpc',action,input);
 const birthdayRpc=(action,input={},options={})=>runRpc('target_birthday_rpc',action,input,options);
 const gamesRpc=(action,input={})=>runRpc('target_games_rpc',action,input);
-module.exports = {rpc, shopRpc, sellRpc, mapRpc, territoryRpc, calculusRpc, birthdayRpc, gamesRpc, closeStore};
+module.exports = {rpc, badgesRpc, shopRpc, sellRpc, mapRpc, territoryRpc, calculusRpc, birthdayRpc, gamesRpc, closeStore};
