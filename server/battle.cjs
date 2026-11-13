@@ -75,12 +75,12 @@ async function state(actor,matchId,sessionHash) {
 function cryptoRandomUuid() {
   return require('node:crypto').randomUUID();
 }
-async function dispatch({pathname,req,url,config,readJson}) {
+async function dispatch({pathname,req,res,url,config,readJson}) {
   const definition=endpoints[pathname];
   if(!definition||req.method!==definition[0])throw new HttpError(404,'見つかりません。','NOT_FOUND');
   const action=definition[1];
   // The KGS session is verified on every read and mutation. Client-chosen actor IDs are ignored.
-  const member=await identity.requireMember(req,null,config);
+  const member=await identity.requireMember(req,res,config);
   const token=identity.sessionToken(req,config);
   if(!token)throw new HttpError(401,'ログインしてください。','AUTHENTICATION_REQUIRED');
   const sessionHash=identity.digest(token,'target-battle-session',config);
