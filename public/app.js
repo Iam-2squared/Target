@@ -6,7 +6,7 @@
     target1000: {title:'英熟語Target 1000',kind:'英熟語',total:1000,wordLabel:'英語',meaningLabel:'訳'},
     kobun400: {title:'古文単語',kind:'古文単語',total:400,wordLabel:'古語',meaningLabel:'現代語訳'}
   };
-  const views = ['home','memorize','setup','quiz','result','ranking','mastery'];
+  const views = ['home','memorySetup','memorize','setup','quiz','result','ranking','mastery','battle'];
   const datasets = new Map(), datasetPromises = new Map();
   let selectedBook='target1900', activeView='home', member=null, lifetimeCorrect=0, lifetimePoints=0;
   let sessionKnown=false, sessionEpoch=0, sessionTicket=0, walletBalance=0, walletKnown=false, walletRevision=null;
@@ -205,9 +205,9 @@
     document.body.dataset.view=view;
     for(const id of views)$(id+'View').hidden=id!==view;
     if(scroll)window.scrollTo({top:0,behavior:'instant'});
-    document.title=['home','memorize'].includes(view)?'暗記':({memorize:'暗記',setup:setupMode==='review'?'解き直し':'テスト',quiz:'テスト',result:'テスト結果',ranking:'ランキング',mastery:'定着率'}[view]+' | 暗記');
+    document.title=['home','memorize'].includes(view)?'暗記':({memorySetup:'暗記の範囲選択',setup:setupMode==='review'?'解き直し':'テスト',quiz:'テスト',result:'テスト結果',ranking:'ランキング',mastery:'定着率',battle:'リアタイバトル'}[view]+' | 暗記');
   }
-  function home() {memoryTicket++;clearMastery();show('home');renderIdentity();renderSectionControls();void loadHomeReview();void loadRanking('homeRanking');}
+  function home() {window.TargetBattleUI?.close();memoryTicket++;clearMastery();show('home');renderIdentity();renderSectionControls();void loadRanking('homeRanking');}
   function goHome() {if(activeView==='quiz'&&quiz&&!quiz.finished){openQuit();return;}home();}
   function appError(message,code='',status=0) {const error=new Error(message);error.code=code;error.status=status;return error;}
   async function api(path,body) {
@@ -294,12 +294,13 @@
       if(changed){resetWallet();if(sessionKnown)sessionEpoch++;}
       member=identity.member;lifetimeCorrect=identity.correctCount;applyWallet(identity);sessionKnown=true;
       if(member)bonus.update(identity.bonus,identity.timing);
+      if(changed&&activeView==='battle'){window.TargetBattleUI?.close();show('home');}
       $('connectionNotice').hidden=true;renderIdentity();
       if(activeView==='mastery')void loadMastery();
-      if(activeView==='home')void loadHomeReview();
+
     } catch(error) {
       if(ticket!==sessionTicket||epoch!==sessionEpoch)return;
-      if(error.status===401){bonus.reset();clearMastery();member=null;lifetimeCorrect=0;resetWallet();sessionKnown=true;sessionEpoch++;sessionTicket++;}
+      if(error.status===401){bonus.reset();clearMastery();member=null;lifetimeCorrect=0;resetWallet();sessionKnown=true;sessionEpoch++;sessionTicket++;if(activeView==='battle'){window.TargetBattleUI?.close();show('home');}}
       if(walletFeedback){walletKnown=false;if($('settingsDialog').open)setError('settingsError','保有金額を確認できませんでした。もう一度個人設定を開いてください。');}
       if(notify){$('connectionNotice').textContent='共有機能に接続できません。暗記とゲスト練習は利用できます。';$('connectionNotice').hidden=false;}
       renderIdentity();
@@ -323,7 +324,7 @@
     if(!Object.hasOwn(books,book))return;selectedBook=book;
     $('bookSelect').value=book;
     clearMastery();startRetry=null;renderSectionControls();
-    if(activeView==='home')void loadHomeReview();
+
   }
   function selectedWordRange(book=selectedBook,review=false){
     const range=(review?reviewSectionRanges:sectionRanges)[book];return {from:(range.from-1)*100+1,to:Math.min(range.to*100,books[book].total)};
@@ -333,7 +334,7 @@
     $('bookSelect').value=selectedBook;
     $('directionWordLabel').textContent=books[selectedBook].wordLabel;
     $('directionMeaningLabel').textContent=books[selectedBook].meaningLabel;
-    for(const [id,part] of [['homeSectionFrom','from'],['homeSectionTo','to'],['rangeFrom','from'],['rangeTo','to']]){
+    for(const [id,part] of [['memoryRangeFrom','from'],['memoryRangeTo','to'],['rangeFrom','from'],['rangeTo','to']]){
       const select=$(id);
       if(select.options.length!==total){const fragment=document.createDocumentFragment();for(let number=1;number<=total;number++){const option=element('option','', 'Section '+number);option.value=String(number);fragment.append(option);}select.replaceChildren(fragment);}
       const range=(id.startsWith('range')&&setupMode==='review'?reviewSectionRanges:sectionRanges)[selectedBook];
@@ -421,6 +422,11 @@
       if(error.status===401){bonus.reset();clearMastery();member=null;lifetimeCorrect=0;resetWallet();sessionKnown=true;sessionEpoch++;sessionTicket++;renderIdentity();$('masteryStatus').textContent='ログインして定着率を確認できます。';}
       else{$('masteryStatus').textContent='';setError('masteryError',error.message);}
     }finally{if(current())$('masteryRefresh').disabled=false;}
+  }
+  function openMemorySetup() {
+    $('memorySetupBook').textContent=books[selectedBook].title;
+    renderSectionControls();
+    show('memorySetup');
   }
   async function openMemory() {
     const book=selectedBook,ticket=++memoryTicket,range=selectedWordRange(book),key=book+':'+range.from+':'+range.to;
@@ -699,7 +705,7 @@
       const identity=parseIdentity(await api('/login',{attendanceNumber,accountPin}));if(!identity.member)throw appError('ログイン情報を確認できませんでした。');
       clearRewardCelebration();bonus.reset();clearMastery();sessionEpoch++;sessionTicket++;resetWallet();member=identity.member;lifetimeCorrect=identity.correctCount;applyWallet(identity);sessionKnown=true;bonus.update(identity.bonus,identity.timing);$('accountPin').value='';$('attendanceNumber').value='';setPinVisible(false);$('connectionNotice').hidden=true;renderIdentity();$('settingsStatus').textContent='ログインしました。';
       if(activeView==='mastery')void loadMastery();
-      if(activeView==='home')void loadHomeReview();
+
     } catch(error){setError('settingsError',error.message);}
     finally{loginPending=false;for(const id of ['attendanceNumber','accountPin','pinVisibility','loginButton'])$(id).disabled=false;$('loginButton').textContent='ログイン';if(!$('settingsDialog').open){$('accountPin').value='';setPinVisible(false);}}
   }
@@ -709,16 +715,22 @@
       await api('/logout',{});clearRewardCelebration();bonus.reset();clearMastery();sessionEpoch++;sessionTicket++;member=null;lifetimeCorrect=0;resetWallet();sessionKnown=true;$('accountPin').value='';$('attendanceNumber').value='';setPinVisible(false);renderIdentity();$('settingsStatus').textContent='ログアウトしました。';
       if(activeView==='mastery')void loadMastery();
       if(activeView==='quiz'&&quiz?.recorded){quiz=null;home();}
+      if(activeView==='battle'){window.TargetBattleUI?.close();home();}
     } catch(error){setError('settingsError',error.message);}
     finally{logoutPending=false;$('logoutButton').disabled=false;}
   }
 
   $('bookSelect').addEventListener('change',()=>selectBook($('bookSelect').value));
-  for(const [id,part] of [['homeSectionFrom','from'],['homeSectionTo','to'],['rangeFrom','from'],['rangeTo','to']])$(id).addEventListener('change',()=>changeSection(part,$(id).value,{review:id.startsWith('range')&&setupMode==='review'}));
+  for(const [id,part] of [['memoryRangeFrom','from'],['memoryRangeTo','to'],['rangeFrom','from'],['rangeTo','to']])$(id).addEventListener('change',()=>changeSection(part,$(id).value,{review:id.startsWith('range')&&setupMode==='review'}));
   $('questionCount').addEventListener('change',()=>{startRetry=null;});
   for(const input of document.querySelectorAll('input[name=direction]'))input.addEventListener('change',()=>{startRetry=null;});
   for(const button of document.querySelectorAll('[data-home]'))button.addEventListener('click',goHome);
-  $('brandHome').addEventListener('click',goHome);$('memorizeOpen').addEventListener('click',openMemory);$('testOpen').addEventListener('click',openSetup);
+  $('brandHome').addEventListener('click',goHome);$('memorizeOpen').addEventListener('click',openMemorySetup);$('testOpen').addEventListener('click',openSetup);
+  $('memorySetupForm').addEventListener('submit',event=>{event.preventDefault();void openMemory();});
+  $('battleOpen').addEventListener('click',()=>{
+    if(!member){toast('リアタイバトルにはログインが必要です。');openSettings();return;}
+    show('battle');window.TargetBattleUI?.open({id:member.id,name:member.name});
+  });
   $('memoryNext').addEventListener('click',()=>memoryNext());$('memoryPrevious').addEventListener('click',()=>{if(memoryPage>0){memoryPage--;renderMemory();window.scrollTo({top:0,behavior:'instant'});}});
   $('memoryPage').addEventListener('change',()=>{memoryPage=Number($('memoryPage').value);renderMemory();window.scrollTo({top:0,behavior:'instant'});});
   $('meaningsToggle').addEventListener('click',()=>{meaningsHidden=!meaningsHidden;renderMemory();});

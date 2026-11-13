@@ -12,11 +12,13 @@
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <link rel="manifest" href="/app.webmanifest">
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/battle.css">
   <link rel="stylesheet" href="/jackpot-effects.css">
   <link rel="stylesheet" href="/bonus-time.css">
   <script src="/jackpot-effects.js" defer></script>
   <script src="/bonus-time.js" defer></script>
   <script src="/reward-lock.js" defer></script>
+  <script src="/battle.js" defer></script>
   <script src="/app.js" defer></script>
 </head>
 <body data-view="home">
@@ -34,27 +36,28 @@
       <h1 id="homeTitle" class="sr-only">暗記</h1>
       <p id="connectionNotice" class="notice" role="status" hidden></p>
       <label class="book-selection" for="bookSelect"><span class="sr-only">教材を選ぶ</span><select id="bookSelect" aria-label="教材を選ぶ"><option value="target1900">Target 1900</option><option value="target1000">英熟語 Target 1000</option><option value="kobun400">古文単語</option></select></label>
-      <div class="home-section-heading"><span id="homeSectionLabel">Section</span></div>
-      <fieldset class="home-sections" aria-labelledby="homeSectionLabel"><div class="range-fields"><label><span class="sr-only">最初のSection</span><select id="homeSectionFrom" aria-label="最初のSection"></select></label><span aria-hidden="true">〜</span><label><span class="sr-only">最後のSection</span><select id="homeSectionTo" aria-label="最後のSection"></select></label></div></fieldset>
-      <div class="study-actions">
+      <div class="study-actions" aria-label="学習メニュー">
         <button class="action-card" type="button" id="memorizeOpen">暗記</button>
         <button class="action-card" type="button" id="testOpen">テスト</button>
+        <button class="action-card" type="button" id="masteryOpen">定着率</button>
+        <button class="action-card" type="button" id="reviewOpen">解き直し</button>
       </div>
-      <div class="home-mastery" aria-labelledby="homeMasteryLabel">
-        <strong id="homeMasteryLabel">定着率</strong>
-        <button id="masteryOpen" class="secondary-button" type="button" aria-label="定着率を確認">確認</button>
-      </div>
-      <div class="home-review" aria-labelledby="homeReviewLabel">
-        <div class="home-review-heading"><p id="homeReviewLabel" class="muted">現在のミス</p><small id="homeReviewHint" class="muted">2回以上正解でクリア</small></div>
-        <p id="homeReviewCount" class="home-review-count" aria-live="polite">—</p>
-        <p id="homeReviewStatus" class="muted" role="status"></p>
-        <button id="homeReviewRetry" class="text-button" type="button" hidden>再読み込み</button>
-        <button id="reviewOpen" class="secondary-button wide" type="button">解き直し</button>
-      </div>
+      <button id="battleOpen" class="battle-home-button" type="button">⚔ リアタイバトル</button>
+      <div hidden aria-hidden="true"><span id="homeReviewCount"></span><span id="homeReviewStatus"></span><button id="homeReviewRetry" type="button"></button></div>
       <button id="rankingOpen" class="ranking-link" type="button"><strong>ランキングTop10</strong><span id="homeScore" class="muted"></span></button>
       <p id="homeRankingStatus" class="muted ranking-status" role="status"></p>
       <p id="homeRankingError" class="error-message" role="alert" hidden></p>
       <ol id="homeRankingList" class="ranking-list home-ranking-list" aria-label="合計点数ランキング 上位10人"></ol>
+    </section>
+
+    <section id="memorySetupView" class="view" aria-labelledby="memorySetupTitle" hidden>
+      <div class="view-toolbar"><button class="back-button" data-home type="button">ホーム</button></div>
+      <div class="section-heading"><div><h1 id="memorySetupTitle">暗記</h1><p id="memorySetupBook" class="muted"></p></div></div>
+      <form id="memorySetupForm" class="setup-form">
+        <fieldset><legend>学ぶSectionを選択</legend><div class="range-fields"><label><span class="sr-only">最初のSection</span><select id="memoryRangeFrom" aria-label="暗記の最初のSection"></select></label><span aria-hidden="true">〜</span><label><span class="sr-only">最後のSection</span><select id="memoryRangeTo" aria-label="暗記の最後のSection"></select></label></div></fieldset>
+        <p class="muted">選んだSectionの単語を順番に確認できます。次へ・前へでページを移動できます。</p>
+        <button class="primary-button wide" type="submit" id="memoryStart">この範囲で暗記</button>
+      </form>
     </section>
 
     <section id="memorizeView" class="view" aria-labelledby="memorizeTitle" hidden>
@@ -121,6 +124,11 @@
       <p id="masteryStatus" class="muted" role="status"></p><p id="masteryError" class="error-message" role="alert" hidden></p>
       <button id="masteryLogin" class="secondary-button wide" type="button" hidden>ログイン</button>
       <ol id="masteryList" class="mastery-list" aria-label="Sectionごとの定着率"></ol>
+    </section>
+    <section id="battleView" class="view" aria-labelledby="battleTitle" hidden>
+      <div class="view-toolbar"><button class="back-button" data-home type="button">ホーム</button><button id="battleRefresh" type="button" class="text-button">更新</button></div>
+      <div class="section-heading"><h1 id="battleTitle">リアタイバトル</h1></div>
+      <div id="battleApp" aria-live="polite"></div>
     </section>
   </main>
   <footer class="app-footer"><a href="#sources" id="sourcesOpen">出典</a></footer>

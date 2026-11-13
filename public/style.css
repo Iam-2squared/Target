@@ -306,3 +306,10 @@ dialog::backdrop { background: #1c273a55; }
 }
 
 .sound-setting{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 18px;padding:4px 0 14px;border-bottom:1px solid var(--line);font-size:14px}.sound-setting select{width:auto;min-width:112px;min-height:44px;padding:8px 12px;border:1px solid #dfe3e6;border-radius:8px;background:var(--card);color:var(--ink);font-size:16px}
+
+/* Compact Target study hub with four equal navigation buttons. */
+.study-actions { margin-top: 20px; gap: 12px; }
+.battle-home-button { display:block; width:100%; min-height:62px; margin-top:18px; border:1px solid #7591aa; border-radius:10px; background:#edf3fa; color:#203951; font-size:18px; font-weight:700; text-align:center; }
+.battle-home-button:focus-visible,.action-card:focus-visible { outline:3px solid #5484af; outline-offset:3px; }
+#memorySetupView .setup-form { margin-top:18px; }
+#memorySetupView .setup-form>.primary-button { margin-top:6px; }
