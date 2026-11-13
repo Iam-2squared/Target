@@ -151,6 +151,11 @@ async function handler(req, res) {
       shop.authorize(req,config);
       return send(res,200,await calculus.wealth(await readJson(req,16384),config));
     }
+    if(pathname==='/api/integrations/kgs/mastery-badges'&&req.method==='POST'){
+      shop.authorize(req,config);
+      if(url.searchParams.size)throw new HttpError(400,'送信内容を確認してください。','INVALID_REQUEST');
+      return send(res,200,await require('./badges.cjs').perform(await readJson(req,2048)));
+    }
     const shopAction={'/api/integrations/kgs/wallet':'wallet','/api/integrations/kgs/gacha':'draw','/api/integrations/kgs/sell':'sell'}[pathname];
     if(shopAction&&req.method==='POST'){
       // Only the KGS service may assert an already authenticated class member.
