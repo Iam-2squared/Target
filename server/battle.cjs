@@ -64,7 +64,7 @@ function matchIdInUrl(url) {
 }
 async function state(actor,matchId,sessionHash) {
   const current=await store.battleRpc('state',{...actor,matchId,sessionHash});
-  if(current?.match?.status!=='playing'||current.question||!current.match?.id)return current;
+  if(current?.match?.status!=='playing'||current.match?.question||!current.match?.id)return current;
   const {book,fromSection,toSection}=current.match;
   if(!Object.hasOwn(BOOK_SECTIONS,book)||!Number.isInteger(fromSection)||!Number.isInteger(toSection)||
      fromSection<1||toSection>BOOK_SECTIONS[book]||fromSection>toSection)throw new HttpError(503,'出題範囲が不正です。','BATTLE_DATA_ERROR');
