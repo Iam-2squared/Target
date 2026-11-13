@@ -334,7 +334,7 @@ BEGIN
    to_value:=(p_input->>'toSection')::integer;stake_value:=(p_input->>'stake')::bigint;
    hp_value:=(p_input->>'initialHp')::integer;
    IF from_value<1 OR to_value<from_value OR
-      to_value>CASE selected_book WHEN 'target1900' THEN 19 WHEN 'target1000' THEN 10 ELSE 4 END OR
+      to_value>(CASE selected_book WHEN 'target1900' THEN 19 WHEN 'target1000' THEN 10 ELSE 4 END) OR
       stake_value<100 OR stake_value>5000000000000 OR stake_value%100<>0 OR
       hp_value NOT IN (50,100,150,200,300) THEN
      RETURN target_private.error_result(400,'INVALID_SETTINGS','対戦設定を確認してください。'); END IF;
