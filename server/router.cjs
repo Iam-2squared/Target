@@ -8,6 +8,7 @@ const shop = require('./shop.cjs');
 const calculus = require('./calculus.cjs');
 const birthday = require('./birthday.cjs');
 const games = require('./games.cjs');
+const battle = require('./battle.cjs');
 const {validateQuizInput, generateQuestions} = require('./questions.cjs');
 const PROCESSING_STARTED=Symbol('target.processing.started');
 
@@ -183,6 +184,7 @@ async function handler(req, res) {
       throw new HttpError(410,'マップは削除されました。','MAP_REMOVED');
     }
     if (req.method === 'POST') checkOrigin(req, config);
+    if (pathname.startsWith('/api/battle/')) return send(res, 200, await battle.dispatch({pathname,req,res,url,config,readJson}));
 
     if (pathname === '/api/session' && req.method === 'GET') {
       const token = identity.sessionToken(req, config);
