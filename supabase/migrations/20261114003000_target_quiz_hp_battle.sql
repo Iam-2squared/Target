@@ -551,10 +551,10 @@ BEGIN
        RETURN target_private.error_result(400,'BATTLE_INVALID_CHOICE','選択肢を確認してください。'); END IF;
      is_correct:=q.question->>'correctChoiceId'=answer_choice::text;
      damage_value:=CASE WHEN is_correct THEN 5 ELSE 10 END;
-     hp_left:=greatest(0,m.host_hp-CASE WHEN (is_correct AND role_value='guest') OR
-       (NOT is_correct AND role_value='host') THEN damage_value ELSE 0 END);
-     hp_right:=greatest(0,m.guest_hp-CASE WHEN (is_correct AND role_value='host') OR
-       (NOT is_correct AND role_value='guest') THEN damage_value ELSE 0 END);
+     hp_left:=greatest(0,m.host_hp-(CASE WHEN (is_correct AND role_value='guest') OR
+       (NOT is_correct AND role_value='host') THEN damage_value ELSE 0 END));
+     hp_right:=greatest(0,m.guest_hp-(CASE WHEN (is_correct AND role_value='host') OR
+       (NOT is_correct AND role_value='guest') THEN damage_value ELSE 0 END));
      INSERT INTO target_private.battle_answers(match_id,member_id,question_id,sequence,
        request_id,choice_id,correct,damage,correct_text)
        VALUES(m.id,actor,answer_id,q.sequence,req_uuid,answer_choice,is_correct,damage_value,
