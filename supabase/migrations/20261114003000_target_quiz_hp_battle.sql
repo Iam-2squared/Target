@@ -118,7 +118,7 @@ REVOKE ALL ON TABLE target_private.battle_presence,target_private.battle_matches
 
 CREATE FUNCTION target_private.battle_immutable()
 RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $$
-BEGIN RAISE EXCEPTION 'Quiz battle permanent evidence cannot be altered' USING ERRCODE='42501'; END $$;
+BEGIN RAISE EXCEPTION 'Quiz battle permanent evidence cannot be altered' USING ERRCODE='42501'; END; $$;
 CREATE TRIGGER battle_wallet_immutable BEFORE UPDATE OR DELETE ON target_private.battle_wallet_events
  FOR EACH ROW EXECUTE FUNCTION target_private.battle_immutable();
 CREATE TRIGGER battle_answers_immutable BEFORE UPDATE OR DELETE ON target_private.battle_answers
@@ -139,7 +139,7 @@ BEGIN
  EXECUTE replace(definition,marker,
    'SELECT member_id,delta,created_at FROM target_private.two_player_wallet_events UNION ALL '||
    'SELECT member_id,delta,created_at FROM target_private.battle_wallet_events) a');
-END $projection$;
+END; $projection$;
 
 
 -- A player cannot reserve stakes in soccer and quiz HP battles simultaneously.
@@ -153,7 +153,7 @@ BEGIN
     AND (s.host_id IN (NEW.host_id,NEW.guest_id) OR s.guest_id IN (NEW.host_id,NEW.guest_id))
  ) THEN RAISE EXCEPTION 'Participant has a funded soccer game' USING ERRCODE='23514'; END IF;
  RETURN NEW;
-END $$;
+END; $$;
 CREATE TRIGGER battle_no_soccer_overlap BEFORE UPDATE OF status ON target_private.battle_matches
  FOR EACH ROW EXECUTE FUNCTION target_private.battle_no_soccer_overlap();
 
@@ -165,7 +165,7 @@ BEGIN
     AND (b.host_id IN (NEW.host_id,NEW.guest_id) OR b.guest_id IN (NEW.host_id,NEW.guest_id))
  ) THEN RAISE EXCEPTION 'Participant has a funded quiz HP battle' USING ERRCODE='23514'; END IF;
  RETURN NEW;
-END $$;
+END; $$;
 CREATE TRIGGER soccer_no_battle_overlap BEFORE UPDATE OF status ON target_private.two_player_matches
  FOR EACH ROW EXECUTE FUNCTION target_private.soccer_no_battle_overlap();
 
@@ -180,7 +180,7 @@ BEGIN
    RAISE EXCEPTION 'Wallet must preserve quiz battle payout headroom' USING ERRCODE='23514';
  END IF;
  RETURN NEW;
-END $$;
+END; $$;
 CREATE TRIGGER battle_wallet_headroom BEFORE UPDATE OF total_points,casino_net,spent_points
  ON target_private.profiles FOR EACH ROW EXECUTE FUNCTION target_private.battle_wallet_headroom();
 
@@ -225,7 +225,7 @@ BEGIN
    UPDATE target_private.profiles SET total_points=total_points+p_delta,
      casino_net=casino_net+p_delta,updated_at=now() WHERE member_id=p_member;
  END IF;
-END $$;
+END; $$;
 
 CREATE FUNCTION target_private.battle_settle(p_match uuid,p_winner text,p_reason text)
 RETURNS void LANGUAGE plpgsql SECURITY INVOKER SET search_path=pg_catalog AS $$
@@ -248,7 +248,7 @@ BEGIN
      CASE WHEN p_winner IS NULL THEN m.stake WHEN p_winner='guest' THEN 2*m.stake ELSE 0 END);
  END IF;
  DELETE FROM target_private.battle_current_questions WHERE match_id=p_match;
-END $$;
+END; $$;
 
 
 -- A disconnected pair must not leave reserved wallets locked forever.
@@ -268,7 +268,7 @@ BEGIN
    expired:=expired+1;
  END LOOP;
  RETURN expired;
-END $$;
+END; $$;
 REVOKE ALL ON FUNCTION target_private.battle_expire(integer)
  FROM PUBLIC,anon,authenticated,service_role;
 DO $battle_schedule$
@@ -277,7 +277,7 @@ BEGIN
    PERFORM cron.schedule('target_quiz_hp_battle_expire','* * * * *',
      'SELECT target_private.battle_expire(100)');
  END IF;
-END $battle_schedule$;
+END; $battle_schedule$;
 
 -- One accepted answer per question and no client-provided grading.
 CREATE FUNCTION public.target_battle_rpc(p_secret text,p_action text,p_input jsonb)
@@ -580,7 +580,7 @@ BEGIN
  INSERT INTO target_private.battle_requests(member_id,request_id,action,payload_hash,match_id,response)
    VALUES(actor,req_uuid,p_action,payload_digest,m.id,output);
  RETURN output;
-END $$;
+END; $$;
 REVOKE ALL ON FUNCTION public.target_battle_rpc(text,text,jsonb) FROM PUBLIC,authenticated,service_role;
 GRANT EXECUTE ON FUNCTION public.target_battle_rpc(text,text,jsonb) TO anon;
 COMMENT ON FUNCTION public.target_battle_rpc(text,text,jsonb) IS
