@@ -294,12 +294,13 @@
       if(changed){resetWallet();if(sessionKnown)sessionEpoch++;}
       member=identity.member;lifetimeCorrect=identity.correctCount;applyWallet(identity);sessionKnown=true;
       if(member)bonus.update(identity.bonus,identity.timing);
+      if(changed&&activeView==='battle'){window.TargetBattleUI?.close();show('home');}
       $('connectionNotice').hidden=true;renderIdentity();
       if(activeView==='mastery')void loadMastery();
 
     } catch(error) {
       if(ticket!==sessionTicket||epoch!==sessionEpoch)return;
-      if(error.status===401){bonus.reset();clearMastery();member=null;lifetimeCorrect=0;resetWallet();sessionKnown=true;sessionEpoch++;sessionTicket++;}
+      if(error.status===401){bonus.reset();clearMastery();member=null;lifetimeCorrect=0;resetWallet();sessionKnown=true;sessionEpoch++;sessionTicket++;if(activeView==='battle'){window.TargetBattleUI?.close();show('home');}}
       if(walletFeedback){walletKnown=false;if($('settingsDialog').open)setError('settingsError','保有金額を確認できませんでした。もう一度個人設定を開いてください。');}
       if(notify){$('connectionNotice').textContent='共有機能に接続できません。暗記とゲスト練習は利用できます。';$('connectionNotice').hidden=false;}
       renderIdentity();
@@ -714,6 +715,7 @@
       await api('/logout',{});clearRewardCelebration();bonus.reset();clearMastery();sessionEpoch++;sessionTicket++;member=null;lifetimeCorrect=0;resetWallet();sessionKnown=true;$('accountPin').value='';$('attendanceNumber').value='';setPinVisible(false);renderIdentity();$('settingsStatus').textContent='ログアウトしました。';
       if(activeView==='mastery')void loadMastery();
       if(activeView==='quiz'&&quiz?.recorded){quiz=null;home();}
+      if(activeView==='battle'){window.TargetBattleUI?.close();home();}
     } catch(error){setError('settingsError',error.message);}
     finally{logoutPending=false;$('logoutButton').disabled=false;}
   }
