@@ -153,14 +153,17 @@ async function handler(req, res) {
     }
     if(pathname==='/api/integrations/kgs/mastery-badges'&&req.method==='POST'){
       shop.authorize(req,config);
-      // Vercel rewrites /api/integrations/kgs/mastery-badges to
-      // /api/index?route=integrations/kgs/mastery-badges. That internal route
-      // parameter is not a user-supplied query. Reject any additional keys.
-      const queryKeys=[...url.searchParams.keys()];
-      if(queryKeys.some(key=>key!=='route' || !route) ||
-         queryKeys.filter(key=>key==='route').length>1)
-        throw new HttpError(400,'送信内容を確認してください。','INVALID_REQUEST');
-      return send(res,200,await require('./badges.cjs').perform(await readJson(req,2048)));
+      // Vercel's rewrite injects transport query keys, whose shape can vary
+      // by deployment. This endpoint uses only the authenticated JSON body,
+      // never query values. Keep authorization before parsing and ignore
+      // transport query keys rather than rejecting a valid internal rewrite.
+      try{
+        return send(res,200,await require('./badges.cjs').perform(await readJson(req,2048)));
+      }catch(error){
+        // Never log member identifiers, body values or bearer credentials.
+        if(error instanceof HttpError)console.error('[mastery-badges] Target validation:',error.code);
+        throw error;
+      }
     }
     const shopAction={'/api/integrations/kgs/wallet':'wallet','/api/integrations/kgs/gacha':'draw','/api/integrations/kgs/sell':'sell'}[pathname];
     if(shopAction&&req.method==='POST'){

@@ -15,7 +15,7 @@ async function request(url){
  const res=response();await handler(req,res);
  return {status:res.statusCode,data:JSON.parse(res.body)};
 }
-test('internal Vercel route parameter is accepted; unexpected query is denied',async()=>{
+test('Vercel rewrite parameters are ignored and never change authorized body',async()=>{
  const vars=['NODE_ENV','VERCEL','TARGET_RPC_SECRET','TARGET_COOKIE_SECRET','KGS_TARGET_INTEGRATION_SECRET','KGS_IDENTITY_URL','TARGET_ALLOWED_ORIGINS','TARGET_SUPABASE_URL','TARGET_SUPABASE_PUBLISHABLE_KEY'];
  const original=Object.fromEntries(vars.map(key=>[key,process.env[key]]));
  Object.assign(process.env,{
@@ -34,12 +34,12 @@ test('internal Vercel route parameter is accepted; unexpected query is denied',a
    const r=await request(url);assert.equal(r.status,200,url);assert.equal(r.data.ok,true);
   }
   for(const url of [
+   '/api/index?route=integrations%2Fkgs%2Fmastery-badges&path=integrations%2Fkgs%2Fmastery-badges',
    '/api/index?route=integrations%2Fkgs%2Fmastery-badges&debug=1',
-   '/api/index?route=integrations%2Fkgs%2Fmastery-badges&route=integrations%2Fkgs%2Fmastery-badges',
    '/api/integrations/kgs/mastery-badges?debug=1'
   ]){
-   const r=await request(url);assert.equal(r.status,400,url);
-   assert.equal(r.data.error.code,'INVALID_REQUEST');
+   const r=await request(url);assert.equal(r.status,200,url);
+   assert.equal(r.data.ok,true);
   }
  }finally{shop.authorize=originalAuthorize;badges.perform=originalPerform;for(const key of vars){if(original[key]===undefined)delete process.env[key];else process.env[key]=original[key];}}
 });
