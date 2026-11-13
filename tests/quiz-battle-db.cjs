@@ -53,6 +53,8 @@ async function main(){
   ok((await rpc(host,'lobby')).ok);
   const list=await rpc(guest,'lobby');
   ok(list.online.some(u=>u.id===host.memberId),'host shows online to guest');
+  eq(list.ranking,[],'ranking stays empty before real completed battles');
+  eq((await rpc(host,'lobby')).ranking,[],'no fabricated victories for signed-in host');
   const settings={book:'target1900',fromSection:1,toSection:1,stake:100,initialHp:100};
   let match=(await rpc(host,'challenge',{targetId:guest.memberId,...settings})).match;
   ok(match.id,'challenge creates a private room');
@@ -92,6 +94,14 @@ async function main(){
   eq(result.match.status,'finished');eq(result.match.winner,'host','forfeit awards rival');
   eq((await wallet(host)).balance,10200,'winner receives two deposits, net +200');
   eq((await wallet(guest)).balance,9800,'loser already paid exactly one deposit');
+  const completed=await rpc(host,'lobby');
+  eq(completed.ranking.length,2,'winner and defeated participant both appear after a finished match');
+  eq(completed.ranking.map(p=>[p.id,p.wins,p.rank]),[[host.memberId,1,1],[guest.memberId,0,2]],
+    'ranking uses completed HP battle wins, never points or own wallet');
+  eq((await rpc(guest,'lobby')).ranking.map(p=>p.wins),[1,0],
+    'all logged-in users see the same battle ranking');
+  eq((await rpc(host,'lobby')).ranking[0].wins,1,
+    'repeated ranking fetches cannot award a second victory');
   await reconcile();
   const oldEvents=await events(match.id);eq(oldEvents.length,4,'two reserves and two settlements');
   await assert.rejects(db.query('UPDATE target_private.battle_wallet_events SET delta=0 WHERE match_id=$1',[match.id]),
