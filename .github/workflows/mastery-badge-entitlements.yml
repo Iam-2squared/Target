@@ -1,0 +1,36 @@
+name: Verified mastery badge entitlements
+on:
+  push:
+    branches: [feat/mastery-badge-entitlements-20261113]
+  pull_request:
+    branches: [codex/target-study-v1]
+permissions:
+  contents: read
+jobs:
+  database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env: {POSTGRES_USER: postgres, POSTGRES_PASSWORD: badges-test-only, POSTGRES_DB: postgres}
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgres://postgres:badges-test-only@127.0.0.1:5432/postgres
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node tests/mastery-badges-db.cjs
+      - run: npm test
+      - run: npm run build
