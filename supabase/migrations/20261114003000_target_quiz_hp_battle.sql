@@ -215,8 +215,8 @@ BEGIN
    wanted:=CASE WHEN m.status='cancelled' THEN m.stake
                 WHEN (m.winner='host' AND m.host_id=p_member) OR
                      (m.winner='guest' AND m.guest_id=p_member) THEN 2*m.stake ELSE 0 END;
-   IF p_delta<>wanted OR p_kind<>CASE WHEN m.status='cancelled' THEN 'refund'
-                           WHEN wanted>0 THEN 'payout' ELSE 'loss' END THEN
+   IF p_delta<>wanted OR p_kind<>(CASE WHEN m.status='cancelled' THEN 'refund'
+                           WHEN wanted>0 THEN 'payout' ELSE 'loss' END) THEN
      RAISE EXCEPTION 'Invalid battle settlement amount' USING ERRCODE='23514'; END IF;
  ELSE RAISE EXCEPTION 'Invalid battle finance phase' USING ERRCODE='23514'; END IF;
  INSERT INTO target_private.battle_wallet_events(match_id,member_id,phase,kind,delta)
