@@ -7,7 +7,7 @@
   const validId=id=>typeof id==='string'&&/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(id);
   const first=name=>[...String(name||'?')][0];
   const freshId=()=>crypto.randomUUID();
-  let active=false,identity=null,epoch=0,timer=null,fetching=false,busy=false,matchId=null,match=null;
+  let active=false,identity=null,epoch=0,syncRevision=0,timer=null,fetching=false,busy=false,matchId=null,match=null;
   let online=[],incoming=[],outgoing=[],selected=null,offerVersion=null,questionId=null,pendingAnswer=null,feedback='';
   function status(message,error=false){const el=$('battleStatus');if(el){el.textContent=message;el.classList.toggle('is-error',error);}}
   async function api(action,body){
@@ -179,8 +179,9 @@
   function displayQuestion(m){
     const q=m.question;
     if(questionId===q?.id)return;
-    questionId=q?.id||null;pendingAnswer=null;feedback='';
-    $('battleQuestionBlock').hidden=!q;
+    if(!q){questionId=null;$('battleQuestionBlock').hidden=true;return;}
+    questionId=q.id;pendingAnswer=null;feedback='';
+    $('battleQuestionBlock').hidden=false;
     $('battlePrompt').textContent=q?.prompt||'次の問題を準備しています…';
     $('battleQuestionMeta').textContent=q?'Section '+Math.ceil(q.number/100)+' / #'+q.number:'';
     $('battleChoices').replaceChildren();
@@ -227,17 +228,17 @@
   }
   async function refresh(){
     if(!active||fetching||busy||document.hidden)return;
-    fetching=true;const lease=epoch;
+    fetching=true;const lease=epoch,revision=syncRevision;
     try{
       const snapshot=await api('lobby');
-      if(!active||epoch!==lease)return;
+      if(!active||epoch!==lease||revision!==syncRevision)return;
       online=Array.isArray(snapshot.online)?snapshot.online:[];
       incoming=Array.isArray(snapshot.incoming)?snapshot.incoming:[];
       outgoing=Array.isArray(snapshot.outgoing)?snapshot.outgoing:[];
       if(validId(snapshot.match?.id))matchId=snapshot.match.id;
       if(matchId){
         const detail=await api('state?matchId='+encodeURIComponent(matchId));
-        if(!active||epoch!==lease)return;
+        if(!active||epoch!==lease||revision!==syncRevision)return;
         match=detail.match||null;
       }else match=null;
       render();status('');
@@ -246,7 +247,7 @@
   }
   async function mutate(action,fields){
     if(busy||!active)return;
-    busy=true;const lease=epoch;status('確認中…');
+    busy=true;syncRevision++;const lease=epoch;status('確認中…');
     try{
       const result=await api(action,{requestId:freshId(),...fields});
       if(!active||epoch!==lease)return;
@@ -286,7 +287,7 @@
   }
   async function submitAnswer(){
     if(!pendingAnswer||busy)return;
-    busy=true;const lease=epoch;status('判定中…');render();
+    busy=true;syncRevision++;const lease=epoch;status('判定中…');render();
     try{
       const response=await api('answer',pendingAnswer);
       if(!active||lease!==epoch)return;
@@ -298,7 +299,7 @@
     finally{busy=false;if(active&&lease===epoch){render();void refresh();}}
   }
   function close(){
-    active=false;epoch++;if(timer)clearInterval(timer);timer=null;
+    active=false;epoch++;syncRevision++;if(timer)clearInterval(timer);timer=null;
     identity=null;matchId=null;match=null;online=[];incoming=[];outgoing=[];
     selected=null;offerVersion=null;questionId=null;pendingAnswer=null;feedback='';busy=false;fetching=false;
     if($('battleApp'))$('battleApp').replaceChildren();
