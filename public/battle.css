@@ -71,3 +71,35 @@
   .battle-choice { min-height:60px; font-size:17px; padding:12px; }
 }
 @media (prefers-reduced-motion:reduce) { .battle-half>span { transition:none; } }
+
+/* 2player-inspired battle lobby: self appears among online members. */
+.battle-online-heading { margin-top:30px; padding-bottom:8px; border-bottom:0; }
+.battle-heading-title { display:flex; align-items:baseline; gap:12px; min-width:0; }
+.battle-heading-title h2 { font-size:17px!important; font-weight:650; }
+.battle-heading-title small { font-size:13px; color:#7b8590; font-variant-numeric:tabular-nums; }
+.battle-refresh { display:grid; place-items:center; min-width:44px; min-height:44px; padding:0; color:#263c52; font-size:30px; font-weight:500; line-height:1; }
+.battle-refresh:focus-visible { outline:2px solid #5484af; outline-offset:2px; border-radius:8px; }
+.battle-people { margin:12px 0 2px; gap:10px; }
+.battle-person { min-height:65px; padding:11px 15px; gap:13px; }
+.battle-online-dot { width:10px; height:10px; border-radius:50%; background:#78a052; flex:0 0 auto; }
+.battle-online-name { font-size:15px; font-weight:650; }
+.battle-self-label { flex:0 0 auto; color:#8b9598; font-size:13px; }
+.battle-person.is-self { background:#fff; }
+.battle-person .secondary-button { border-radius:8px; }
+#battleOnlineEmpty { margin:12px 0 22px; }
+.battle-ranking-panel { margin:42px 0 32px; }
+.battle-ranking-heading { border-bottom:0; gap:10px; padding:0 0 5px; }
+.battle-ranking-heading h2 { font-size:18px!important; }
+.battle-ranking-heading>span { font-size:12px; color:#7a858d; text-align:right; }
+.battle-ranking-list { display:grid; gap:10px; margin-top:12px; }
+.battle-ranking-row { display:grid; grid-template-columns:25px minmax(0,1fr) auto; align-items:center; min-height:68px; gap:15px; padding:15px 17px; border:1px solid #e1e5e3; border-radius:11px; background:#fff; font-variant-numeric:tabular-nums; }
+.battle-ranking-row.is-self { border-color:#9fbcd2; background:#edf3f9; }
+.battle-ranking-place { text-align:center; color:#7c8680; font-size:16px; font-weight:750; }
+.battle-ranking-name { min-width:0; color:#243a4c; overflow-wrap:anywhere; font-size:15px; font-weight:700; }
+.battle-ranking-wins { color:#2a4157; font-size:16px; font-weight:750; white-space:nowrap; }
+#battleRankingEmpty { padding:12px 0; }
+@media (max-width:374px) {
+  .battle-person { gap:9px; padding-inline:10px; }
+  .battle-ranking-row { gap:10px; padding-inline:12px; }
+  .battle-person>.secondary-button { padding-inline:9px; }
+}
