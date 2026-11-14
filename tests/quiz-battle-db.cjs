@@ -86,7 +86,7 @@ async function main(){
     correctChoiceId:choices[0].id,correctText:choices[0].text};
   eq((await rpc(host,'next',{matchId:match.id,question})).error.code,'BATTLE_SHARED_ROUNDS_ONLY',
     'legacy per-player question API is disabled');
-  eq((await buzzer(host,'state',{matchId:match.id},uid(),'bad-secret')).error.code,'RPC_FORBIDDEN',
+  eq((await buzzer(host,'state',{matchId:match.id},uid(),db,'bad-secret')).error.code,'RPC_FORBIDDEN',
     'a private server secret is required before reading shared questions');
   const next=(await buzzer(host,'next',{matchId:match.id,question})).match;
   eq(next.round,1,'first shared question number');
