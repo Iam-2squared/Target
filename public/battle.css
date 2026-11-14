@@ -274,3 +274,125 @@ body.battle-playing #battleView .battle-top-actions .back-button {
   body.battle-setup #battleOffer { padding:12px; }
   body.battle-setup .battle-form { gap:8px; }
 }
+
+
+/* V3: rapid individual questions. The scoreboard owns action feedback. */
+body.battle-playing .battle-board {
+  position:relative;
+  min-height:140px;
+  margin-bottom:8px;
+  padding:13px 12px 18px;
+  overflow:visible;
+  isolation:isolate;
+}
+body.battle-playing .battle-names { min-height:25px; }
+body.battle-playing .battle-names>strong {
+  font-size:clamp(12px,3vw,16px);
+  font-weight:750;
+}
+body.battle-playing .battle-bars {
+  height:17px;
+  margin:19px 0 13px;
+}
+body.battle-playing .battle-avatars>div { gap:5px;flex-wrap:wrap; }
+body.battle-playing .battle-avatars .battle-avatar {
+  width:37px;height:37px;font-size:15px;
+}
+body.battle-playing .battle-avatars b { font-size:12px; font-weight:750; }
+body.battle-playing .battle-streak {
+  font-size:11px;font-weight:800;color:#a05e17;white-space:nowrap;
+}
+.battle-board .battle-hit-stamp {
+  position:absolute;
+  top:48%;
+  left:50%;
+  bottom:auto;
+  transform:translate(-50%,-50%);
+  min-height:48px;
+  max-width:93%;
+  padding:8px 15px;
+  border-radius:12px;
+  white-space:normal;
+  text-align:center;
+  background-clip:padding-box;
+  animation:battle-board-stamp .22s ease-out both;
+  box-shadow:0 7px 25px #192d4061;
+}
+.battle-board .battle-hit-stamp[hidden] { display:none!important; }
+.battle-board .battle-hit-stamp strong {font-size:clamp(20px,5.2vw,27px);}
+.battle-board .battle-hit-stamp small {font-size:11px;}
+@keyframes battle-board-stamp {
+  from {opacity:0;transform:translate(-50%,-50%) scale(.78);}
+  to {opacity:1;transform:translate(-50%,-50%) scale(1);}
+}
+/* Bigger high-contrast typography with shorter choice cards. */
+body.battle-playing #battlePrompt {
+  font-size:clamp(34px,9vw,49px)!important;
+  font-weight:800!important;
+  color:#1d2d3d;
+  line-height:1.19;
+  margin:7px 0 12px!important;
+  max-height:2.4em;
+}
+body.battle-playing .battle-choice-stage {
+  flex:0 1 auto;
+  height:clamp(280px,45dvh,425px);
+  max-height:100%;
+  min-height:0;
+  width:100%;
+}
+body.battle-playing .battle-choices {
+  display:grid;
+  width:100%;
+  grid-template-rows:repeat(4,minmax(0,1fr));
+  gap:8px;
+}
+body.battle-playing .battle-choice {
+  min-height:0;
+  width:100%;
+  padding:8px 15px;
+  font-size:clamp(19px,4.7vw,25px)!important;
+  font-weight:750;
+  line-height:1.33;
+  color:#233649;
+  border:1.5px solid #cbd6df;
+  background:#fff;
+}
+body.battle-playing .battle-choice>span:last-child {
+  color:#233649!important;
+  font-size:inherit;
+  font-weight:750;
+  opacity:1!important;
+}
+body.battle-playing .battle-choice:disabled {
+  opacity:.94;
+  color:#273b4e;
+}
+body.battle-playing .battle-choice .battle-letter {
+  color:#435d78;
+  background:#e4ecf4;
+  font-size:13px;
+  font-weight:750;
+}
+body.battle-playing .battle-feedback {margin:4px 0 0;}
+@media(max-height:730px){
+  body.battle-playing .battle-board { min-height:114px;padding:8px 8px 12px; }
+  body.battle-playing .battle-bars {margin:9px 0 7px;}
+  body.battle-playing .battle-avatars .battle-avatar {width:28px;height:28px;font-size:12px;}
+  body.battle-playing #battlePrompt {
+    font-size:clamp(27px,7vw,40px)!important;
+    margin:3px 0 6px!important;
+  }
+  body.battle-playing .battle-choice-stage {height:clamp(250px,43dvh,370px);}
+  body.battle-playing .battle-choices {gap:5px;}
+  body.battle-playing .battle-choice {padding:5px 10px;font-size:clamp(17px,4.3vw,22px)!important;}
+}
+@media(max-width:360px){
+  body.battle-playing .battle-choice {padding:6px 10px;font-size:17px!important;}
+  body.battle-playing .battle-board {padding-inline:6px;}
+  .battle-board .battle-hit-stamp {padding:6px 8px;}
+  .battle-board .battle-hit-stamp strong {font-size:18px;}
+}
+@media(prefers-reduced-motion:reduce){
+  .battle-board .battle-hit-stamp {animation:none;}
+}

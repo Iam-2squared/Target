@@ -1,257 +1,208 @@
 'use strict';
-// Synthetic wallets only. NEVER point this test at production.
+// Disposable local PostgreSQL only. NEVER execute this test on Production.
 const assert=require('node:assert/strict');
 const crypto=require('node:crypto');
 const fs=require('node:fs/promises');
 const path=require('node:path');
 const {Client}=require('pg');
 const root=path.resolve(__dirname,'..');
-const uid=()=>crypto.randomUUID(),secret=crypto.randomBytes(40).toString('hex');
-const database='target_quiz_hp_battle_'+process.pid+'_'+crypto.randomBytes(4).toString('hex')+'_test';
-let admin,db,other,created=false,checks=0;
-const eq=(x,y,msg)=>{checks++;assert.deepEqual(x,y,msg);};
-const ok=(x,msg)=>{checks++;assert(x,msg);};
+const uid=()=>crypto.randomUUID();
+const secret=crypto.randomBytes(40).toString('hex');
+const dbName='target_sprint_'+process.pid+'_'+crypto.randomBytes(4).toString('hex')+'_test';
 const actor=name=>({memberId:uid(),name,sessionHash:crypto.randomBytes(32).toString('hex')});
-const host=actor('Battle Host'),guest=actor('Battle Guest');
-async function rpc(member,action,params={},id=uid(),key=secret){
+const host=actor('Sprint Host'),guest=actor('Sprint Guest');
+let admin,db,other,created=false,checks=0;
+const eq=(a,b,msg)=>{checks++;assert.deepEqual(a,b,msg);};
+const ok=(v,msg)=>{checks++;assert(v,msg);};
+async function rpc(member,action,params={},requestId=uid(),client=db,key=secret){
   const input={...member,...params};
-  if(!['lobby','state','next'].includes(action))input.requestId=id;
-  return (await db.query('SELECT public.target_battle_rpc($1,$2,$3::jsonb) x',[key,action,JSON.stringify(input)])).rows[0].x;
+  if(!['lobby','state','next'].includes(action))input.requestId=requestId;
+  return (await client.query('SELECT public.target_battle_rpc($1,$2,$3::jsonb) x',
+     [key,action,JSON.stringify(input)])).rows[0].x;
 }
-async function buzzer(member,action,params={},id=uid(),client=db,key=secret){
-  const body={...member,...params};
-  if(action==='answer')body.requestId=id;
-  return (await client.query('SELECT public.target_buzzer_rpc($1,$2,$3::jsonb) x',
-    [key,action,JSON.stringify(body)])).rows[0].x;
+async function sprint(member,action,params={},requestId=uid(),client=db,key=secret){
+  const input={...member,...params};
+  if(action==='answer')input.requestId=requestId;
+  return (await client.query('SELECT public.target_sprint_rpc($1,$2,$3::jsonb) x',
+     [key,action,JSON.stringify(input)])).rows[0].x;
 }
-const nap=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-async function profile(p){return(await db.query('SELECT total_points,spent_points,casino_net FROM target_private.profiles WHERE member_id=$1',[p.memberId])).rows[0];}
-async function wallet(p){return(await db.query('SELECT target_private.games_wallet($1) x',[p.memberId])).rows[0].x;}
-async function events(id){return(await db.query('SELECT member_id,phase,kind,delta FROM target_private.battle_wallet_events WHERE match_id=$1 ORDER BY member_id,phase',[id])).rows;}
+async function wallet(member){
+  return (await db.query('SELECT target_private.games_wallet($1) x',[member.memberId])).rows[0].x;
+}
+async function receipts(matchId){
+  return (await db.query('SELECT member_id,phase,kind,delta FROM target_private.battle_wallet_events WHERE match_id=$1 ORDER BY member_id,phase',[matchId])).rows;
+}
 async function reconcile(){
-  const mismatches=await db.query('SELECT count(*)::int n FROM target_private.profiles p JOIN target_private.wallet_finance_projection(NULL) r USING(member_id) WHERE (p.total_points,p.spent_points,p.casino_net) IS DISTINCT FROM(r.total_points,r.spent_points,r.casino_net)');
-  eq(mismatches.rows[0].n,0,'consolidated income and immutable ledger reconcile');
-  const imbalance=await db.query("SELECT count(*)::int n FROM target_private.battle_matches m LEFT JOIN LATERAL(SELECT coalesce(sum(e.delta),0) balance FROM target_private.battle_wallet_events e WHERE e.match_id=m.id) x ON true WHERE x.balance+m.escrow<>0");
-  eq(imbalance.rows[0].n,0,'pot conservation');
+  const delta=await db.query('SELECT count(*)::int n FROM target_private.profiles p JOIN target_private.wallet_finance_projection(NULL) f USING(member_id) WHERE (p.total_points,p.spent_points,p.casino_net) IS DISTINCT FROM (f.total_points,f.spent_points,f.casino_net)');
+  eq(delta.rows[0].n,0,'disposable finance projection matches profiles');
+  const conservation=await db.query("SELECT count(*)::int n FROM target_private.battle_matches m LEFT JOIN LATERAL (SELECT coalesce(sum(e.delta),0) net FROM target_private.battle_wallet_events e WHERE e.match_id=m.id) x ON true WHERE x.net + m.escrow <> 0");
+  eq(conservation.rows[0].n,0,'stake receipts conserve total money + escrow');
 }
-async function adjust(p,amount){
-  const batch={version:1,reason:'Disposable Target quiz battle ledger test',targets:[{memberId:p.memberId,expectedName:p.name,totalIncome:amount}]};
-  await db.query('SELECT target_private.adjust_wallet_income($1,$2::jsonb)',
-    ['income_adjust_battle_'+crypto.randomBytes(8).toString('hex'),JSON.stringify(batch)]);
+async function adjust(member,amount){
+ const batch={version:1,reason:'Disposable Target quiz battle ledger test',targets:[{memberId:member.memberId,expectedName:member.name,totalIncome:amount}]};
+ await db.query('SELECT target_private.adjust_wallet_income($1,$2::jsonb)',
+   ['income_adjust_battle_'+crypto.randomBytes(8).toString('hex'),JSON.stringify(batch)]);
+}
+function makeQuestion(number){
+ const choices=Array.from({length:4},(_,i)=>({id:uid(),text:'意味'+number+'-'+i}));
+ return {id:uid(),number,prompt:'english '+number,choices,
+   correctChoiceId:choices[0].id,correctText:choices[0].text};
+}
+async function openMatch(stake=200,hp=100){
+ await rpc(host,'lobby');await rpc(guest,'lobby');
+ const defaults={book:'target1900',fromSection:1,toSection:1,stake:100,initialHp:100};
+ let m=(await rpc(host,'challenge',{targetId:guest.memberId,...defaults})).match;
+ ok(m?.id,'invitation creates a room');
+ eq(m.status,'invited');eq((await receipts(m.id)).length,0,'invitation never reserves funds');
+ m=(await rpc(guest,'accept',{matchId:m.id})).match;
+ eq(m.status,'setup','after acceptance both can configure');
+ m=(await rpc(host,'propose',{matchId:m.id,expectedVersion:m.offerVersion,
+   book:'target1900',fromSection:1,toSection:1,stake,initialHp:hp})).match;
+ eq(m.host.ready,false);eq(m.guest.ready,false);
+ m=(await rpc(guest,'ready',{matchId:m.id,expectedVersion:m.offerVersion})).match;
+ eq(m.status,'setup','one approval is insufficient');
+ m=(await rpc(host,'ready',{matchId:m.id,expectedVersion:m.offerVersion})).match;
+ eq(m.status,'playing');eq(m.pot,2*stake,'funded match escrows both deposits');
+ return m;
+}
+async function putQuestion(member,matchId,question){
+ return (await sprint(member,'next',{matchId,question})).match;
+}
+async function answer(member,matchId,q,correct=true,id=uid(),client=db){
+ const choice=correct?q.choices[0].id:q.choices[1].id;
+ return sprint(member,'answer',{matchId,questionId:q.id,choiceId:choice},id,client);
 }
 async function main(){
-  eq(process.env.NODE_ENV,'test','no production test mode');
-  const url=new URL(process.env.DATABASE_URL||'');
-  ok(['127.0.0.1','localhost','[::1]'].includes(url.hostname)&&!url.search&&!url.hash,'only local PostgreSQL');
-  const owner=new URL(url);owner.pathname='/postgres';
-  admin=new Client({connectionString:owner.href});await admin.connect();
-  await admin.query('CREATE DATABASE "'+database+'"');created=true;
-  url.pathname='/'+database;db=new Client({connectionString:url.href});await db.connect();
-  await db.query("DO $roles$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='anon') THEN CREATE ROLE anon NOLOGIN; END IF; IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='authenticated') THEN CREATE ROLE authenticated NOLOGIN; END IF; IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='service_role') THEN CREATE ROLE service_role NOLOGIN; END IF; END $roles$");
-  for(const name of (await fs.readdir(path.join(root,'supabase/migrations'))).filter(x=>/^[0-9]+_.*\.sql$/.test(x)).sort()){
-    await db.query(await fs.readFile(path.join(root,'supabase/migrations',name),'utf8'));
-  }
-  await db.query("INSERT INTO target_private.server_credentials(singleton,key_hash) VALUES(true,encode(sha256(convert_to($1,'UTF8')),'hex'))",[secret]);
-  for(const p of [host,guest]){
-    await db.query('INSERT INTO target_private.profiles(member_id,name) VALUES($1,$2)',[p.memberId,p.name]);
-    await adjust(p,10000);
-  }
-  eq((await rpc(host,'lobby',{},uid(),'wrong')).error.code,'RPC_FORBIDDEN','reject wrong credential before state writes');
-  ok((await rpc(host,'lobby')).ok);
-  const list=await rpc(guest,'lobby');
-  ok(list.online.some(u=>u.id===host.memberId),'host shows online to guest');
-  eq(list.ranking,[],'ranking stays empty before real completed battles');
-  eq((await rpc(host,'lobby')).ranking,[],'no fabricated victories for signed-in host');
-  const settings={book:'target1900',fromSection:1,toSection:1,stake:100,initialHp:100};
-  let match=(await rpc(host,'challenge',{targetId:guest.memberId,...settings})).match;
-  ok(match.id,'challenge creates a private room');
-  eq(match.status,'invited');eq((await wallet(host)).balance,10000,'invite is free');
-  eq((await rpc(guest,'lobby')).incoming.length,1,'guest sees invitation');
-  match=(await rpc(guest,'accept',{matchId:match.id})).match;
-  eq(match.status,'setup');eq((await events(match.id)).length,0,'accepted, no reserve until both approve');
-  const updated={book:'target1900',fromSection:1,toSection:1,stake:200,initialHp:50};
-  match=(await rpc(guest,'propose',{matchId:match.id,expectedVersion:match.offerVersion,...updated})).match;
-  eq(match.offerVersion,2);eq(match.host.ready,false);eq(match.guest.ready,false);
-  match=(await rpc(host,'ready',{matchId:match.id,expectedVersion:2})).match;
-  eq(match.status,'setup');eq(match.pot,400);eq((await wallet(host)).balance,10000);
-  const readyId=uid();
-  const funded=await rpc(guest,'ready',{matchId:match.id,expectedVersion:2},readyId);
-  match=funded.match;eq(match.status,'playing');eq(match.pot,400);
-  eq((await wallet(host)).balance,9800);eq((await wallet(guest)).balance,9800);
-  eq((await rpc(guest,'ready',{matchId:match.id,expectedVersion:2},readyId)).replayed,true);
-  eq((await events(match.id)).length,2,'retry does not double-reserve');
-  await reconcile();
-  const choices=Array.from({length:4},(_,i)=>({id:uid(),text:['正解','不正解1','不正解2','不正解3'][i]}));
-  const question={id:uid(),number:1,prompt:'2人で共通のテスト問題',choices,
-    correctChoiceId:choices[0].id,correctText:choices[0].text};
-  eq((await rpc(host,'next',{matchId:match.id,question})).error.code,'BATTLE_SHARED_ROUNDS_ONLY',
-    'legacy per-player question API is disabled');
-  eq((await buzzer(host,'state',{matchId:match.id},uid(),db,'bad-secret')).error.code,'RPC_FORBIDDEN',
-    'a private server secret is required before reading shared questions');
-  const next=(await buzzer(host,'next',{matchId:match.id,question})).match;
-  eq(next.round,1,'first shared question number');
-  eq(next.roundPhase,'countdown','rounds have a server start gate');
-  eq(next.question.id,question.id);
-  ok(!Object.hasOwn(next.question,'correctChoiceId')&&!Object.hasOwn(next.question,'correctText'),
-    'private answer stays server-side');
-  const guestView=(await buzzer(guest,'state',{matchId:match.id})).match;
-  eq(guestView.question,next.question,'both users receive exactly identical choices and prompt');
-  eq(guestView.startsAt,next.startsAt,'the two clients have one common opening time');
-  eq((await buzzer(host,'answer',{matchId:match.id,questionId:question.id,choiceId:choices[0].id})).error.code,
-    'BATTLE_ROUND_NOT_STARTED','early answer cannot steal initiative');
-  await nap(1750);
-  const answerId=uid();
-  let result=await buzzer(host,'answer',{matchId:match.id,questionId:question.id,choiceId:choices[0].id},answerId);
-  eq(result.answer.correct,true);eq(result.answer.damage,5,'first correct buzz attacks 5');
-  eq(result.match.guest.hp,45,'correct: only rival loses 5 HP');
-  eq(result.match.host.hp,50,'attacker does not lose HP');
-  eq(result.match.roundResult.attacker,'host','attack owner comes from server grading');
-  eq(result.match.roundPhase,'cooldown','round closes after the first correct answer');
-  eq((await buzzer(host,'answer',{matchId:match.id,questionId:question.id,choiceId:choices[0].id},answerId)).replayed,true,
-    'same request ID is idempotent');
-  eq((await buzzer(guest,'answer',{matchId:match.id,questionId:question.id,choiceId:choices[0].id})).error.code,
-    'BATTLE_ROUND_CLOSED','second correct player cannot deal duplicate damage');
-  eq((await buzzer(guest,'state',{matchId:match.id})).match.roundResult.attacker,'host',
-    'loser sees the same server-confirmed attack event');
-  eq((await buzzer(host,'next',{matchId:match.id,question:{...question,id:uid()}})).match.round,1,
-    'cannot skip required result display cooldown');
+ eq(process.env.NODE_ENV,'test','never perform destructive fixture testing outside NODE_ENV=test');
+ const url=new URL(process.env.DATABASE_URL||'');
+ ok(['localhost','127.0.0.1','[::1]'].includes(url.hostname)&&!url.search&&!url.hash,
+    'database must be localhost and no query overrides');
+ const owner=new URL(url);owner.pathname='/postgres';
+ admin=new Client({connectionString:owner.href});await admin.connect();
+ await admin.query('CREATE DATABASE "'+dbName+'"');created=true;
+ url.pathname='/'+dbName;db=new Client({connectionString:url.href});await db.connect();
+ await db.query("DO $roles$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='anon') THEN CREATE ROLE anon NOLOGIN; END IF; IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='authenticated') THEN CREATE ROLE authenticated NOLOGIN; END IF; IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='service_role') THEN CREATE ROLE service_role NOLOGIN; END IF; END $roles$");
+ for(const name of (await fs.readdir(path.join(root,'supabase/migrations'))).filter(x=>/^[0-9]+_.*\.sql$/.test(x)).sort()){
+   await db.query(await fs.readFile(path.join(root,'supabase/migrations',name),'utf8'));
+ }
+ await db.query("INSERT INTO target_private.server_credentials(singleton,key_hash) VALUES(true,encode(sha256(convert_to($1,'UTF8')),'hex'))",[secret]);
+ for(const member of [host,guest]){
+   await db.query('INSERT INTO target_private.profiles(member_id,name) VALUES($1,$2)',[member.memberId,member.name]);
+   await adjust(member,10000);
+ }
+ eq((await sprint(host,'state',{matchId:uid()},uid(),db,'bad-secret')).error.code,'RPC_FORBIDDEN',
+   'secret gate runs before reads or writes');
+ ok((await rpc(host,'lobby')).ok);
+ ok((await rpc(guest,'lobby')).online.some(x=>x.id===host.memberId),'presence is authenticated');
+ const m=await openMatch(200,100);
+ eq((await wallet(host)).balance,9800);eq((await wallet(guest)).balance,9800);
+ await reconcile();
 
-  await nap(2050);
-  const q2={...question,id:uid(),number:2,choices:choices.map(c=>({...c,id:uid()}))};
-  q2.correctChoiceId=q2.choices[0].id;q2.correctText=q2.choices[0].text;
-  const newRound=(await buzzer(guest,'next',{matchId:match.id,question:q2})).match;
-  eq(newRound.round,2);eq(newRound.question.id,q2.id);
-  eq((await buzzer(host,'state',{matchId:match.id})).match.question,newRound.question,
-    'new question stays shared, regardless of which client opened it');
-  await nap(1750);
-  result=await buzzer(guest,'answer',{matchId:match.id,questionId:q2.id,choiceId:q2.choices[1].id});
-  eq(result.answer.correct,false);eq(result.answer.damage,10,'a wrong buzz costs itself ten HP');
-  eq(result.match.host.hp,50);eq(result.match.guest.hp,35,
-    'first wrong answer damages the answering guest, not the host');
-  eq(result.match.wrongHit.damage,10,'private UI stamp reports self-damage');
-  eq((await buzzer(host,'state',{matchId:match.id})).match.wrongHit,null,
-    'opponent cannot access the other player’s private answer status');
-  eq(result.match.answered,true,'wrong guess consumes the only attempt for that user');
-  eq((await buzzer(guest,'answer',{matchId:match.id,questionId:q2.id,choiceId:q2.choices[0].id})).error.code,
-    'BATTLE_ALREADY_ANSWERED','cannot brute-force all four options');
-  result=await buzzer(host,'answer',{matchId:match.id,questionId:q2.id,choiceId:q2.choices[1].id});
-  eq(result.answer.correct,false);eq(result.match.roundPhase,'cooldown','both wrong closes round');
-  eq(result.match.roundResult.damage,0);
-  eq(result.answer.damage,10);
-  eq(result.match.guest.hp,35);eq(result.match.host.hp,40);
-  eq(result.match.wrongHit.damage,10,'both wrong answers each cost their own HP');
+ const ha=makeQuestion(1),ga=makeQuestion(2);
+ let hostM=(await sprint(host,'next',{matchId:m.id,question:ha})).match;
+ let guestM=(await sprint(guest,'next',{matchId:m.id,question:ga})).match;
+ eq(hostM.question.id,ha.id);eq(guestM.question.id,ga.id,
+   'each player receives their own independent question');
+ ok(!Object.hasOwn(hostM.question,'correctChoiceId')&&!Object.hasOwn(hostM.question,'correctText'),
+   'private correct option remains server-side');
+ eq((await sprint(host,'next',{matchId:m.id,question:makeQuestion(3)})).match.question.id,ha.id,
+   'new-question polling cannot silently replace a pending question');
+ eq((await sprint(host,'state',{matchId:m.id})).match.question.id,ha.id,'own question is stable');
+ const missId=uid();let result=await answer(host,m.id,ha,false,missId);
+ eq(result.answer.correct,false);eq(result.answer.damage,10);
+ eq(result.match.host.hp,90);eq(result.match.guest.hp,100,'wrong answer damages only its owner');
+ eq(result.match.host.streak,0);
+ eq(result.match.events.at(-1).actorRole,'host');
+ eq(result.match.events.at(-1).correct,false,'server publishes outcome, not the answer key');
+ eq((await sprint(host,'answer',{matchId:m.id,questionId:ha.id,choiceId:ha.choices[1].id},missId)).replayed,true,
+   'retry cannot apply self damage twice');
+ eq((await sprint(host,'answer',{matchId:m.id,questionId:ha.id,choiceId:ha.choices[0].id})).error.code,
+   'BATTLE_QUESTION_CHANGED','old question may not be answered a second time');
+ eq((await sprint(guest,'state',{matchId:m.id})).match.question.id,ga.id,
+   'opponent can continue their question independently');
 
-  await nap(2050);
-  const q3={...question,id:uid(),number:3,choices:choices.map(c=>({...c,id:uid()}))};
-  q3.correctChoiceId=q3.choices[0].id;q3.correctText=q3.choices[0].text;
-  const third=(await buzzer(host,'next',{matchId:match.id,question:q3})).match;
-  eq(third.round,3);
-  await nap(1750);
-  result=await buzzer(guest,'answer',{matchId:match.id,questionId:q3.id,choiceId:q3.choices[0].id});
-  eq(result.match.roundResult.attacker,'guest','either side can win the buzzer race');
-  eq(result.match.host.hp,35);eq(result.match.guest.hp,35);
-  eq((await buzzer(host,'answer',{matchId:match.id,questionId:q3.id,choiceId:q3.choices[0].id})).error.code,
-    'BATTLE_ROUND_CLOSED','a later correct answer is rejected');
+ result=await answer(guest,m.id,ga,true);
+ eq(result.answer.correct,true);eq(result.match.host.hp,85,'guest correct attacks host -5');
+ eq(result.match.guest.streak,1);
+ for(let i=0;i<5;i++){
+   const q=makeQuestion(10+i);
+   hostM=await putQuestion(host,m.id,q);
+   eq(hostM.question.id,q.id,'host receives requested private question');
+   const own=hostM.question;
+   const correctId=q.correctChoiceId;
+   result=await sprint(host,'answer',{matchId:m.id,questionId:own.id,choiceId:correctId});
+   eq(result.answer.correct,true);
+   eq(result.answer.damage,5);
+   eq(result.match.guest.hp,95-5*i,'only the opponent takes the correct-hit damage');
+   eq(result.match.host.streak,(i+1)%5);
+   if(i===4){
+     eq(result.answer.streakBonus,true,'fifth consecutive correct triggers healing');
+     eq(result.answer.healedHp,10,'fifth correct heals ten HP');
+     eq(result.match.host.hp,95,'healing restores 85 to 95 HP');
+   }
+ }
+ for(let i=0;i<5;i++){
+   const q=makeQuestion(20+i);
+   hostM=await putQuestion(host,m.id,q);
+   result=await answer(host,m.id,q,true);
+   if(i===4){
+     eq(result.answer.streakBonus,true,'tenth correct triggers a second recovery');
+     eq(result.answer.healedHp,5,'healing is capped at initial HP');
+     eq(result.match.host.hp,100,'HP cannot exceed initial HP');
+   }
+ }
+ eq(result.match.guest.hp,50,'10 correct hits deal 50 total damage');
+ eq(result.match.host.streak,0,'streak restarts after five consecutive successes');
 
-  // Two actual PostgreSQL connections race to open and answer one new round.
-  // Only one server-serialized correct arrival may reduce HP.
-  await nap(2050);
-  other=new Client({connectionString:url.href});await other.connect();
-  const q4={...question,id:uid(),number:4,choices:choices.map(c=>({...c,id:uid()}))};
-  q4.correctChoiceId=q4.choices[0].id;q4.correctText=q4.choices[0].text;
-  const q5={...question,id:uid(),number:5,choices:choices.map(c=>({...c,id:uid()}))};
-  q5.correctChoiceId=q5.choices[0].id;q5.correctText=q5.choices[0].text;
-  const openings=await Promise.all([
-    buzzer(host,'next',{matchId:match.id,question:q4}),
-    buzzer(guest,'next',{matchId:match.id,question:q5},uid(),other)
-  ]);
-  eq(openings[0].match.question,openings[1].match.question,
-    'two simultaneous generators cannot fork into different questions');
-  const activeQuestion=openings[0].match.question;
-  const correctChoice=(activeQuestion.id===q4.id?q4:q5).correctChoiceId;
-  await nap(1750);
-  const attempts=await Promise.all([
-    buzzer(host,'answer',{matchId:match.id,questionId:activeQuestion.id,choiceId:correctChoice}),
-    buzzer(guest,'answer',{matchId:match.id,questionId:activeQuestion.id,choiceId:correctChoice},uid(),other)
-  ]);
-  eq(attempts.filter(x=>x.answer?.correct===true).length,1,
-    'exactly one correct answer wins simultaneous requests');
-  eq(attempts.filter(x=>x.error?.code==='BATTLE_ROUND_CLOSED').length,1,
-    'other correct answer is locked out after first settlement');
-  const contest=(await buzzer(host,'state',{matchId:match.id})).match;
-  eq(contest.host.hp+contest.guest.hp,65,'one race deals 5 more damage after two -10 mistakes');
-  ok(['host','guest'].includes(contest.roundResult.attacker),'server chooses one attacker');
-  await reconcile();
-  result=await rpc(guest,'cancel',{matchId:match.id});
-  eq(result.match.status,'finished');eq(result.match.winner,'host','forfeit awards rival');
-  eq((await wallet(host)).balance,10200,'winner receives two deposits, net +200');
-  eq((await wallet(guest)).balance,9800,'loser already paid exactly one deposit');
-  const completed=await rpc(host,'lobby');
-  eq(completed.ranking.length,2,'winner and defeated participant both appear after a finished match');
-  eq(completed.ranking.map(p=>[p.id,p.wins,p.rank]),[[host.memberId,1,1],[guest.memberId,0,2]],
-    'ranking uses completed HP battle wins, never points or own wallet');
-  eq((await rpc(guest,'lobby')).ranking.map(p=>p.wins),[1,0],
-    'all logged-in users see the same battle ranking');
-  eq((await rpc(host,'lobby')).ranking[0].wins,1,
-    'repeated ranking fetches cannot award a second victory');
-  await reconcile();
-  const oldEvents=await events(match.id);eq(oldEvents.length,4,'two reserves and two settlements');
-  await assert.rejects(db.query('UPDATE target_private.battle_wallet_events SET delta=0 WHERE match_id=$1',[match.id]),
-    /permanent evidence/i);
-  for(const role of ['anon','authenticated','service_role']){
-    ok(!(await db.query("SELECT has_table_privilege($1,'target_private.battle_matches','SELECT') x",[role])).rows[0].x,
-      'private match table inaccessible');
-  }
-  // Synthetic self-KO: a wrong answer at 10 HP must instantly settle a win for
-  // the opponent, with no second ledger payout, and no correct answer required.
-  let ko=(await rpc(host,'challenge',{targetId:guest.memberId,...settings})).match;
-  ko=(await rpc(guest,'accept',{matchId:ko.id})).match;
-  ko=(await rpc(host,'ready',{matchId:ko.id,expectedVersion:ko.offerVersion})).match;
-  ko=(await rpc(guest,'ready',{matchId:ko.id,expectedVersion:ko.offerVersion})).match;
-  eq(ko.status,'playing','KO fixture funded by both accepted users');
-  await db.query('UPDATE target_private.battle_matches SET guest_hp=10 WHERE id=$1',[ko.id]);
-  const koQuestion={...question,id:uid(),choices:choices.map(c=>({...c,id:uid()}))};
-  koQuestion.correctChoiceId=koQuestion.choices[0].id;koQuestion.correctText=koQuestion.choices[0].text;
-  ko=(await buzzer(host,'next',{matchId:ko.id,question:koQuestion})).match;
-  await nap(1750);
-  const koAnswer=await buzzer(guest,'answer',{
-    matchId:ko.id,questionId:koQuestion.id,choiceId:koQuestion.choices[1].id});
-  eq(koAnswer.answer.correct,false);eq(koAnswer.answer.damage,10);
-  eq(koAnswer.match.status,'finished');
-  eq(koAnswer.match.winner,'host','self-inflicted KO awards opponent the pot');
-  eq((await events(ko.id)).length,4,'self-KO creates exactly two reserves and two settlement entries');
-  await reconcile();
-  // Production bridge proves the previously deployed separate-question client
-  // still works without touching prior played matches, if shared_enabled=false.
-  eq((await db.query('SELECT shared_enabled FROM target_private.battle_release_flags WHERE singleton')).rows[0].shared_enabled,true,
-    'fresh CI and future Production builds keep shared-buzzer behavior by default');
-  await db.query('UPDATE target_private.battle_release_flags SET shared_enabled=false WHERE singleton');
-  let oldMatch=(await rpc(host,'challenge',{targetId:guest.memberId,...settings})).match;
-  oldMatch=(await rpc(guest,'accept',{matchId:oldMatch.id})).match;
-  oldMatch=(await rpc(host,'ready',{matchId:oldMatch.id,expectedVersion:oldMatch.offerVersion})).match;
-  oldMatch=(await rpc(guest,'ready',{matchId:oldMatch.id,expectedVersion:oldMatch.offerVersion})).match;
-  eq(oldMatch.status,'playing','legacy room can still be funded under flag');
-  const legacyChoices=Array.from({length:4},(_,i)=>({id:uid(),text:'legacy '+i}));
-  const legacyQuestion={id:uid(),number:1,prompt:'Legacy production client',choices:legacyChoices,
-    correctChoiceId:legacyChoices[0].id,correctText:legacyChoices[0].text};
-  oldMatch=(await rpc(host,'next',{matchId:oldMatch.id,question:legacyQuestion})).match;
-  eq(oldMatch.question.id,legacyQuestion.id,'legacy private question DTO is available only with flag disabled');
-  ok(!Object.hasOwn(oldMatch.question,'correctChoiceId'),'legacy question does not expose grading');
-  eq((await rpc(guest,'state',{matchId:oldMatch.id})).match.question,null,
-    'legacy question remains private to answering player');
-  const legacyAnswer=await rpc(host,'answer',{
-    matchId:oldMatch.id,questionId:legacyQuestion.id,choiceId:legacyChoices[0].id});
-  eq(legacyAnswer.match.guest.hp,95,'unchanged legacy correct answer grading remains functional');
-  eq((await rpc(guest,'cancel',{matchId:oldMatch.id})).match.status,'finished');
-  await reconcile();
-  await db.query('UPDATE target_private.battle_release_flags SET shared_enabled=true WHERE singleton');
-  eq((await rpc(host,'next',{matchId:oldMatch.id,question:legacyQuestion})).error.code,
-    'BATTLE_SHARED_ROUNDS_ONLY','legacy entry closes again after Production upgrade flag');
-  await reconcile();
-  console.log(JSON.stringify({battle:'passed',checks,hostedWrites:false}));
+ other=new Client({connectionString:url.href});await other.connect();
+ const hq=makeQuestion(40),gq=makeQuestion(41);
+ hostM=await putQuestion(host,m.id,hq);
+ guestM=await putQuestion(guest,m.id,gq);
+ eq(hostM.question.id,hq.id);
+ eq(guestM.question.id,gq.id);
+ const before=(await sprint(host,'state',{matchId:m.id})).match;
+ const outcomes=await Promise.all([
+   sprint(host,'answer',{matchId:m.id,questionId:hq.id,choiceId:hq.correctChoiceId},uid(),db),
+   sprint(guest,'answer',{matchId:m.id,questionId:gq.id,choiceId:gq.correctChoiceId},uid(),other)
+ ]);
+ eq(outcomes.filter(x=>x.answer?.correct===true).length,2,
+   'both players may score concurrently on different questions');
+ const after=(await sprint(host,'state',{matchId:m.id})).match;
+ eq(after.host.hp+after.guest.hp,before.host.hp+before.guest.hp-10,
+    'two simultaneous answers each deal exactly five HP damage');
+ eq((await sprint(host,'state',{matchId:m.id})).match.events.length>0,true);
+ await reconcile();
+
+ eq((await rpc(guest,'cancel',{matchId:m.id})).match.winner,'host','forfeit awards the opponent');
+ eq((await wallet(host)).balance,10200);eq((await wallet(guest)).balance,9800);
+ eq((await receipts(m.id)).length,4,'exactly two reserves and two settlements');
+ await reconcile();
+
+ const ko=await openMatch(100,100);
+ await db.query('UPDATE target_private.battle_matches SET guest_hp=10 WHERE id=$1',[ko.id]);
+ const knockout=makeQuestion(55);
+ await sprint(guest,'next',{matchId:ko.id,question:knockout});
+ const koResult=await answer(guest,ko.id,knockout,false);
+ eq(koResult.answer.damage,10);eq(koResult.match.status,'finished');
+ eq(koResult.match.winner,'host','wrong answer at 10 HP ends match immediately');
+ eq((await receipts(ko.id)).length,4,'self-KO settles at most once');
+ await reconcile();
+ const invalid=await sprint(host,'answer',{matchId:ko.id,questionId:knockout.id,choiceId:knockout.correctChoiceId});
+ eq(invalid.error.code,'BATTLE_NOT_PLAYING','ended match cannot accept new answers');
+
+ for(const role of ['anon','authenticated','service_role']){
+   ok(!(await db.query("SELECT has_table_privilege($1,'target_private.battle_current_questions','SELECT') x",[role])).rows[0].x,
+     'correct options are inaccessible from client roles');
+ }
+ ok(! (await db.query("SELECT has_function_privilege('authenticated','public.target_sprint_rpc(text,text,jsonb)','EXECUTE') x")).rows[0].x,
+   'authenticated users cannot bypass backend to call the server-only sprint RPC');
+ const stamp=(await sprint(host,'state',{matchId:ko.id})).match.events.at(-1);
+ ok(!Object.hasOwn(stamp,'correctChoiceId')&&!Object.hasOwn(stamp,'choiceId'),
+    'event feed never leaks exact answers');
+ console.log(JSON.stringify({sprint:'passed',checks,hostedWrites:false}));
 }
-main().catch(e=>{console.error(e.stack||e);process.exitCode=1;}).finally(async()=>{
-  if(other)await other.end();
-  if(db)await db.end();
-  if(admin){if(created)await admin.query('DROP DATABASE "'+database+'"');await admin.end();}
+main().catch(err=>{console.error(err.stack||err);process.exitCode=1;}).finally(async()=>{
+ if(other)await other.end();
+ if(db)await db.end();
+ if(admin){if(created)await admin.query('DROP DATABASE "'+dbName+'"');await admin.end();}
 });

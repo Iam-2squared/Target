@@ -93,25 +93,31 @@ test('Battle lobby shows logged-in self, online refresh and victory ranking inde
 });
 
 
-test('Buzzer shares the same question, displays attack / damage stamps, and keeps four choices onscreen',()=>{
+test('Independent sprint renders high-contrast shortened choices and HP-board attack/heal stamps',()=>{
   const js=fs.readFileSync(path.join(root,'public/battle.js'),'utf8');
   const css=fs.readFileSync(path.join(root,'public/battle.css'),'utf8');
   const html=fs.readFileSync(path.join(root,'public/index.html'),'utf8');
   const server=fs.readFileSync(path.join(root,'server/battle.cjs'),'utf8');
   const store=fs.readFileSync(path.join(root,'server/store.cjs'),'utf8');
   assert.doesNotThrow(()=>new Function(js));
-  for(const token of ['battleHitStamp','is-attack','is-damage','攻撃成功','被ダメージ',
-    'roundCanAnswer','roundPhase','roundResult','answered','startsAt','deadlineAt','nowServer',
-    "timer=setInterval(()=>{updateRoundClock();void refresh();},480)"])
-    assert(js.includes(token),'buzzer script '+token);
-  assert(!js.includes('自分のHP -10'),'old self-damage text is removed');
-  assert(server.includes("store.buzzerRpc('next'"),'both users use one server-owned question');
-  assert(server.includes("store.buzzerRpc('state'"),'state reads the shared round');
-  assert(store.includes("runRpc('target_buzzer_rpc'"),'buzzer backend is private server RPC');
-  assert(css.includes('grid-template-rows:repeat(4,minmax(0,1fr))'),'all answer rows fit screen');
-  assert(css.includes('height:100dvh'),'game uses dynamic viewport');
-  assert(css.includes('body.battle-playing #battleView>.section-heading'),'heading hidden in game');
-  assert(html.includes('id="battleTitle"'),'accessible lobby heading retained');
+  for(const token of ['battleHitStamp','is-attack','is-damage','被ダメージ',
+    'roundCanAnswer','streakBonus','healedHp','m.events','5連続',
+    'ミス −10','相手のミス −10','自分のペースで連続回答'])
+    assert(js.includes(token),'independent script '+token);
+  assert(!js.includes('roundPhase'),'no shared buzzer waiting states');
+  assert(!js.includes('次の問題まで'),'the opponent cannot force a cooldown');
+  assert(server.includes("store.sprintRpc('next'"),'individual question generation is server owned');
+  assert(server.includes("store.sprintRpc('state'"),'each player reads only their own active question');
+  assert(store.includes("runRpc('target_sprint_rpc'"),'new backend-only RPC');
+  assert(css.includes('body.battle-playing #battlePrompt'),'English prompt has its own large font');
+  assert(css.includes('font-size:clamp(34px,9vw,49px)'),'English typography is visibly larger');
+  assert(css.includes('body.battle-playing .battle-choice>span:last-child'),'Japanese contrast is forced');
+  assert(css.includes('color:#233649'),'text is dark, not washed out');
+  assert(css.includes('height:clamp(280px,45dvh,425px)'),'choice cards are shorter');
+  assert(css.includes('.battle-board .battle-hit-stamp'),'stamps overlay the HP board, not the choices');
+  assert(css.includes('height:100dvh'),'all four choices fit dynamic phone viewport');
+  assert(html.includes('id="battleTitle"'),'battle page remains accessible');
+  assert(html.includes('independent-sprint-streak-20261114'),'mobile assets invalidate old cache');
 });
 
 test('Buzzer database migration keeps correctness and money server-owned',()=>{
@@ -142,13 +148,14 @@ test('Accepted invitation is the first time setup appears and battle UI has no m
   assert(app.includes("view==='battle'?'リアタイバトル | Target'"));
 });
 
-test('Shared buzzer restores server-owned -10 HP on wrong answers without allowing double attacks',()=>{
-  const sql=fs.readFileSync(path.join(root,'supabase/migrations/20261114121000_target_buzzer_wrong_self_damage.sql'),'utf8');
-  const js=fs.readFileSync(path.join(root,'public/battle.js'),'utf8');
-  for(const marker of ['damage_value:=10','new_host_hp:=greatest(0,m.host_hp-',
-    'new_guest_hp:=greatest(0,m.guest_hp-','PERFORM target_private.battle_settle',
-    "'wrongHit'","'damage',10","IF new_host_hp=0 OR new_guest_hp=0"])
-    assert(sql.includes(marker),marker);
-  assert(js.includes('誤答 −10'),'red wrong-answer stamp');
-  assert(js.includes("wrongHit"),'only the answering player receives their mistake feedback');
+test('Sprint database keeps -5 correct, -10 wrong, every five correct +10 heal and immutable receipts',()=>{
+  const sql=fs.readFileSync(path.join(root,'supabase/migrations/20261114215500_target_independent_sprint_streaks.sql'),'utf8');
+  for(const token of ['public.target_sprint_rpc','battle_sprint_dto','healed_hp','streak_bonus','host_streak','guest_streak',
+     "accepted THEN 5 ELSE 10","old_streak=4","LEAST(10,m.initial_hp","host_hp=new_host_hp",
+     'PERFORM target_private.battle_settle','battle_current_questions','battle_answers',
+     'PERFORM pg_advisory_xact_lock(991101)','streakBonus'])
+    assert(sql.includes(token),'DB migration '+token);
+  assert(!sql.includes('DROP TABLE target_private.battle_buzzer_rounds'),'old shared rounds are preserved');
+  assert(!sql.includes('DELETE FROM target_private.battle_answers'),'past immutable answers are preserved');
+  assert(!sql.includes('UPDATE target_private.profiles SET total_points'),'new mode uses existing audited settlement');
 });
