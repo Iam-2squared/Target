@@ -12,13 +12,13 @@
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <link rel="manifest" href="/app.webmanifest">
   <link rel="stylesheet" href="/style.css">
-  <link rel="stylesheet" href="/battle.css?v=shared-buzzer-20261114">
+  <link rel="stylesheet" href="/battle.css?v=buzzer-setup-miss-20261114">
   <link rel="stylesheet" href="/jackpot-effects.css">
   <link rel="stylesheet" href="/bonus-time.css">
   <script src="/jackpot-effects.js" defer></script>
   <script src="/bonus-time.js" defer></script>
   <script src="/reward-lock.js" defer></script>
-  <script src="/battle.js?v=shared-buzzer-20261114" defer></script>
+  <script src="/battle.js?v=buzzer-setup-miss-20261114" defer></script>
   <script src="/app.js" defer></script>
 </head>
 <body data-view="home">
@@ -126,8 +126,13 @@
       <ol id="masteryList" class="mastery-list" aria-label="Sectionごとの定着率"></ol>
     </section>
     <section id="battleView" class="view" aria-labelledby="battleTitle" hidden>
-      <div class="view-toolbar"><button class="back-button" data-home type="button">ホーム</button><button id="battleRefresh" type="button" class="text-button">更新</button></div>
-      <div class="section-heading"><h1 id="battleTitle">リアタイバトル</h1></div>
+      <div class="view-toolbar battle-topbar">
+        <h1 id="battleTitle">リアタイバトル</h1>
+        <div class="battle-top-actions">
+          <button class="back-button" data-home type="button">ホーム</button>
+          <button id="battleRefresh" type="button" class="text-button">更新</button>
+        </div>
+      </div>
       <div id="battleApp" aria-live="polite"></div>
     </section>
   </main>
