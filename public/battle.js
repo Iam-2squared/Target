@@ -68,7 +68,7 @@
   }
   function build(){
     $('battleApp').innerHTML=[
-      "<p class='battle-intro'>同じ問題で早押し · 正解で相手 −5 HP / 誤答で自分 −10 HP</p>",
+      "<p class='battle-intro'>自分のペースで連続回答 · 正解で相手−5 / 誤答で自分−10 / 5連続でHP回復</p>",
       "<p id='battleStatus' class='battle-status' role='status' aria-live='polite'></p>",
       "<section id='battleLobby'>",
       "<div class='battle-heading battle-online-heading'><div class='battle-heading-title'><h2>ログイン中</h2><small id='battleOnlineCount' aria-live='polite'>—</small></div><button id='battleLobbyRefresh' class='battle-refresh' type='button' aria-label='ログイン中のユーザーとランキングを更新' title='更新'>↻</button></div>",
@@ -95,16 +95,16 @@
       "<p class='battle-caution'>両者が承認するまで賭け金は確保されません。条件を変更すると双方の承認が解除されます。</p></div>",
       "<button id='battleOfferBack' class='text-button' type='button'>戻る</button></section>",
       "<section id='battleGame' hidden>",
-      "<div class='battle-board'><div class='battle-names'><strong id='battleHostName'></strong>",
+      "<div class='battle-board'><div id='battleHitStamp' class='battle-hit-stamp' role='status' aria-live='polite' hidden></div><div class='battle-names'><strong id='battleHostName'></strong>",
       "<span class='battle-pot'><small>合計賭け金</small><strong id='battleTotalStake'></strong></span>",
       "<strong id='battleGuestName'></strong></div>",
       "<div class='battle-bars'><div class='battle-half battle-left'><span id='battleHostFill'></span></div>",
       "<span class='battle-mid' aria-hidden='true'></span>",
       "<div class='battle-half battle-right'><span id='battleGuestFill'></span></div></div>",
-      "<div class='battle-avatars'><div><span class='battle-avatar' id='battleHostAvatar'></span><b id='battleHostHP'></b></div>",
-      "<div><span class='battle-avatar' id='battleGuestAvatar'></span><b id='battleGuestHP'></b></div></div></div>",
+      "<div class='battle-avatars'><div><span class='battle-avatar' id='battleHostAvatar'></span><b id='battleHostHP'></b><small id='battleHostStreak' class='battle-streak'></small></div>",
+      "<div><span class='battle-avatar' id='battleGuestAvatar'></span><b id='battleGuestHP'></b><small id='battleGuestStreak' class='battle-streak'></small></div></div></div>",
       "<div id='battleQuestionBlock' class='battle-question'><small id='battleQuestionMeta'></small><h2 id='battlePrompt'></h2>",
-      "<div class='battle-choice-stage'><div id='battleHitStamp' class='battle-hit-stamp' role='status' aria-live='polite' hidden></div>",
+      "<div class='battle-choice-stage'>",
       "<div id='battleChoices' class='battle-choices'></div></div></div>",
       "<p id='battleFeedback' class='battle-feedback' role='status'></p>",
       "<button id='battleAnswerRetry' class='secondary-button wide' type='button' hidden>同じ回答を再確認</button>",
@@ -219,18 +219,15 @@
   }
   function nowServer(){return Date.now()+clockOffset;}
   function roundCanAnswer(m){
-    if(!m||m.status!=='playing'||!m.question||m.answered||busy||pendingAnswer)return false;
-    if(m.roundPhase==='cooldown'||m.roundPhase==='timeout'||m.roundPhase==='inactive')return false;
-    const start=Date.parse(m.startsAt),deadline=Date.parse(m.deadlineAt),now=nowServer();
-    return Number.isFinite(start)&&Number.isFinite(deadline)&&now>=start&&now<deadline;
+    return !!(m?.status==='playing'&&m.question&&!busy&&!pendingAnswer);
   }
   function displayQuestion(m){
     const q=m.question;
     if(questionId===q?.id)return;
     questionId=q?.id||null;pendingAnswer=null;feedback='';
     $('battleQuestionBlock').hidden=false;
-    $('battlePrompt').textContent=q?.prompt||'次の共通問題を準備中…';
-    $('battleQuestionMeta').textContent=q?'Section '+Math.ceil(q.number/100)+' / ROUND '+m.round:'同じ問題を2人に配信します';
+    $('battlePrompt').textContent=q?.prompt||'次の問題を準備しています…';
+    $('battleQuestionMeta').textContent=q?'Section '+Math.ceil(q.number/100)+' / 問題 #'+q.number:'問題を読み込み中';
     $('battleChoices').replaceChildren();
     if(q&&Array.isArray(q.choices))q.choices.forEach((option,index)=>{
       const button=make('button','battle-choice');
@@ -241,35 +238,30 @@
     });
   }
   function renderStamp(m){
-    const stamp=$('battleHitStamp'),result=m.roundResult,wrong=m.wrongHit;
-    const wrongThisRound=wrong?.round===m.round;
-    const isHit=m.roundPhase==='cooldown'&&result?.attacker;
-    const isOwnWrong=wrongThisRound&&nowServer()-Date.parse(wrong.createdAt)<1750;
-    let key=null,kind='',title='',hint='',symbol='';
-    if(isHit){
-      const attacking=result.attacker===m.myRole;
-      const extra=attacking?0:(wrongThisRound?10:0);
-      kind=attacking?'is-attack':'is-damage';
-      symbol=attacking?'⚔':'💥';
-      title=attacking?'攻撃成功 +'+result.damage:'被ダメージ −'+(result.damage+extra);
-      hint=attacking?'相手HP −'+result.damage:
-        (extra?'相手の攻撃 −'+result.damage+' / 誤答 −10':'相手の攻撃 −'+result.damage);
-      key=m.id+':'+result.round+':'+kind+':'+(result.damage+extra);
-    }else if(isOwnWrong){
-      kind='is-damage';symbol='💥';title='誤答 −10';hint='自分のHP −10';
-      key=m.id+':'+m.round+':wrong:'+wrong.createdAt;
-    }else if(m.roundPhase==='cooldown'&&result&&!result.attacker){
-      kind='is-neutral';title=wrongThisRound?'誤答 −10':'次の問題へ';
-      symbol=wrongThisRound?'💥':'';
-      hint=wrongThisRound?'自分のHP −10':'';
-      key=m.id+':'+result.round+':neutral:'+String(wrongThisRound);
+    const stamp=$('battleHitStamp');
+    const list=Array.isArray(m.events)?m.events:[];
+    const e=list[list.length-1];
+    const age=nowServer()-Date.parse(e?.createdAt);
+    if(!e||!validId(e.id)||!Number.isFinite(age)||age>1700||age< -3000){
+      stamp.hidden=true;return;
     }
-    if(!key){stamp.hidden=true;shownStampKey=null;return;}
-    if(shownStampKey!==key){
-      stamp.className='battle-hit-stamp '+(kind==='is-neutral'&&wrongThisRound?'is-damage':kind);
+    if(shownStampKey!==e.id){
+      const mine=e.actorRole===m.myRole;
+      let kind='',symbol='',title='',hint='';
+      if(e.correct&&mine){
+        kind='is-attack';symbol='⚔';title='攻撃 −5';
+        hint=e.streakBonus?'5連続 ✨ '+(e.healedHp>0?'HP +'+e.healedHp:'HP最大'):'相手HP −5';
+      }else if(e.correct&&!mine){
+        kind='is-damage';symbol='💥';title='被ダメージ −5';hint='相手からの攻撃';
+      }else if(mine){
+        kind='is-damage';symbol='💥';title='ミス −10';hint='自分のHP −10';
+      }else{
+        kind='is-neutral';symbol='⚠';title='相手のミス −10';hint='相手のHPが減少';
+      }
+      stamp.className='battle-hit-stamp '+kind;
       stamp.replaceChildren(make('span','battle-hit-symbol',symbol),
         make('strong','',title),make('small','',hint));
-      shownStampKey=key;
+      shownStampKey=e.id;
     }
     stamp.hidden=false;
   }
@@ -280,6 +272,8 @@
     $('battleGuestAvatar').textContent=first(m.guest.name);
     $('battleHostHP').textContent=m.host.hp+' / '+m.initialHp+' HP';
     $('battleGuestHP').textContent=m.guest.hp+' / '+m.initialHp+' HP';
+    $('battleHostStreak').textContent=m.host.streak?'🔥 '+m.host.streak+'/5':'';
+    $('battleGuestStreak').textContent=m.guest.streak?'🔥 '+m.guest.streak+'/5':'';
     $('battleHostFill').style.width=(Math.max(0,Math.min(1,m.host.hp/m.initialHp))*100)+'%';
     $('battleGuestFill').style.width=(Math.max(0,Math.min(1,m.guest.hp/m.initialHp))*100)+'%';
     displayQuestion(m);renderStamp(m);
@@ -289,17 +283,14 @@
   }
   function updateRoundClock(){
     if(!active||match?.status!=='playing')return;
-    const m=match,meta=$('battleQuestionMeta');
-    if(m.roundPhase==='cooldown'){
-      const next=Math.max(0,Math.ceil((Date.parse(m.nextAt)-nowServer())/1000));
-      meta.textContent='次の問題まで '+next+' 秒';
-    }else if(m.roundPhase==='countdown'||m.roundPhase==='open'){
-      const until=Date.parse(m.startsAt)-nowServer();
-      if(until>0)meta.textContent='同時スタートまで '+Math.max(1,Math.ceil(until/1000))+' 秒';
-      else if(m.answered)meta.textContent='回答済み・相手の正解を待機中';
-      else meta.textContent='ROUND '+m.round+'  ·  残り'+Math.max(0,Math.ceil((Date.parse(m.deadlineAt)-nowServer())/1000))+'秒';
-    }else if(m.roundPhase==='timeout')meta.textContent='この問題は時間切れ';
-    for(const button of $('battleChoices').querySelectorAll('button'))button.disabled=!roundCanAnswer(m);
+    const m=match;
+    const meta=$('battleQuestionMeta');
+    meta.textContent=m.question
+      ? 'Section '+Math.ceil(m.question.number/100)+' / 問題 #'+m.question.number
+      : '次の問題を準備しています…';
+    for(const button of $('battleChoices').querySelectorAll('button'))
+      button.disabled=!roundCanAnswer(m);
+    renderStamp(m);
   }
   function renderDone(m){
     const myWin=m.winner===m.myRole;
@@ -395,17 +386,15 @@
       const response=await api('answer',pendingAnswer);
       if(!active||lease!==epoch)return;
       const correct=response.answer?.correct;
-      feedback=correct===false?'誤答：自分のHP −10（この問題は回答済み）':
-        correct===true?'正解！ 相手のHP −5':'';
+      feedback=correct===false?'ミス −10 HP':correct===true?
+        (response.answer?.streakBonus?'5連続！ HP +'+response.answer.healedHp:'正解 −5 HP'):'';
       pendingAnswer=null;
       if(response.match)match=response.match;status('');
     }catch(e){
       if(active&&lease===epoch){
-        if(['BATTLE_ROUND_CLOSED','BATTLE_ALREADY_ANSWERED','BATTLE_QUESTION_CHANGED','BATTLE_NOT_PLAYING'].includes(e.code)){
-          pendingAnswer=null;feedback='次の問題をお待ちください。';status(''); 
-        }else if(e.code==='BATTLE_ROUND_NOT_STARTED'){
-          pendingAnswer=null;status('同時スタートの合図をお待ちください。');
-        }else status(e.message+' 同じ回答で再確認できます。',true);
+        if(['BATTLE_QUESTION_CHANGED','BATTLE_NOT_PLAYING'].includes(e.code)){
+          pendingAnswer=null;feedback='最新の問題に更新します。';status('');
+        }else status(e.message+' 同じ回答を再確認できます。',true);
       }
     }
     finally{busy=false;if(active&&lease===epoch){render();void refresh();}}
