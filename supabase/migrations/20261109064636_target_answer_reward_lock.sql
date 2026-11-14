@@ -1,0 +1,402 @@
+-- Account-wide reward suppression. Old answers and monetary receipts stay unchanged.
+BEGIN;
+SELECT pg_advisory_xact_lock(991101);
+DO $guard$
+BEGIN
+  IF (SELECT md5(prosrc) FROM pg_proc WHERE oid='public.target_rpc(text,text,jsonb)'::regprocedure)
+    IS DISTINCT FROM '3a9cb9c8e0431e8e742509d8c608e1cf' THEN
+    RAISE EXCEPTION 'Quiz scorer changed; review the account reward-lock patch again';
+  END IF;
+END $guard$;
+ALTER TABLE target_private.profiles
+  ADD COLUMN reward_miss_streak smallint NOT NULL DEFAULT 0,
+  ADD COLUMN reward_correct_streak smallint NOT NULL DEFAULT 0,
+  ADD COLUMN reward_locked boolean NOT NULL DEFAULT false,
+  ADD CONSTRAINT target_reward_lock_state CHECK(
+    reward_miss_streak BETWEEN 0 AND 2 AND reward_correct_streak BETWEEN 0 AND 2 AND
+    ((reward_locked AND reward_miss_streak=2) OR
+     (NOT reward_locked AND reward_miss_streak<=1 AND reward_correct_streak=0)));
+CREATE FUNCTION target_private.reward_lock_snapshot(p_member uuid)
+RETURNS jsonb LANGUAGE sql STABLE SECURITY INVOKER SET search_path=pg_catalog AS $$
+  SELECT jsonb_build_object('locked',reward_locked,'missStreak',reward_miss_streak,
+    'recoveryStreak',reward_correct_streak) FROM target_private.profiles WHERE member_id=p_member;
+$$;
+REVOKE ALL ON FUNCTION target_private.reward_lock_snapshot(uuid) FROM PUBLIC,anon,authenticated,service_role;
+
+CREATE OR REPLACE FUNCTION public.target_rpc(p_secret text, p_action text, p_input jsonb)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'target_private'
+AS $function$
+DECLARE
+  member_uuid uuid;
+  quiz_uuid uuid;
+  question_uuid uuid;
+  choice_uuid uuid;
+  request_uuid uuid;
+  display_name text;
+  selected_book text;
+  selected_direction text;
+  range_from integer;
+  range_to integer;
+  question_total integer;
+  q target_private.quizzes%ROWTYPE;
+  a target_private.answers%ROWTYPE;
+  state target_private.system_state%ROWTYPE;
+  questions_value jsonb;
+  question_value jsonb;
+  choice_value jsonb;
+  response_value jsonb;
+  correct_value boolean;
+  next_answered integer;
+  next_correct integer;
+  awarded_points integer;
+  next_quiz_points bigint;
+  next_total_points bigint;
+  new_bytes integer;
+  wait_seconds integer;
+  entry record;
+  award_time timestamptz;
+  active_bonus_id uuid;
+  active_bonus_started_at timestamptz;
+  active_bonus_ends_at timestamptz;
+  bonus_value jsonb;
+  selected_mode text;
+  requested_count integer;
+  mastery_bytes integer;
+  gate_miss smallint;
+  gate_correct smallint;
+  gate_locked boolean;
+  was_reward_locked boolean;
+BEGIN
+  -- The credential gate runs before inspecting caller data or allocating rows.
+  IF p_secret IS NULL OR length(p_secret)<32 OR length(p_secret)>256 OR
+      NOT EXISTS(SELECT 1 FROM target_private.server_credentials WHERE singleton
+        AND key_hash=encode(sha256(convert_to(p_secret,'UTF8')),'hex')) THEN
+    RETURN target_private.error_result(403,'RPC_FORBIDDEN','この操作は許可されていません。');
+  END IF;
+  IF p_input IS NULL OR jsonb_typeof(p_input)<>'object' OR pg_column_size(p_input)>262144 OR
+      (p_action IS NULL OR p_action NOT IN ('rate','profile','start','review_start','mastery','answer','ranking')) THEN
+    RETURN target_private.error_result(400,'INVALID_REQUEST','送信内容を確認してください。');
+  END IF;
+  IF p_action='ranking' THEN
+    IF p_input<>'{}'::jsonb THEN RETURN target_private.error_result(400,'INVALID_REQUEST','送信内容を確認してください。'); END IF;
+    SELECT jsonb_build_object('ranking',coalesce(jsonb_agg(result_value ORDER BY row_rank),'[]'::jsonb),
+      'updatedAt',clock_timestamp()) INTO response_value FROM (
+      SELECT row_number() OVER(ORDER BY total_points DESC,correct_count DESC,answered_count ASC,updated_at ASC,member_id ASC) AS row_rank,
+        jsonb_build_object('rank',row_number() OVER(ORDER BY total_points DESC,correct_count DESC,answered_count ASC,updated_at ASC,member_id ASC),
+          'name',name,'correctCount',correct_count,'totalPoints',total_points) AS result_value
+      FROM target_private.profiles WHERE answered_count>0
+      ORDER BY total_points DESC,correct_count DESC,answered_count ASC,updated_at ASC,member_id ASC LIMIT 500
+    ) ranked;
+    RETURN response_value;
+  END IF;
+
+  -- Bounded shared writes use one transaction lock to keep quota checks,
+  -- retries and all score increments atomic across independent clients.
+  PERFORM pg_advisory_xact_lock(991101);
+  DELETE FROM target_private.rate_limits WHERE expires_at<=clock_timestamp();
+  IF p_action='rate' THEN
+    IF (SELECT count(*) FROM jsonb_object_keys(p_input))<>1 OR
+      coalesce(p_input->>'identifier','')!~'^[a-f0-9]{64}$' THEN
+      RETURN target_private.error_result(400,'INVALID_REQUEST','送信内容を確認してください。');
+    END IF;
+    wait_seconds:=target_private.consume_rate('login:global',86400,3000);
+    IF wait_seconds=0 THEN
+      wait_seconds:=target_private.consume_rate('login:device:'||(p_input->>'identifier'),300,5);
+    END IF;
+    IF wait_seconds>0 THEN
+      RETURN jsonb_set(target_private.error_result(429,'RATE_LIMITED','入力回数が多いため、時間をおいてお試しください。'),'{error,retryAfter}',to_jsonb(wait_seconds));
+    END IF;
+    RETURN jsonb_build_object('ok',true);
+  END IF;
+
+  IF coalesce(p_input->>'memberId','')!~'^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$' OR
+      jsonb_typeof(p_input->'name')<>'string' OR length(btrim(coalesce(p_input->>'name','')))<1 OR length(btrim(p_input->>'name'))>20 THEN
+    RETURN target_private.error_result(400,'INVALID_REQUEST','送信内容を確認してください。');
+  END IF;
+  member_uuid:=(p_input->>'memberId')::uuid;
+  display_name:=btrim(p_input->>'name');
+  IF NOT EXISTS(SELECT 1 FROM target_private.profiles WHERE member_id=member_uuid) AND
+      (SELECT count(*) FROM target_private.profiles)>=500 THEN
+    RETURN target_private.error_result(507,'CAPACITY_LIMIT','登録人数の上限に達しました。管理者へ連絡してください。');
+  END IF;
+  INSERT INTO target_private.profiles(member_id,name) VALUES(member_uuid,display_name)
+    ON CONFLICT(member_id) DO UPDATE SET name=excluded.name,
+      updated_at=CASE WHEN target_private.profiles.name IS DISTINCT FROM excluded.name THEN now() ELSE target_private.profiles.updated_at END;
+  IF p_action='profile' THEN
+    IF (SELECT count(*) FROM jsonb_object_keys(p_input))<>2 THEN
+      RETURN target_private.error_result(400,'INVALID_REQUEST','送信内容を確認してください。');
+    END IF;
+    RETURN (SELECT jsonb_build_object('correctCount',correct_count,'totalPoints',total_points,'bonus',target_private.bonus_snapshot(member_uuid),'rewardLock',target_private.reward_lock_snapshot(member_uuid)) FROM target_private.profiles WHERE member_id=member_uuid);
+  END IF;
+
+  IF p_action='mastery' THEN
+    IF (SELECT count(*) FROM jsonb_object_keys(p_input))<>3 OR
+        coalesce(p_input->>'book','') NOT IN ('target1900','target1000','kobun400') THEN
+      RETURN target_private.error_result(400,'INVALID_REQUEST','送信内容を確認してください。');
+    END IF;
+    wait_seconds:=target_private.consume_rate('mastery:'||member_uuid::text,3600,1200);
+    IF wait_seconds>0 THEN RETURN jsonb_set(target_private.error_result(429,'RATE_LIMITED','しばらく待ってから更新してください。'),'{error,retryAfter}',to_jsonb(wait_seconds)); END IF;
+    RETURN target_private.mastery_snapshot(member_uuid,p_input->>'book');
+  END IF;
+
+  IF coalesce(p_input->>'requestId','')!~'^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$' THEN
+    RETURN target_private.error_result(400,'INVALID_REQUEST','送信内容を確認してください。');
+  END IF;
+  request_uuid:=(p_input->>'requestId')::uuid;
+  IF p_action IN ('start','review_start') THEN
+    selected_mode:=CASE WHEN p_action='review_start' THEN 'review' ELSE 'standard' END;
+    IF (selected_mode='standard' AND (SELECT count(*) FROM jsonb_object_keys(p_input))<>8) OR
+        (selected_mode='review' AND ((p_input ? 'questions' AND (SELECT count(*) FROM jsonb_object_keys(p_input))<>9)
+          OR (NOT (p_input ? 'questions') AND (SELECT count(*) FROM jsonb_object_keys(p_input))<>8))) OR
+        coalesce(p_input->>'book','') NOT IN ('target1900','target1000','kobun400') OR
+        coalesce(p_input->>'direction','') NOT IN ('english','japanese') OR
+        jsonb_typeof(p_input->'from') IS DISTINCT FROM 'number' OR jsonb_typeof(p_input->'to') IS DISTINCT FROM 'number' OR
+        coalesce(p_input->>'from','')!~'^[0-9]{1,4}$' OR coalesce(p_input->>'to','')!~'^[0-9]{1,4}$' OR
+        (selected_mode='standard' AND jsonb_typeof(p_input->'questions') IS DISTINCT FROM 'array') OR
+        (selected_mode='review' AND (jsonb_typeof(p_input->'count') IS DISTINCT FROM 'number' OR
+          coalesce(p_input->>'count','') NOT IN ('10','20','50','100') OR
+          (p_input ? 'questions' AND jsonb_typeof(p_input->'questions') IS DISTINCT FROM 'array'))) THEN
+      RETURN target_private.error_result(400,'INVALID_REQUEST','送信内容を確認してください。');
+    END IF;
+    selected_book:=p_input->>'book'; selected_direction:=p_input->>'direction';
+    range_from:=(p_input->>'from')::integer; range_to:=(p_input->>'to')::integer;
+    requested_count:=CASE WHEN selected_mode='review' THEN (p_input->>'count')::integer ELSE NULL END;
+    questions_value:=p_input->'questions'; question_total:=jsonb_array_length(questions_value);
+    IF range_from<1 OR range_to<range_from OR range_to>(CASE selected_book WHEN 'target1900' THEN 1900 WHEN 'target1000' THEN 1000 WHEN 'kobun400' THEN 400 ELSE 0 END) OR
+        (selected_mode='standard' AND question_total NOT BETWEEN 1 AND 100) OR
+        (question_total IS NOT NULL AND (question_total NOT BETWEEN 1 AND 100 OR range_to-range_from+1<question_total)) THEN
+      RETURN target_private.error_result(400,'INVALID_RANGE','出題範囲を確認してください。');
+    END IF;
+    -- Replay precedes the current review-pool lookup: the last review word may
+    -- have become mastered after the first accepted request.
+    SELECT * INTO q FROM target_private.quizzes WHERE member_id=member_uuid AND request_id=request_uuid FOR UPDATE;
+    IF FOUND THEN
+      IF q.book<>selected_book OR q.direction<>selected_direction OR q.from_number<>range_from OR
+          q.to_number<>range_to OR q.study_mode<>selected_mode OR
+          (selected_mode='standard' AND q.total<>question_total) OR
+          (selected_mode='review' AND q.requested_count IS DISTINCT FROM requested_count) THEN
+        RETURN target_private.error_result(409,'IDEMPOTENCY_CONFLICT','同じ開始操作の内容が異なります。');
+      END IF;
+      IF q.expires_at<=clock_timestamp() THEN RETURN target_private.error_result(409,'QUIZ_EXPIRED','テストの期限が切れました。新しいテストを始めてください。'); END IF;
+      RETURN jsonb_build_object('quizId',q.id,'total',q.total,'answeredCount',q.answered_count,
+        'correctCount',q.correct_count,'quizPoints',q.quiz_points,'question',target_private.public_question(q.questions->q.answered_count),'bonus',target_private.bonus_snapshot(member_uuid),'rewardLock',target_private.reward_lock_snapshot(member_uuid));
+    END IF;
+    IF selected_mode='review' AND questions_value IS NULL THEN
+      wait_seconds:=target_private.consume_rate('review-read:'||member_uuid::text,3600,240);
+      IF wait_seconds>0 THEN RETURN jsonb_set(target_private.error_result(429,'RATE_LIMITED','しばらく待ってから始めてください。'),'{error,retryAfter}',to_jsonb(wait_seconds)); END IF;
+      SELECT jsonb_build_object('reviewNumbers',coalesce(jsonb_agg(word_number ORDER BY word_number),'[]'::jsonb))
+        INTO response_value FROM target_private.word_mastery
+        WHERE member_id=member_uuid AND book=selected_book AND needs_review AND word_number BETWEEN range_from AND range_to;
+      IF jsonb_array_length(response_value->'reviewNumbers')=0 THEN
+        RETURN target_private.error_result(409,'REVIEW_EMPTY','この範囲に解き直す単語はありません。');
+      END IF;
+      RETURN response_value;
+    END IF;
+    wait_seconds:=target_private.consume_rate('start:'||member_uuid::text,3600,120);
+    IF wait_seconds>0 THEN RETURN jsonb_set(target_private.error_result(429,'RATE_LIMITED','しばらく待ってからテストを始めてください。'),'{error,retryAfter}',to_jsonb(wait_seconds)); END IF;
+    -- Validate every stored question, including the four independently identified
+    -- options. Answer keys remain private and never appear in the start DTO.
+    FOR question_value IN SELECT value FROM jsonb_array_elements(questions_value) LOOP
+      IF jsonb_typeof(question_value)<>'object' OR (SELECT count(*) FROM jsonb_object_keys(question_value))<>6 OR
+          coalesce(question_value->>'id','')!~'^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$' OR
+          jsonb_typeof(question_value->'prompt')<>'string' OR length(coalesce(question_value->>'prompt','')) NOT BETWEEN 1 AND 2000 OR
+          coalesce(question_value->>'number','')!~'^[0-9]{1,4}$' OR (question_value->>'number')::integer NOT BETWEEN range_from AND range_to OR
+          jsonb_typeof(question_value->'choices')<>'array' OR jsonb_array_length(question_value->'choices')<>4 OR
+          jsonb_typeof(question_value->'correctText')<>'string' OR length(coalesce(question_value->>'correctText','')) NOT BETWEEN 1 AND 2000 OR
+          coalesce(question_value->>'correctChoiceId','')!~'^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$' THEN
+        RETURN target_private.error_result(400,'INVALID_QUESTIONS','出題内容を確認してください。');
+      END IF;
+      FOR choice_value IN SELECT value FROM jsonb_array_elements(question_value->'choices') LOOP
+        IF jsonb_typeof(choice_value)<>'object' OR (SELECT count(*) FROM jsonb_object_keys(choice_value))<>2 OR
+            coalesce(choice_value->>'id','')!~'^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$' OR
+            jsonb_typeof(choice_value->'text')<>'string' OR length(coalesce(choice_value->>'text','')) NOT BETWEEN 1 AND 2000 THEN
+          RETURN target_private.error_result(400,'INVALID_QUESTIONS','出題内容を確認してください。');
+        END IF;
+      END LOOP;
+      IF (SELECT count(DISTINCT value->>'id') FROM jsonb_array_elements(question_value->'choices'))<>4 OR
+          (SELECT count(DISTINCT value->>'text') FROM jsonb_array_elements(question_value->'choices'))<>4 OR
+          NOT EXISTS(SELECT 1 FROM jsonb_array_elements(question_value->'choices') WHERE value->>'id'=question_value->>'correctChoiceId' AND value->>'text'=question_value->>'correctText') THEN
+        RETURN target_private.error_result(400,'INVALID_QUESTIONS','出題内容を確認してください。');
+      END IF;
+    END LOOP;
+    IF (SELECT count(DISTINCT value->>'id') FROM jsonb_array_elements(questions_value))<>question_total OR
+        (SELECT count(DISTINCT value->>'number') FROM jsonb_array_elements(questions_value))<>question_total THEN
+      RETURN target_private.error_result(400,'INVALID_QUESTIONS','出題内容を確認してください。');
+    END IF;
+    IF selected_mode='review' THEN
+      -- Recheck under the same lock as accepted answers. A candidate snapshot
+      -- may have become stale while server-side choices were being generated.
+      IF question_total>requested_count OR question_total<>least(requested_count,(
+          SELECT count(*)::integer FROM target_private.word_mastery WHERE member_id=member_uuid AND book=selected_book
+            AND needs_review AND word_number BETWEEN range_from AND range_to)) OR EXISTS(
+          SELECT 1 FROM jsonb_array_elements(questions_value) candidate WHERE NOT EXISTS(
+            SELECT 1 FROM target_private.word_mastery WHERE member_id=member_uuid AND book=selected_book
+              AND word_number=(candidate->>'number')::integer AND needs_review)) THEN
+        RETURN target_private.error_result(409,'REVIEW_CHANGED','解き直しの対象が更新されました。もう一度始めてください。');
+      END IF;
+    END IF;
+    -- Retain one week of expired quiz details. Lifetime totals are independent.
+    FOR entry IN SELECT id,charged_bytes FROM target_private.quizzes WHERE expires_at<clock_timestamp()-interval '7 days' LIMIT 250 LOOP
+      UPDATE target_private.system_state SET logical_bytes=logical_bytes-entry.charged_bytes-
+          coalesce((SELECT sum(charged_bytes) FROM target_private.answers WHERE quiz_id=entry.id),0),
+        answer_count=answer_count-(SELECT count(*) FROM target_private.answers WHERE quiz_id=entry.id),quiz_count=quiz_count-1 WHERE singleton;
+      DELETE FROM target_private.quizzes WHERE id=entry.id;
+    END LOOP;
+    SELECT * INTO state FROM target_private.system_state WHERE singleton FOR UPDATE;
+    new_bytes:=pg_column_size(questions_value)+512;
+    IF state.quiz_count>=50000 OR state.logical_bytes+new_bytes>104857600 THEN
+      RETURN target_private.error_result(507,'CAPACITY_LIMIT','保存容量の上限に達しました。時間をおいてお試しください。');
+    END IF;
+    INSERT INTO target_private.quizzes(member_id,request_id,book,direction,from_number,to_number,questions,total,charged_bytes,study_mode,requested_count)
+      VALUES(member_uuid,request_uuid,selected_book,selected_direction,range_from,range_to,questions_value,question_total,new_bytes,selected_mode,requested_count) RETURNING * INTO q;
+    UPDATE target_private.system_state SET quiz_count=quiz_count+1,logical_bytes=logical_bytes+new_bytes WHERE singleton;
+    RETURN jsonb_build_object('quizId',q.id,'total',q.total,'answeredCount',0,'correctCount',0,'quizPoints',0,
+      'question',target_private.public_question(q.questions->0),'bonus',target_private.bonus_snapshot(member_uuid),'rewardLock',target_private.reward_lock_snapshot(member_uuid));
+  END IF;
+
+  IF p_action='answer' THEN
+    IF (SELECT count(*) FROM jsonb_object_keys(p_input))<>6 OR
+        coalesce(p_input->>'quizId','')!~'^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$' OR
+        coalesce(p_input->>'questionId','')!~'^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$' OR
+        coalesce(p_input->>'choiceId','')!~'^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$' THEN
+      RETURN target_private.error_result(400,'INVALID_REQUEST','送信内容を確認してください。');
+    END IF;
+    quiz_uuid:=(p_input->>'quizId')::uuid; question_uuid:=(p_input->>'questionId')::uuid; choice_uuid:=(p_input->>'choiceId')::uuid;
+    SELECT * INTO a FROM target_private.answers WHERE member_id=member_uuid AND request_ids @> ARRAY[request_uuid];
+    IF FOUND THEN
+      IF a.quiz_id<>quiz_uuid OR a.question_id<>question_uuid OR a.choice_id<>choice_uuid THEN
+        RETURN target_private.error_result(409,'IDEMPOTENCY_CONFLICT','同じ解答操作の内容が異なります。');
+      END IF;
+      -- Pre-reward answers retain their original zero-point snapshot.
+      RETURN jsonb_build_object('awardPoints',0,'quizPoints',0,'totalPoints',0)||a.response;
+    END IF;
+    SELECT * INTO q FROM target_private.quizzes WHERE id=quiz_uuid AND member_id=member_uuid FOR UPDATE;
+    IF NOT FOUND THEN RETURN target_private.error_result(404,'QUIZ_NOT_FOUND','テストが見つかりません。'); END IF;
+    SELECT * INTO a FROM target_private.answers WHERE quiz_id=quiz_uuid AND question_id=question_uuid;
+    IF FOUND THEN
+      IF a.choice_id<>choice_uuid THEN RETURN target_private.error_result(409,'ANSWER_ALREADY_ACCEPTED','この問題は解答済みです。'); END IF;
+      -- Bind an alternate retry ID too, so it cannot later identify a different
+      -- payload. Aliases are bounded and never increment a score or rate reset.
+      IF cardinality(a.request_ids)>=32 THEN RETURN target_private.error_result(429,'RETRY_LIMIT','再試行回数の上限に達しました。'); END IF;
+      SELECT * INTO state FROM target_private.system_state WHERE singleton FOR UPDATE;
+      IF state.logical_bytes+16>104857600 THEN RETURN target_private.error_result(507,'CAPACITY_LIMIT','保存容量の上限に達しました。'); END IF;
+      UPDATE target_private.answers SET request_ids=array_append(request_ids,request_uuid),charged_bytes=charged_bytes+16
+        WHERE quiz_id=quiz_uuid AND question_id=question_uuid;
+      UPDATE target_private.system_state SET logical_bytes=logical_bytes+16 WHERE singleton;
+      -- Pre-reward answers retain their original zero-point snapshot.
+      RETURN jsonb_build_object('awardPoints',0,'quizPoints',0,'totalPoints',0)||a.response;
+    END IF;
+    IF q.expires_at<=clock_timestamp() THEN RETURN target_private.error_result(409,'QUIZ_EXPIRED','テストの期限が切れました。新しいテストを始めてください。'); END IF;
+    question_value:=q.questions->q.answered_count;
+    IF question_value IS NULL OR question_value->>'id'<>question_uuid::text THEN
+      RETURN target_private.error_result(409,'QUESTION_ORDER','表示中の問題から解答してください。');
+    END IF;
+    IF NOT EXISTS(SELECT 1 FROM jsonb_array_elements(question_value->'choices') WHERE value->>'id'=choice_uuid::text) THEN
+      RETURN target_private.error_result(400,'INVALID_CHOICE','選択肢を確認してください。');
+    END IF;
+    wait_seconds:=target_private.consume_rate('answer:'||member_uuid::text,3600,1200);
+    IF wait_seconds>0 THEN RETURN jsonb_set(target_private.error_result(429,'RATE_LIMITED','しばらく待ってから解答してください。'),'{error,retryAfter}',to_jsonb(wait_seconds)); END IF;
+    correct_value:=question_value->>'correctChoiceId'=choice_uuid::text;
+    next_answered:=q.answered_count+1; next_correct:=q.correct_count+CASE WHEN correct_value THEN 1 ELSE 0 END;
+    -- A draw happens only for a new correct answer, after every replay check.
+    -- These are virtual study points; the client supplies neither roll nor award.
+    award_time:=clock_timestamp();
+    SELECT bonus_id,bonus_started_at,bonus_ends_at,reward_miss_streak,reward_correct_streak,reward_locked
+      INTO active_bonus_id,active_bonus_started_at,active_bonus_ends_at,gate_miss,gate_correct,gate_locked
+      FROM target_private.profiles WHERE member_id=member_uuid;
+    -- The profile upsert above holds this account's row lock for the entire RPC.
+    -- Only a newly accepted answer advances the gate; every replay already returned.
+    was_reward_locked:=gate_locked;
+    IF gate_locked THEN
+      IF correct_value THEN
+        IF gate_correct=2 THEN
+          gate_locked:=false;gate_miss:=0;gate_correct:=0;
+        ELSE gate_correct:=gate_correct+1; END IF;
+      ELSE gate_correct:=0; END IF;
+    ELSE
+      IF correct_value THEN gate_miss:=0;
+      ELSE
+        gate_miss:=least(2,gate_miss+1);
+        IF gate_miss=2 THEN gate_locked:=true; END IF;
+      END IF;
+    END IF;
+    -- Recovery answers, including the third correct answer, earn nothing.
+    -- Bonus time cannot bypass the gate and a locked answer never draws a reward.
+    IF NOT correct_value OR was_reward_locked THEN
+      awarded_points:=0;
+    ELSIF active_bonus_ends_at>award_time THEN
+      awarded_points:=500;
+    ELSE
+      awarded_points:=target_private.reward_points_for_roll(floor(random()*100)::integer);
+      IF awarded_points=100000 THEN
+        active_bonus_id:=gen_random_uuid();
+        active_bonus_started_at:=award_time;
+        active_bonus_ends_at:=award_time+interval '15.9 seconds';
+      END IF;
+    END IF;
+    bonus_value:=CASE WHEN active_bonus_ends_at>award_time THEN
+      jsonb_build_object('id',active_bonus_id,'startedAt',to_char(active_bonus_started_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+        'endsAt',to_char(active_bonus_ends_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),'durationMs',15900) ELSE 'null'::jsonb END;
+    next_quiz_points:=q.quiz_points+awarded_points;
+    SELECT total_points+awarded_points INTO next_total_points FROM target_private.profiles WHERE member_id=member_uuid;
+    response_value:=jsonb_build_object('correct',correct_value,'correctChoiceId',question_value->>'correctChoiceId',
+      'correctText',question_value->>'correctText','answeredCount',next_answered,'correctCount',next_correct,'total',q.total,
+      'awardPoints',awarded_points,'quizPoints',next_quiz_points,'totalPoints',next_total_points,'bonus',bonus_value,
+      'rewardLock',jsonb_build_object('locked',gate_locked,'missStreak',gate_miss,'recoveryStreak',gate_correct),
+      'finished',next_answered=q.total,'nextQuestion',target_private.public_question(q.questions->next_answered));
+    SELECT * INTO state FROM target_private.system_state WHERE singleton FOR UPDATE;
+    new_bytes:=pg_column_size(response_value)+256;
+    mastery_bytes:=CASE WHEN EXISTS(SELECT 1 FROM target_private.word_mastery
+      WHERE member_id=member_uuid AND book=q.book AND word_number=(question_value->>'number')::integer) THEN 0 ELSE 256 END;
+    IF state.answer_count>=200000 OR state.logical_bytes+new_bytes+mastery_bytes>104857600 OR
+        (SELECT answered_count FROM target_private.profiles WHERE member_id=member_uuid)>=1000000000 OR
+        next_total_points>10000000000000 THEN
+      RETURN target_private.error_result(507,'CAPACITY_LIMIT','保存容量の上限に達しました。時間をおいてお試しください。');
+    END IF;
+    INSERT INTO target_private.answers(quiz_id,member_id,question_id,choice_id,request_id,request_ids,response,charged_bytes,award_points)
+      VALUES(quiz_uuid,member_uuid,question_uuid,choice_uuid,request_uuid,ARRAY[request_uuid],response_value,new_bytes,awarded_points);
+    UPDATE target_private.quizzes SET answered_count=next_answered,correct_count=next_correct,quiz_points=next_quiz_points,
+      finished_at=CASE WHEN next_answered=total THEN now() ELSE NULL END WHERE id=quiz_uuid;
+    UPDATE target_private.profiles SET answered_count=answered_count+1,
+      correct_count=correct_count+CASE WHEN correct_value THEN 1 ELSE 0 END,total_points=next_total_points,
+      bonus_id=active_bonus_id,bonus_started_at=active_bonus_started_at,bonus_ends_at=active_bonus_ends_at,
+      reward_miss_streak=gate_miss,reward_correct_streak=gate_correct,reward_locked=gate_locked,
+      updated_at=now() WHERE member_id=member_uuid;
+    UPDATE target_private.system_state SET answer_count=answer_count+1,logical_bytes=logical_bytes+new_bytes WHERE singleton;
+    RETURN response_value;
+  END IF;
+  RETURN target_private.error_result(400,'INVALID_REQUEST','送信内容を確認してください。');
+EXCEPTION WHEN SQLSTATE 'P0750' THEN
+  RETURN target_private.error_result(507,'CAPACITY_LIMIT','保存容量の上限に達しました。時間をおいてお試しください。');
+WHEN invalid_text_representation OR invalid_parameter_value OR numeric_value_out_of_range OR check_violation OR not_null_violation THEN
+  RETURN target_private.error_result(400,'INVALID_REQUEST','送信内容を確認してください。');
+END $function$;
+
+
+-- A compiled pre-migration scorer can still be waiting when this DDL commits.
+-- Reject its new modern answer before progress, mastery or money can commit.
+-- Compact operator/test ledger imports are not RPC envelopes; historic accepted
+-- answers are untouched and their replay paths do not insert another receipt.
+CREATE FUNCTION target_private.require_reward_lock_answer()
+RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=pg_catalog AS $fence$
+BEGIN
+  IF NEW.response ? 'answeredCount' AND NEW.response ? 'correctChoiceId' THEN
+    IF jsonb_typeof(NEW.response->'rewardLock') IS DISTINCT FROM 'object' OR
+      NOT(NEW.response->'rewardLock' ?& ARRAY['locked','missStreak','recoveryStreak']) OR
+      (SELECT count(*) FROM jsonb_object_keys(NEW.response->'rewardLock'))<>3 THEN
+      RAISE EXCEPTION 'Quiz reward protocol changed; retry the same answer' USING ERRCODE='42501';
+    END IF;
+  END IF;
+  RETURN NEW;
+END $fence$;
+REVOKE ALL ON FUNCTION target_private.require_reward_lock_answer() FROM PUBLIC,anon,authenticated,service_role;
+CREATE TRIGGER target_answer_reward_protocol BEFORE INSERT ON target_private.answers
+  FOR EACH ROW EXECUTE FUNCTION target_private.require_reward_lock_answer();
+
+-- Keep the credential-gated public RPC's original role surface.
+REVOKE ALL ON FUNCTION public.target_rpc(text,text,jsonb) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.target_rpc(text,text,jsonb) TO anon;
+COMMIT;

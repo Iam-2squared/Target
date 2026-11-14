@@ -1,0 +1,398 @@
+
+/* Quiz HP battle: center-origin paired health bars, mobile-first Target palette. */
+#battleView { max-width:900px; margin-inline:auto; }
+#battleView h2 { color:#283c51; font-size:18px; line-height:1.45; }
+.battle-intro { color:#637588; font-size:13px; line-height:1.8; margin:10px 0; }
+.battle-status { min-height:22px; margin:10px 0; font-size:13px; color:#315971; line-height:1.5; overflow-wrap:anywhere; }
+.battle-status.is-error { color:#b04840; }
+.battle-heading { display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e3e8eb; padding:12px 0; }
+.battle-heading>span { color:#718191; font-size:12px; }
+.battle-people { display:grid; gap:9px; margin:15px 0 24px; }
+.battle-person { display:flex; gap:12px; align-items:center; min-height:62px; padding:8px 12px; border:1px solid #e1e5e9; border-radius:10px; background:#fff; }
+.battle-person>strong { flex:1; min-width:0; overflow-wrap:anywhere; font-size:15px; color:#263b52; }
+.battle-person>.secondary-button { flex:0 0 auto; margin:0; min-height:44px; padding:8px 14px; font-size:13px; }
+.battle-avatar { display:grid; place-items:center; flex:0 0 auto; height:46px; width:46px; border-radius:50%; border:2px solid #b6cadd; background:#eaf0f7; color:#294e76; font-size:17px; font-weight:700; }
+#battleInvitations,#battleSentInvitations { margin-top:20px; }
+#battleInvitations>h2,#battleSentInvitations>h2 { margin:0 0 10px; }
+.battle-invite { padding:14px; border:1px solid #e3e7ec; border-radius:10px; margin-bottom:10px; background:#fff; }
+.battle-invite>button { margin-right:10px; min-height:42px; padding:9px 15px; }
+.battle-box { padding:18px; border:1px solid #dfe5e9; background:#fff; border-radius:12px; margin:16px 0; }
+.battle-box h2 { margin:0 0 8px; }
+.battle-form { display:grid; gap:16px; margin-top:16px; }
+.battle-form label { display:grid; gap:8px; color:#2f4357; font-size:13px; font-weight:600; }
+.battle-form select,.battle-form input {
+  width:100%; min-width:0; min-height:50px; padding:10px 12px;
+  border:1px solid #d9e0e5; border-radius:8px; background:#fafbfc;
+  font:inherit; font-weight:500; color:#263c52;
+}
+.battle-range { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.battle-pot-preview { margin:0; font-size:14px; color:#395d7d; font-weight:700; }
+#battleOfferBack { display:block; margin:15px auto 0; min-height:44px; }
+#battleApprovalsBlock { margin-top:20px; padding-top:16px; border-top:1px solid #e2e6e9; }
+#battleApprovals { margin-bottom:12px; font-weight:600; }
+.battle-caution { margin:12px 0; font-size:11px; line-height:1.8; color:#697c8c; }
+.battle-board { margin:16px 0 22px; padding:16px 10px; border:1px solid #dfe6ee; border-radius:12px; background:linear-gradient(180deg,#f7faff,#fff); }
+.battle-names { display:grid; grid-template-columns:minmax(0,1fr) minmax(110px,1fr) minmax(0,1fr); align-items:start; gap:6px; }
+.battle-names>strong { min-width:0; color:#253c52; font-size:13px; overflow-wrap:anywhere; line-height:1.5; }
+.battle-names>strong:last-child { text-align:right; }
+.battle-pot { display:grid; gap:4px; justify-items:center; color:#1d456b; min-width:0; }
+.battle-pot small { font-size:10px; font-weight:500; color:#748296; }
+.battle-pot strong { font-size:clamp(12px,3.4vw,18px); font-weight:750; text-align:center; overflow-wrap:anywhere; }
+.battle-bars { display:grid; grid-template-columns:minmax(0,1fr) 4px minmax(0,1fr); height:20px; margin:18px 0 12px; gap:0; }
+.battle-half { position:relative; overflow:hidden; background:#e1e9f0; }
+.battle-left { border-radius:8px 0 0 8px; }
+.battle-right { border-radius:0 8px 8px 0; }
+.battle-half>span { position:absolute; display:block; top:0; bottom:0; transition:width 260ms ease; }
+.battle-left>span { right:0; background:#5e9bc3; }
+.battle-right>span { left:0; background:#b78c78; }
+.battle-mid { background:#334960; z-index:1; border-radius:2px; }
+.battle-avatars { display:flex; align-items:start; justify-content:space-between; }
+.battle-avatars>div { display:grid; gap:6px; justify-items:center; }
+.battle-avatars>div:last-child { justify-items:center; }
+.battle-avatars b { font-size:11px; color:#4e6984; font-variant-numeric:tabular-nums; }
+.battle-avatars .battle-avatar { height:52px; width:52px; }
+.battle-question { margin:28px 0 10px; }
+.battle-question>small { color:#6c8195; font-size:12px; }
+.battle-question h2 { margin:12px 0 22px; text-align:center; font-size:clamp(21px,5vw,29px)!important; }
+.battle-choices { display:grid; gap:10px; }
+.battle-choice { display:flex; align-items:center; gap:12px; width:100%; min-height:66px; padding:12px 16px; text-align:left; background:#fff; border:1.5px solid #dce3ea; border-radius:10px; color:#243a52; font-size:19px; font-weight:650; overflow-wrap:anywhere; }
+.battle-choice:focus-visible,.battle-person button:focus-visible { outline:3px solid #5491ba; outline-offset:2px; }
+.battle-choice:disabled { opacity:.52; }
+.battle-letter { display:grid; place-items:center; width:28px; height:28px; border-radius:7px; background:#e8eff5; color:#54738d; font-size:13px; flex:0 0 auto; }
+.battle-feedback { min-height:28px; font-size:15px; font-weight:650; color:#305d87; }
+.battle-forfeit { margin-top:20px; min-height:44px; }
+#battleDoneTitle { font-size:28px!important; }
+#battleDoneMessage { font-size:15px; line-height:1.8; }
+#battleAgain { margin-top:18px; }
+@media (max-width:380px) {
+  .battle-range { gap:8px; }
+  .battle-board { padding:12px 6px; }
+  .battle-names { grid-template-columns:minmax(0,1fr) minmax(94px,1fr) minmax(0,1fr); }
+  .battle-choice { min-height:60px; font-size:17px; padding:12px; }
+}
+@media (prefers-reduced-motion:reduce) { .battle-half>span { transition:none; } }
+
+/* 2player-inspired battle lobby: self appears among online members. */
+.battle-online-heading { margin-top:30px; padding-bottom:8px; border-bottom:0; }
+.battle-heading-title { display:flex; align-items:baseline; gap:12px; min-width:0; }
+.battle-heading-title h2 { font-size:17px!important; font-weight:650; }
+.battle-heading-title small { font-size:13px; color:#7b8590; font-variant-numeric:tabular-nums; }
+.battle-refresh { display:grid; place-items:center; min-width:44px; min-height:44px; padding:0; color:#263c52; font-size:30px; font-weight:500; line-height:1; }
+.battle-refresh:focus-visible { outline:2px solid #5484af; outline-offset:2px; border-radius:8px; }
+.battle-people { margin:12px 0 2px; gap:10px; }
+.battle-person { min-height:65px; padding:11px 15px; gap:13px; }
+.battle-online-dot { width:10px; height:10px; border-radius:50%; background:#78a052; flex:0 0 auto; }
+.battle-online-name { font-size:15px; font-weight:650; }
+.battle-self-label { flex:0 0 auto; color:#8b9598; font-size:13px; }
+.battle-person.is-self { background:#fff; }
+.battle-person .secondary-button { border-radius:8px; }
+#battleOnlineEmpty { margin:12px 0 22px; }
+.battle-ranking-panel { margin:42px 0 32px; }
+.battle-ranking-heading { border-bottom:0; gap:10px; padding:0 0 5px; }
+.battle-ranking-heading h2 { font-size:18px!important; }
+.battle-ranking-heading>span { font-size:12px; color:#7a858d; text-align:right; }
+.battle-ranking-list { display:grid; gap:10px; margin-top:12px; }
+.battle-ranking-row { display:grid; grid-template-columns:25px minmax(0,1fr) auto; align-items:center; min-height:68px; gap:15px; padding:15px 17px; border:1px solid #e1e5e3; border-radius:11px; background:#fff; font-variant-numeric:tabular-nums; }
+.battle-ranking-row.is-self { border-color:#9fbcd2; background:#edf3f9; }
+.battle-ranking-place { text-align:center; color:#7c8680; font-size:16px; font-weight:750; }
+.battle-ranking-name { min-width:0; color:#243a4c; overflow-wrap:anywhere; font-size:15px; font-weight:700; }
+.battle-ranking-wins { color:#2a4157; font-size:16px; font-weight:750; white-space:nowrap; }
+#battleRankingEmpty { padding:12px 0; }
+@media (max-width:374px) {
+  .battle-person { gap:9px; padding-inline:10px; }
+  .battle-ranking-row { gap:10px; padding-inline:12px; }
+  .battle-person>.secondary-button { padding-inline:9px; }
+}
+
+
+/* Shared buzzer: fit all four choices in iPhone dynamic viewport without
+   requiring a whole-page scroll to answer. The ordinary lobby is unchanged. */
+body.battle-playing .app-header,
+body.battle-playing .app-footer,
+body.battle-playing #battleView>.section-heading,
+body.battle-playing #battleApp>.battle-intro { display:none!important; }
+body.battle-playing .app-shell {
+  display:flex;flex-direction:column;max-width:620px;width:100%;
+  height:100dvh;min-height:0;
+  padding:max(4px,env(safe-area-inset-top)) 12px max(6px,env(safe-area-inset-bottom));
+}
+body.battle-playing #main { display:flex; flex:1; min-height:0; }
+body.battle-playing #battleView { display:flex; flex-direction:column; flex:1; min-height:0; min-width:0; }
+body.battle-playing #battleView>.view-toolbar { flex:0 0 30px;min-height:30px;margin:0 0 2px; }
+body.battle-playing #battleView>.view-toolbar .back-button,
+body.battle-playing #battleView>.view-toolbar .text-button { min-height:28px;padding:0 4px;font-size:12px; }
+body.battle-playing #battleApp { display:flex;flex:1;flex-direction:column;min-height:0; }
+body.battle-playing #battleStatus { flex:0 0 auto;min-height:0;max-height:19px;line-height:1.3;overflow:hidden;font-size:11px;margin:0; }
+body.battle-playing #battleStatus:empty { display:none; }
+body.battle-playing #battleGame { display:flex; flex:1;flex-direction:column;min-height:0;overflow:hidden; }
+body.battle-playing .battle-board { flex:0 0 auto;margin:0 0 6px;padding:7px 10px 6px;border-radius:9px; }
+body.battle-playing .battle-names { gap:4px; }
+body.battle-playing .battle-names>strong { font-size:clamp(10px,2.5vw,13px);line-height:1.25; }
+body.battle-playing .battle-pot { gap:0; }
+body.battle-playing .battle-pot small { font-size:9px; }
+body.battle-playing .battle-pot strong { font-size:clamp(11px,3vw,16px); }
+body.battle-playing .battle-bars { height:14px;margin:8px 0 6px; }
+body.battle-playing .battle-avatars { align-items:center; }
+body.battle-playing .battle-avatars>div { display:flex;align-items:center;gap:6px; }
+body.battle-playing .battle-avatars>div:last-child { flex-direction:row-reverse; }
+body.battle-playing .battle-avatars .battle-avatar { width:30px;height:30px;font-size:12px; }
+body.battle-playing .battle-avatars b { font-size:10px; }
+body.battle-playing .battle-question {
+  display:flex;flex:1;flex-direction:column;min-height:0;margin:0;padding:0;
+}
+body.battle-playing #battleQuestionMeta { flex:0 0 auto;min-height:17px;font-size:10px; }
+body.battle-playing .battle-question h2 {
+  flex:0 0 auto;margin:2px 0 7px!important;text-align:center;
+  font-size:clamp(18px,5.2vw,26px)!important;line-height:1.35;
+  max-height:4.05em;overflow-y:auto;overflow-wrap:anywhere;
+}
+body.battle-playing .battle-choice-stage { display:flex;position:relative;flex:1;min-height:0; }
+body.battle-playing .battle-choices {
+  display:grid;grid-template-rows:repeat(4,minmax(0,1fr));flex:1;
+  min-height:0;gap:6px;
+}
+body.battle-playing .battle-choice {
+  min-height:0;max-height:none;height:100%;padding:5px 12px;
+  font-size:clamp(14px,3.6vw,19px);line-height:1.3;overflow-y:auto;
+  border-radius:9px;word-break:normal;
+}
+body.battle-playing .battle-letter { width:23px;height:23px;font-size:12px; }
+body.battle-playing .battle-feedback { flex:0 0 auto;min-height:0;margin:4px 0 0;font-size:12px;line-height:1.3; }
+body.battle-playing .battle-feedback:empty { display:none; }
+body.battle-playing #battleAnswerRetry { flex:0 0 auto;min-height:34px;margin:2px 0;padding:4px; }
+body.battle-playing .battle-forfeit {
+  flex:0 0 29px;min-height:29px;align-self:center;
+  padding:2px 8px;margin:1px 0 0;font-size:11px;
+}
+/* Pop-in stamps are shown above the four answers, without consuming
+   additional vertical layout space. Both players see the same server event. */
+.battle-hit-stamp {
+  position:absolute;z-index:3;top:0;left:50%;
+  transform:translate(-50%,-12%);
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  max-width:96%;padding:10px 16px;border:1px solid;
+  border-radius:12px;box-shadow:0 8px 24px #23354724;
+  font-weight:800;white-space:nowrap;pointer-events:none;
+  animation:battle-hit-arrive .28s cubic-bezier(.17,1.35,.34,1) both;
+}
+.battle-hit-stamp strong { font-size:clamp(19px,5vw,26px);font-variant-numeric:tabular-nums; }
+.battle-hit-stamp small { font-size:11px; }
+.battle-hit-symbol { font-size:23px; }
+.battle-hit-stamp.is-attack { background:#e2f5e8;color:#13613d;border-color:#6cb38b; }
+.battle-hit-stamp.is-damage { background:#fff0ed;color:#af392f;border-color:#e99b91; }
+.battle-hit-stamp.is-neutral { background:#f3f5f7;color:#435d72;border-color:#cbd5de;font-size:14px; }
+@keyframes battle-hit-arrive {
+  from { opacity:0;transform:translate(-50%,-12%) scale(.75); }
+  to { opacity:1;transform:translate(-50%,-12%) scale(1); }
+}
+@media (max-height:710px) {
+  body.battle-playing .app-shell { padding-top:max(2px,env(safe-area-inset-top));padding-bottom:max(2px,env(safe-area-inset-bottom)); }
+  body.battle-playing .battle-board { padding:4px 6px;margin-bottom:4px; }
+  body.battle-playing .battle-avatars .battle-avatar { width:25px;height:25px; }
+  body.battle-playing .battle-question h2 { margin:0 0 4px!important;font-size:clamp(17px,4.6vw,24px)!important;max-height:2.7em; }
+  body.battle-playing .battle-choice { padding:3px 10px;font-size:clamp(13px,3.4vw,17px); }
+  body.battle-playing .battle-choices { gap:4px; }
+  body.battle-playing .battle-feedback { margin:0; }
+}
+@media (max-width:380px) {
+  body.battle-playing .app-shell { padding-left:7px;padding-right:7px; }
+  .battle-hit-stamp { padding:8px 10px;gap:4px; }
+  .battle-hit-stamp strong { font-size:17px; }
+  .battle-hit-stamp small { font-size:10px; }
+}
+@media (prefers-reduced-motion:reduce){
+  .battle-hit-stamp { animation:none; }
+}
+
+
+/* Battle-specific page shell: no duplicate 暗記 masthead and no large blank gap. */
+body[data-view="battle"] .app-header,
+body[data-view="battle"] .app-footer { display:none!important; }
+body[data-view="battle"] .app-shell {
+  padding-top:max(10px,env(safe-area-inset-top));
+  padding-bottom:max(12px,env(safe-area-inset-bottom));
+}
+#battleView .battle-topbar {
+  display:flex;align-items:center;justify-content:space-between;
+  min-height:43px;margin:0 0 5px;gap:8px;
+}
+#battleTitle { margin:0;font-size:clamp(20px,5vw,24px);line-height:1.35;font-weight:700; }
+.battle-top-actions { display:flex;justify-content:flex-end;align-items:center;gap:10px; }
+.battle-top-actions .back-button,
+.battle-top-actions .text-button { min-height:40px;padding:4px 7px;font-size:13px; }
+#battleApp>.battle-intro { margin:2px 0 3px;color:#66788a;font-size:12px;line-height:1.5; }
+#battleStatus { margin:0 0 3px;min-height:0;line-height:1.4; }
+#battleStatus:empty { display:none; }
+#battleLobby .battle-online-heading { margin-top:9px;padding:4px 0 6px; }
+#battleLobby .battle-people { margin:6px 0 1px;gap:9px; }
+#battleLobby .battle-person { min-height:59px;padding:10px 14px; }
+#battleLobby #battleOnlineEmpty { margin:8px 0 12px; }
+#battleInvitations,#battleSentInvitations { margin-top:15px; }
+.battle-invite { margin-bottom:8px;padding:11px 13px; }
+.battle-invite .battle-intro { margin:3px 0 8px;line-height:1.5; }
+.battle-ranking-panel { margin:26px 0 20px; }
+.battle-ranking-list { margin-top:7px;gap:8px; }
+.battle-ranking-row { min-height:62px;padding:12px 15px; }
+
+/* Setup is entered ONLY after the invited player accepts. Keep fields
+   comfortable while making the confirmation visible on normal phones. */
+body.battle-setup #battleApp>.battle-intro { display:none; }
+body.battle-setup #battleOffer {
+  padding:15px 16px;margin:5px 0 10px;border-radius:11px;
+}
+body.battle-setup #battleOfferTitle { margin:0 0 2px;font-size:19px; }
+body.battle-setup #battleOfferSub { margin:0 0 8px;font-size:12px;line-height:1.45; }
+body.battle-setup .battle-form { gap:10px;margin-top:8px; }
+body.battle-setup .battle-form label { gap:5px;font-size:12px; }
+body.battle-setup .battle-form select,
+body.battle-setup .battle-form input {
+  min-height:44px;padding:8px 10px;font-size:15px;
+}
+body.battle-setup .battle-range { gap:12px; }
+body.battle-setup .battle-pot-preview { font-size:13px; }
+body.battle-setup #battleSendOffer,
+body.battle-setup #battleReady { min-height:45px; }
+body.battle-setup #battleApprovalsBlock { margin-top:13px;padding-top:11px; }
+body.battle-setup #battleApprovals { font-size:12px;margin:0 0 7px; }
+body.battle-setup .battle-caution { margin:7px 0;font-size:11px;line-height:1.55; }
+body.battle-setup #battleOfferBack { min-height:35px;margin:5px auto 0; }
+
+/* The game retains its one-screen four-option layout and a tiny Home action.
+   No リアタイバトル page title is repeated above the HP bars. */
+body.battle-playing #battleTitle,
+body.battle-playing #battleRefresh { display:none!important; }
+body.battle-playing #battleView .battle-topbar {
+  justify-content:flex-start;min-height:28px;margin:0 0 2px;
+}
+body.battle-playing .battle-top-actions { justify-content:flex-start;gap:0; }
+body.battle-playing #battleView .battle-top-actions .back-button {
+  min-height:28px;padding:0 5px;font-size:12px;
+}
+@media (max-width:374px) {
+  #battleView .battle-topbar { gap:3px; }
+  .battle-top-actions { gap:5px; }
+  body.battle-setup #battleOffer { padding:12px; }
+  body.battle-setup .battle-form { gap:8px; }
+}
+
+
+/* V3: rapid individual questions. The scoreboard owns action feedback. */
+body.battle-playing .battle-board {
+  position:relative;
+  min-height:140px;
+  margin-bottom:8px;
+  padding:13px 12px 18px;
+  overflow:visible;
+  isolation:isolate;
+}
+body.battle-playing .battle-names { min-height:25px; }
+body.battle-playing .battle-names>strong {
+  font-size:clamp(12px,3vw,16px);
+  font-weight:750;
+}
+body.battle-playing .battle-bars {
+  height:17px;
+  margin:19px 0 13px;
+}
+body.battle-playing .battle-avatars>div { gap:5px;flex-wrap:wrap; }
+body.battle-playing .battle-avatars .battle-avatar {
+  width:37px;height:37px;font-size:15px;
+}
+body.battle-playing .battle-avatars b { font-size:12px; font-weight:750; }
+body.battle-playing .battle-streak {
+  font-size:11px;font-weight:800;color:#a05e17;white-space:nowrap;
+}
+.battle-board .battle-hit-stamp {
+  position:absolute;
+  top:48%;
+  left:50%;
+  bottom:auto;
+  transform:translate(-50%,-50%);
+  min-height:48px;
+  max-width:93%;
+  padding:8px 15px;
+  border-radius:12px;
+  white-space:normal;
+  text-align:center;
+  background-clip:padding-box;
+  animation:battle-board-stamp .22s ease-out both;
+  box-shadow:0 7px 25px #192d4061;
+}
+.battle-board .battle-hit-stamp[hidden] { display:none!important; }
+.battle-board .battle-hit-stamp strong {font-size:clamp(20px,5.2vw,27px);}
+.battle-board .battle-hit-stamp small {font-size:11px;}
+@keyframes battle-board-stamp {
+  from {opacity:0;transform:translate(-50%,-50%) scale(.78);}
+  to {opacity:1;transform:translate(-50%,-50%) scale(1);}
+}
+/* Bigger high-contrast typography with shorter choice cards. */
+body.battle-playing #battlePrompt {
+  font-size:clamp(34px,9vw,49px)!important;
+  font-weight:800!important;
+  color:#1d2d3d;
+  line-height:1.19;
+  margin:7px 0 12px!important;
+  max-height:2.4em;
+}
+body.battle-playing .battle-choice-stage {
+  flex:0 1 auto;
+  height:clamp(280px,45dvh,425px);
+  max-height:100%;
+  min-height:0;
+  width:100%;
+}
+body.battle-playing .battle-choices {
+  display:grid;
+  width:100%;
+  grid-template-rows:repeat(4,minmax(0,1fr));
+  gap:8px;
+}
+body.battle-playing .battle-choice {
+  min-height:0;
+  width:100%;
+  padding:8px 15px;
+  font-size:clamp(19px,4.7vw,25px)!important;
+  font-weight:750;
+  line-height:1.33;
+  color:#233649;
+  border:1.5px solid #cbd6df;
+  background:#fff;
+}
+body.battle-playing .battle-choice>span:last-child {
+  color:#233649!important;
+  font-size:inherit;
+  font-weight:750;
+  opacity:1!important;
+}
+body.battle-playing .battle-choice:disabled {
+  opacity:.94;
+  color:#273b4e;
+}
+body.battle-playing .battle-choice .battle-letter {
+  color:#435d78;
+  background:#e4ecf4;
+  font-size:13px;
+  font-weight:750;
+}
+body.battle-playing .battle-feedback {margin:4px 0 0;}
+@media(max-height:730px){
+  body.battle-playing .battle-board { min-height:114px;padding:8px 8px 12px; }
+  body.battle-playing .battle-bars {margin:9px 0 7px;}
+  body.battle-playing .battle-avatars .battle-avatar {width:28px;height:28px;font-size:12px;}
+  body.battle-playing #battlePrompt {
+    font-size:clamp(27px,7vw,40px)!important;
+    margin:3px 0 6px!important;
+  }
+  body.battle-playing .battle-choice-stage {height:clamp(250px,43dvh,370px);}
+  body.battle-playing .battle-choices {gap:5px;}
+  body.battle-playing .battle-choice {padding:5px 10px;font-size:clamp(17px,4.3vw,22px)!important;}
+}
+@media(max-width:360px){
+  body.battle-playing .battle-choice {padding:6px 10px;font-size:17px!important;}
+  body.battle-playing .battle-board {padding-inline:6px;}
+  .battle-board .battle-hit-stamp {padding:6px 8px;}
+  .battle-board .battle-hit-stamp strong {font-size:18px;}
+}
+@media(prefers-reduced-motion:reduce){
+  .battle-board .battle-hit-stamp {animation:none;}
+}

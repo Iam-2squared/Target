@@ -1,0 +1,291 @@
+{
+  "rulesVersion": 5,
+  "minStake": 100,
+  "maxStake": 100000,
+  "stakeStep": 100,
+  "moneyLimit": 10000000000000,
+  "games": {
+    "plinko": {
+      "choice": null,
+      "rows": 16,
+      "outcome": "16 independent uniform binary left/right decisions",
+      "bin": "sum(outcome)",
+      "multiplierTenths": [
+        10000,
+        1300,
+        260,
+        90,
+        40,
+        20,
+        10,
+        2,
+        2,
+        2,
+        10,
+        20,
+        40,
+        90,
+        260,
+        1300,
+        10000
+      ],
+      "multipliers": [
+        1000,
+        130,
+        26,
+        9,
+        4,
+        2,
+        1,
+        0.2,
+        0.2,
+        0.2,
+        1,
+        2,
+        4,
+        9,
+        26,
+        130,
+        1000
+      ],
+      "maxMultiplier": 1000,
+      "maxPayout": 100000000,
+      "payout": "stake*multiplierTenths[bin]/10 using integer arithmetic",
+      "rtp": {
+        "fraction": "38839/32768",
+        "percent": 118.5272216796875
+      }
+    }
+  },
+  "wallet": {
+    "balance": "money",
+    "totalIncome": "money",
+    "spent": "money",
+    "walletRevision": "integer0..1e13",
+    "gameNet": "signedmoney-1e13..1e13"
+  },
+  "round": {
+    "requestId": "uuid",
+    "game": "plinko; historical coin|dice|slots under rulesVersion1 or2",
+    "stake": "money100..100000 step100",
+    "choice": "game-specific integer or null",
+    "rulesVersion": "1..5; immutable per-receipt version",
+    "outcome": [
+      "16 binary bits forcurrent5/historical4;20 forhistorical3; historical1/2 game-specific outcomes"
+    ],
+    "multiplier": "v5 current array; historical1/2/3/4 tables retained",
+    "payout": "stake*multiplier",
+    "net": "payout-stake",
+    "createdAt": "timestamp"
+  },
+  "storageRpc": {
+    "name": "target_games_rpc",
+    "credential": "TARGET_RPC_SECRET",
+    "actions": {
+      "state": {
+        "input": [
+          "memberId",
+          "name"
+        ],
+        "output": {
+          "rulesVersion": "actual database envelope4 or5 during rollout;5 after activation",
+          "minStake": 100,
+          "maxStake": 100000,
+          "stakeStep": 100,
+          "wallet": "wallet",
+          "rounds": "own newest10 rounds"
+        }
+      },
+      "play": {
+        "input": [
+          "memberId",
+          "name",
+          "requestId",
+          "game",
+          "stake",
+          "choice",
+          "rulesVersion"
+        ],
+        "output": {
+          "rulesVersion": "actual database envelope4 or5 during rollout;5 after activation",
+          "wallet": "CURRENT wallet",
+          "round": "IMMUTABLE round"
+        }
+      },
+      "snapshot": {
+        "input": [
+          "memberId"
+        ],
+        "output": "wallet directly; no remote source refresh"
+      },
+      "batch": {
+        "input": [
+          "memberId",
+          "name",
+          "requestId",
+          "game",
+          "stake",
+          "choice",
+          "rulesVersion",
+          "count"
+        ],
+        "output": {
+          "rulesVersion": "actual database envelope4 or5 during rollout;5 after activation",
+          "wallet": "CURRENT wallet",
+          "batch": "IMMUTABLE batch"
+        }
+      }
+    }
+  },
+  "serviceRoutes": {
+    "state": "/api/integrations/kgs/games/state",
+    "play": "/api/integrations/kgs/games/play",
+    "credential": "KGS_TARGET_INTEGRATION_SECRET",
+    "batch": "/api/integrations/kgs/games/batch"
+  },
+  "businessErrors": {
+    "INVALID_REQUEST": 400,
+    "RULES_CHANGED": 409,
+    "REQUEST_ID_CONFLICT": 409,
+    "INSUFFICIENT_BALANCE": 409,
+    "GAME_LIMIT": 409,
+    "RATE_LIMITED": 429,
+    "CAPACITY_LIMIT": 507
+  },
+  "quizAnswer": "Existing result with totalPoints=current wallet.totalIncome, walletRevision=current wallet.walletRevision, balance=current wallet.balance; historical receipt total is not forwarded",
+  "historicalRules": {
+    "1": {
+      "coin": 2,
+      "dice": 6,
+      "slotsTriple": 20,
+      "slotsPair": 1
+    },
+    "2": {
+      "coin": 1.5,
+      "dice": 2,
+      "slotsTriple": 3,
+      "slotsPair": 1
+    },
+    "3": {
+      "game": "plinko",
+      "rows": 20,
+      "multipliers": [
+        2.0,
+        1.8,
+        1.6,
+        1.4,
+        1.2,
+        1.0,
+        0.8,
+        0.6,
+        0.4,
+        0.2,
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0,
+        1.2,
+        1.4,
+        1.6,
+        1.8,
+        2.0
+      ],
+      "maxMultiplier": 2
+    },
+    "4": {
+      "choice": null,
+      "rows": 16,
+      "outcome": "16 independent uniform binary left/right decisions",
+      "bin": "sum(outcome)",
+      "multiplierTenths": [
+        10000,
+        1300,
+        260,
+        90,
+        40,
+        20,
+        2,
+        2,
+        2,
+        2,
+        2,
+        20,
+        40,
+        90,
+        260,
+        1300,
+        10000
+      ],
+      "multipliers": [
+        1000,
+        130,
+        26,
+        9,
+        4,
+        2,
+        0.2,
+        0.2,
+        0.2,
+        0.2,
+        0.2,
+        2,
+        4,
+        9,
+        26,
+        130,
+        1000
+      ],
+      "maxMultiplier": 1000,
+      "maxPayout": 100000000,
+      "payout": "stake*multiplierTenths[bin]/10 using integer arithmetic"
+    }
+  },
+  "moneyGrid": {
+    "balance": 10,
+    "totalIncome": 10,
+    "gameNet": 10,
+    "payout": 10,
+    "net": 10,
+    "stake": 100,
+    "spent": 100,
+    "mapSpent": 100,
+    "calculusIncome": 10000,
+    "birthdayIncome": 100000,
+    "rawStudy": 100
+  },
+  "replayPolicy": "Existing v1/v2/v3/v4 receipts replay exactly, including4 batches up to100. Unseen legacy requests return RULES_CHANGED after v5 activation. New requests use5/plinko/null. Rollout servers echo actual4/5 envelopes; a5 receipt cannot appear under envelope4.",
+  "batch": {
+    "requestId": "uuid",
+    "game": "plinko",
+    "stake": "per-ball stake100..100000 step100",
+    "choice": null,
+    "rulesVersion": "5 current;4 historical exact replay",
+    "count": "integer1..100",
+    "totalStake": "stake*count",
+    "totalPayout": "sum(rounds.payout)",
+    "net": "totalPayout-totalStake",
+    "createdAt": "one timestamp shared by every ordered child",
+    "rounds": "ordered immutable per-version rounds; every child matches the parent version"
+  },
+  "batchChildId": "Normalize parent UUID to32 lowercase hex chars; retain first24; XOR final8 hex uint32 with ordinal1..count; rebuild canonical UUID. No extra child DTO fields.",
+  "batchNamespace": "Parent and every derived child are preflighted against all member single rounds and batch parents. Exact replay checks precede quota/balance/RNG; other collisions return REQUEST_ID_CONFLICT.",
+  "ballRate": {
+    "limit": 120,
+    "periodSeconds": 60,
+    "scope": "member; shared existing games-play bucket for single and batch",
+    "weight": "one per ball",
+    "rejectedRequests": "no quota charge",
+    "retries": "bypass"
+  },
+  "batchStartingFunds": "balance >= stake*count before any RNG; no credit from early wins",
+  "batchCap": "maxnet999*totalStake; minnet-0.8*totalStake; storage checked before quota or entropy",
+  "batchMaximums": {
+    "totalStake": 10000000,
+    "grossPayout": 10000000000,
+    "netWin": 9990000000
+  },
+  "batchResponseLimitBytes": 65536,
+  "rolloutBridge": "Servers accept and forward actual envelope4/5 without retagging. State4 cannot contain a5 history row. A5 play/batch success requires envelope5. UI waits for state5 before placing new5 requests."
+}

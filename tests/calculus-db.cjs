@@ -1,0 +1,75 @@
+'use strict';
+// Standalone PostgreSQL verification; this guard forbids hosted/class DBs.
+const assert=require('node:assert/strict'),crypto=require('node:crypto'),fs=require('node:fs/promises'),path=require('node:path');
+const {Client,Pool}=require('pg');
+const source=new URL(process.env.DATABASE_URL||'');
+assert.equal(process.env.NODE_ENV,'test');assert(['localhost','127.0.0.1','[::1]'].includes(source.hostname));
+source.pathname='/target_calculus_test';
+const db=new Pool({connectionString:source.href,max:8}),secret=crypto.randomBytes(32).toString('base64url'),uuid=()=>crypto.randomUUID();
+const rpc=(action,input,key=secret)=>db.query('SELECT public.target_calculus_rpc($1,$2,$3::jsonb) AS v',[key,action,JSON.stringify(input)]).then(r=>r.rows[0].v);
+const shop=(action,input)=>db.query('SELECT public.target_shop_rpc($1,$2,$3::jsonb) AS v',[secret,action,JSON.stringify(input)]).then(r=>r.rows[0].v);
+const snapshot=(userId,totalPoints,extra={})=>({userId,totalPoints,known:true,deleted:false,...extra});
+const member={memberId:uuid(),name:'合算テスト'},second={memberId:uuid(),name:'別の利用者'},zero=uuid();
+let checks=0;const eq=(a,b,msg)=>{checks++;assert.deepEqual(a,b,msg);};
+async function rejects(sql,args,code){await assert.rejects(db.query(sql,args),e=>e.code===code);checks++;}
+(async()=>{
+ try{
+  const adminURL=new URL(source.href);adminURL.pathname='/postgres';const admin=new Client({connectionString:adminURL.href});await admin.connect();
+  try{await admin.query('DROP DATABASE IF EXISTS target_calculus_test WITH (FORCE)');await admin.query('CREATE DATABASE target_calculus_test');}finally{await admin.end();}
+  const directory=path.resolve(__dirname,'../supabase/migrations'),files=(await fs.readdir(directory)).filter(n=>/^\d+_.*\.sql$/.test(n)).sort(),latest=files.find(n=>n.endsWith('_target_calculus_combined_wallet.sql'));
+  assert(latest);
+  for(const file of files.filter(n=>n<latest))await db.query(await fs.readFile(path.join(directory,file),'utf8'));
+  await db.query("INSERT INTO target_private.server_credentials(singleton,key_hash) VALUES(true,encode(sha256(convert_to($1,'UTF8')),'hex'))",[secret]);
+  await db.query('INSERT INTO target_private.profiles(member_id,name,total_points,correct_count,answered_count) VALUES($1,$2,200000,2,2)',[member.memberId,member.name]);
+  const oldDraw=await shop('draw',{...member,requestId:uuid(),expectedPrice:100000,expectedCatalogVersion:3,itemType:'frame'});
+  eq(oldDraw.spent,100000);
+  const fingerprint=async()=>(await db.query("SELECT md5(pg_get_functiondef('public.target_rpc(text,text,jsonb)'::regprocedure)) AS quiz,md5(pg_get_functiondef('public.target_shop_rpc(text,text,jsonb)'::regprocedure)) AS shop")).rows[0];
+  const before=await fingerprint(),receipts=(await db.query('SELECT * FROM target_private.item_draws')).rows;
+  await db.query(await fs.readFile(path.join(directory,latest),'utf8'));
+  for(const file of files.filter(n=>n>latest))await db.query(await fs.readFile(path.join(directory,file),'utf8'));
+  eq(await fingerprint(),before,'Quiz, bonus, mastery and gacha RPC definitions stay unchanged');
+  eq((await db.query('SELECT * FROM target_private.item_draws')).rows,receipts,'Existing immutable spending stays identical');
+  eq((await shop('wallet',member)).balance,100000);
+  eq((await rpc('status',{userId:1},'bad-secret')).error.code,'RPC_FORBIDDEN');
+  eq(await rpc('status',{userId:1}),{linked:false,conversionRate:10000,member:null,balance:null,totalIncome:null,calculusIncome:null,syncPending:false});
+  const profiles=(await db.query('SELECT count(*)::int AS n FROM target_private.profiles')).rows[0].n;
+  eq(await rpc('wealth',{memberIds:[member.memberId,zero]}),{entries:[{memberId:member.memberId,totalIncome:200000},{memberId:zero,totalIncome:0}]});
+  eq((await db.query('SELECT count(*)::int AS n FROM target_private.profiles')).rows[0].n,profiles,'Ranking never creates empty profiles');
+  for(const bad of [{userId:0},{userId:'1'},{userId:2147483648},{userId:1,amount:10000}])eq((await rpc('status',bad)).error.code,'INVALID_REQUEST');
+  for(const bad of [{...member,...snapshot(1,1),extra:1},{...member,...snapshot(1,1.5)},{...member,...snapshot(1,1000000001)}])eq((await rpc('link',bad)).error.code,'INVALID_REQUEST');
+  for(const extra of [{known:false,deleted:true,totalPoints:0},{deleted:true}])eq((await rpc('link',{...member,...snapshot(1,1),...extra})).error.code,'SOURCE_ACCOUNT_UNAVAILABLE');
+  const linked=await rpc('link',{...member,...snapshot(1,9)});
+  eq(linked.totalIncome,290000,'Historical1+3+5 points convert once');eq(linked.calculusIncome,90000);eq(linked.balance,190000);
+  eq(await rpc('link',{...member,...snapshot(1,9)}),linked,'Link retries are idempotent');
+  eq((await rpc('link',{...second,...snapshot(1,9)})).error.code,'ACCOUNT_ALREADY_LINKED');
+  eq((await rpc('link',{...member,...snapshot(2,9)})).error.code,'ACCOUNT_ALREADY_LINKED');
+  eq((await db.query('SELECT count(*)::int AS n FROM target_private.profiles')).rows[0].n,profiles,'Conflicting links do not allocate profiles');
+  const results=await Promise.all([12,10,12,9,11].map(n=>rpc('sync',{totals:[snapshot(1,n)]})));
+  eq(results.every(r=>Number.isInteger(r.synced)),true);eq((await rpc('status',{userId:1})).calculusIncome,120000,'Concurrent and stale imports never remint');
+  eq((await db.query('SELECT sum(amount)::bigint AS n FROM target_private.calculus_credits')).rows[0].n,'120000');
+  await rpc('sync',{totals:[snapshot(1,0,{known:false,deleted:true})]});
+  eq((await rpc('status',{userId:1})).totalIncome,320000,'Unknown/deleted snapshots never subtract');
+  await rpc('sync',{totals:[snapshot(1,15,{deleted:true})]});
+  eq((await rpc('status',{userId:1})).calculusIncome,150000,'Retained lifetime points import after source account deletion');
+  const draw=await shop('draw',{...member,requestId:uuid(),expectedPrice:100000,expectedCatalogVersion:3,itemType:'sticker'});
+  eq(draw.spent,200000);eq(draw.balance,150000);eq(draw.totalIncome,350000,'Purchases use combined income and keep gross income');
+  eq((await rpc('wealth',{memberIds:[member.memberId,zero]})).entries[0].totalIncome,350000);
+  const linkRow=(await db.query('SELECT * FROM target_private.calculus_links WHERE user_id=1')).rows[0];
+  await rejects('UPDATE target_private.calculus_links SET member_id=$1 WHERE user_id=1',[second.memberId],'42501');
+  await rejects('DELETE FROM target_private.calculus_links WHERE user_id=1',[],'42501');
+  await rejects('UPDATE target_private.calculus_credits SET amount=amount WHERE user_id=1',[],'42501');
+  await rejects('DELETE FROM target_private.calculus_credits WHERE user_id=1',[],'42501');
+  await rejects('UPDATE target_private.profiles SET total_points=total_points+1000000 WHERE member_id=$1',[member.memberId],'23514');
+  eq((await db.query('SELECT * FROM target_private.calculus_links WHERE user_id=1')).rows[0],linkRow);
+  const acl=(await db.query("SELECT has_table_privilege('anon','target_private.calculus_links','SELECT') AS links,has_table_privilege('authenticated','target_private.calculus_credits','INSERT') AS credits,has_function_privilege('anon','public.target_calculus_rpc(text,text,jsonb)','EXECUTE') AS rpc,has_function_privilege('authenticated','public.target_calculus_rpc(text,text,jsonb)','EXECUTE') AS auth_rpc,has_function_privilege('anon','target_private.calculus_status(integer)','EXECUTE') AS helper")).rows[0];
+  eq(acl,{links:false,credits:false,rpc:true,auth_rpc:false,helper:false});
+  eq((await db.query("SELECT bool_and(relrowsecurity) AS ok FROM pg_class WHERE oid IN ('target_private.calculus_links'::regclass,'target_private.calculus_credits'::regclass)")).rows[0].ok,true);
+  const capacity=(await db.query('SELECT logical_bytes FROM target_private.system_state')).rows[0].logical_bytes;
+  await db.query('UPDATE target_private.system_state SET logical_bytes=104857600');
+  eq((await rpc('sync',{totals:[snapshot(1,16)]})).error.code,'CAPACITY_LIMIT');
+  eq((await rpc('status',{userId:1})).calculusIncome,150000,'Capacity refusal cannot advance source watermark');
+  await db.query('UPDATE target_private.system_state SET logical_bytes=$1',[capacity]);
+  eq((await rpc('sync',{totals:[snapshot(1,16)]})).synced,1);
+  console.log(JSON.stringify({calculusDatabase:'passed',checks,concurrentImports:true,historicSpendPreserved:true,hostedWrites:false}));
+ }finally{await db.end();}
+})().catch(error=>{console.error('Calculus database verification failed: '+error.name+' '+error.message.replace(/\s+/g,' ').slice(0,200));process.exitCode=1;});

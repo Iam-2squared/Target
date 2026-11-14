@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "conversionRate": 10000,
+  "maxSourcePoints": 1000000000,
+  "maxDailyUserId": 2147483647,
+  "maxMoney": 10000000000000,
+  "sourceBatchLimit": 100,
+  "storageRpc": {
+    "name": "target_calculus_rpc",
+    "credential": "TARGET_RPC_SECRET",
+    "actions": {
+      "status": {"input": ["userId"], "output": "linkStatus"},
+      "link": {"input": ["userId", "memberId", "name", "totalPoints", "known", "deleted"], "output": "linkStatus"},
+      "sync": {"input": {"totals": [{"userId": "integer", "totalPoints": "source integer", "known": "boolean", "deleted": "boolean"}]}, "output": {"synced": "integer"}},
+      "links": {"input": {"memberIds": ["uuid"]}, "output": {"links": [{"userId": "integer", "memberId": "uuid"}]}},
+      "wealth": {"input": {"memberIds": ["uuid"]}, "output": {"entries": [{"memberId": "uuid", "totalIncome": "money integer"}]}}
+    }
+  },
+  "linkStatus": {
+    "linked": "boolean",
+    "conversionRate": 10000,
+    "member": "null or {id: uuid, name: string}",
+    "balance": "null or money integer",
+    "totalIncome": "null or money integer",
+    "calculusIncome": "null or money integer",
+    "syncPending": "boolean"
+  },
+  "wealthService": {
+    "path": "/api/integrations/kgs/wealth",
+    "credential": "KGS_TARGET_INTEGRATION_SECRET",
+    "input": {"memberId": "uuid", "name": "string", "members": [{"id": "uuid", "name": "string"}]},
+    "output": {"entries": [{"memberId": "uuid", "totalIncome": "money integer"}], "syncPending": "boolean"}
+  }
+}

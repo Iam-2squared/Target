@@ -1,0 +1,62 @@
+'use strict';
+// Financial regression checks against an isolated local PostgreSQL database.
+const assert=require('node:assert/strict'),crypto=require('node:crypto'),fs=require('node:fs/promises'),path=require('node:path');
+const {Client,Pool}=require('pg');
+const source=new URL(process.env.DATABASE_URL||'');assert.equal(process.env.NODE_ENV,'test');assert(['localhost','127.0.0.1','[::1]'].includes(source.hostname));source.pathname='/target_g_ledger_test';
+const db=new Pool({connectionString:source.href,max:10}),secret=crypto.randomBytes(32).toString('base64url'),uuid=()=>crypto.randomUUID();
+const rpc=(action,input,key=secret)=>db.query('SELECT public.target_games_rpc($1,$2,$3::jsonb) AS v',[key,action,JSON.stringify(input)]).then(r=>r.rows[0].v);
+const shop=(action,input)=>db.query('SELECT public.target_shop_rpc($1,$2,$3::jsonb) AS v',[secret,action,JSON.stringify(input)]).then(r=>r.rows[0].v);
+const member={memberId:uuid(),name:'ゲーム検証'},other={memberId:uuid(),name:'別の人'},play=(m,more={})=>({...m,requestId:uuid(),game:'coin',stake:100,choice:0,rulesVersion:1,...more});
+let checks=0;const eq=(a,b,message)=>{checks++;assert.deepEqual(a,b,message);};
+async function reject(sql,args,code){await assert.rejects(db.query(sql,args),error=>error.code===code);checks++;}
+async function forceZero(){await db.query("CREATE OR REPLACE FUNCTION target_private.secure_random_int(p_bound integer) RETURNS integer LANGUAGE sql VOLATILE SECURITY INVOKER SET search_path=pg_catalog AS 'SELECT 0'");}
+(async()=>{try{
+ const adminURL=new URL(source.href);adminURL.pathname='/postgres';const admin=new Client({connectionString:adminURL.href});await admin.connect();
+ try{await admin.query('DROP DATABASE IF EXISTS target_g_ledger_test WITH (FORCE)');await admin.query('CREATE DATABASE target_g_ledger_test');}finally{await admin.end();}
+ const dir=path.resolve(__dirname,'../supabase/migrations'),files=(await fs.readdir(dir)).filter(n=>/^\d+_.*\.sql$/.test(n)).sort(),latest=files.find(n=>n.endsWith('_target_g_games_net_wallet.sql'));assert(latest);
+ for(const file of files.filter(n=>n<latest))await db.query(await fs.readFile(path.join(dir,file),'utf8'));
+ await db.query("INSERT INTO target_private.server_credentials(singleton,key_hash) VALUES(true,encode(sha256(convert_to($1,'UTF8')),'hex'))",[secret]);
+ await db.query('INSERT INTO target_private.profiles(member_id,name,total_points,correct_count,answered_count) VALUES($1,$2,1000000,10,10)',[member.memberId,member.name]);
+ const historical=await shop('draw',{...member,requestId:uuid(),expectedPrice:100000,expectedCatalogVersion:3,itemType:'frame'}),beforeReceipts=(await db.query('SELECT * FROM target_private.item_draws')).rows;
+ eq(historical.spent,100000);
+ const hashes=async()=>(await db.query("SELECT proname,md5(pg_get_functiondef(oid)) AS hash FROM pg_proc WHERE oid IN ('public.target_rpc(text,text,jsonb)'::regprocedure,'public.target_shop_rpc(text,text,jsonb)'::regprocedure,'public.target_calculus_rpc(text,text,jsonb)'::regprocedure,'public.target_birthday_rpc(text,text,jsonb)'::regprocedure,'public.target_map_rpc(text,text,jsonb)'::regprocedure,'public.target_territory_rpc(text,text,jsonb)'::regprocedure) ORDER BY proname")).rows;
+ const before=await hashes();await db.query(await fs.readFile(path.join(dir,latest),'utf8'));eq(await hashes(),before,'All existing financial RPC bodies are unchanged');eq((await db.query('SELECT * FROM target_private.item_draws')).rows,beforeReceipts);
+ eq(await rpc('snapshot',{memberId:other.memberId}),{balance:0,totalIncome:0,spent:0,walletRevision:0,gameNet:0});
+ eq((await db.query('SELECT count(*)::int AS n FROM target_private.profiles')).rows[0].n,1,'Read snapshots never allocate profiles');
+ eq((await rpc('state',member,'bad-secret')).error.code,'RPC_FORBIDDEN');
+ for(const input of [{...play(member),outcome:[0]},{...play(member),stake:101},{...play(member),choice:null},{...play(member),game:'slots',choice:0},{...play(member),game:'dice',choice:0}])eq((await rpc('play',input)).error.code,'INVALID_REQUEST');
+ const request=play(member),race=await Promise.all(Array.from({length:40},()=>rpc('play',request)));
+ for(const value of race)eq(value,race[0],'Concurrent retries return the identical original round and settled wallet');
+ eq((await db.query('SELECT count(*)::int AS n FROM target_private.casino_rounds')).rows[0].n,1);
+ eq(race[0].wallet.walletRevision,1);eq(race[0].wallet.spent,100000);eq((await rpc('play',{...request,choice:1})).error.code,'REQUEST_ID_CONFLICT');
+ eq((await rpc('play',play(member,{rulesVersion:2}))).error.code,'RULES_CHANGED');eq((await rpc('play',{...request,rulesVersion:2})).error.code,'REQUEST_ID_CONFLICT','Known IDs bind their original rules before version checks');
+ const rngOriginal=(await db.query("SELECT pg_get_functiondef('target_private.secure_random_int(integer)'::regprocedure) AS source")).rows[0].source;
+ await forceZero();let revision=race[0].wallet.walletRevision;
+ const win=await rpc('play',play(member));eq(win.round.net,100);eq(win.round.payout,200);eq(win.wallet.walletRevision,++revision);
+ const lose=await rpc('play',play(member,{choice:1}));eq(lose.round.net,-100);eq(lose.wallet.totalIncome,win.wallet.totalIncome-100);eq(lose.wallet.spent,win.wallet.spent);eq(lose.wallet.walletRevision,++revision);
+ const dice=await rpc('play',play(member,{game:'dice',choice:1}));eq(dice.round.multiplier,6);eq(dice.round.net,500);eq(dice.wallet.walletRevision,++revision);
+ const triple=await rpc('play',play(member,{game:'slots',choice:null}));eq(triple.round.multiplier,20);eq(triple.wallet.walletRevision,++revision);
+ await db.query('CREATE SEQUENCE target_private.test_game_rolls MINVALUE 0 START 0');
+ await db.query("CREATE OR REPLACE FUNCTION target_private.secure_random_int(p_bound integer) RETURNS integer LANGUAGE sql VOLATILE SECURITY INVOKER SET search_path=pg_catalog AS 'SELECT CASE WHEN nextval(''target_private.test_game_rolls'')%3=2 THEN 1 ELSE 0 END'");
+ const push=await rpc('play',play(member,{game:'slots',choice:null}));eq(push.round.net,0);eq(push.wallet.totalIncome,triple.wallet.totalIncome);eq(push.wallet.walletRevision,++revision,'A +0 settlement still advances revision');
+ const replay=await rpc('play',request);eq(replay.round,race[0].round);eq(replay.wallet,push.wallet,'Replay returns current money, never its historical wallet');
+ const combinations=(await db.query("SELECT target_private.game_multiplier('slots',NULL,jsonb_build_array(a,b,c)) AS multiplier,count(*)::integer AS count FROM generate_series(0,5)a CROSS JOIN generate_series(0,5)b CROSS JOIN generate_series(0,5)c GROUP BY multiplier ORDER BY multiplier")).rows;
+ eq(combinations,[{multiplier:0,count:120},{multiplier:1,count:90},{multiplier:20,count:6}],'Exhaustive216 outcomes prove fixed35/36 RTP');
+ const rates={memberId:uuid(),name:'回数上限'};await db.query('INSERT INTO target_private.profiles(member_id,name,total_points,correct_count,answered_count) VALUES($1,$2,1000000,10,10)',[rates.memberId,rates.name]);await forceZero();
+ let rateReceipt;for(let i=0;i<30;i++)rateReceipt=await rpc('play',play(rates,{choice:1}));eq((await rpc('play',play(rates))).error.code,'RATE_LIMITED');eq((await rpc('play',{...rates,...Object.fromEntries(['requestId','game','stake','choice','rulesVersion'].map(key=>[key,rateReceipt.round[key]]))})).round,rateReceipt.round,'Rate limit never blocks an existing receipt');
+ const capped={memberId:uuid(),name:'上限'};await db.query('INSERT INTO target_private.profiles(member_id,name,total_points,calculus_points) VALUES($1,$2,10000000000000,10000000000000)',[capped.memberId,capped.name]);
+ await db.query("CREATE OR REPLACE FUNCTION target_private.secure_random_int(p_bound integer) RETURNS integer LANGUAGE plpgsql VOLATILE SECURITY INVOKER SET search_path=pg_catalog AS $$ BEGIN RAISE EXCEPTION 'Entropy must not be reached'; END $$");
+ eq((await rpc('play',play(capped,{choice:1}))).error.code,'GAME_LIMIT','Maximum possible win is checked even when the selected choice would lose');
+ const floor={memberId:uuid(),name:'損失の上限'};await db.query('INSERT INTO target_private.profiles(member_id,name,total_points,calculus_points,casino_net,correct_count,answered_count) VALUES($1,$2,1000,10000000000000,-10000000000000,1,1)',[floor.memberId,floor.name]);
+ eq((await rpc('play',play(floor))).error.code,'GAME_LIMIT','Minimum possible casino net is checked before entropy');
+ const capacity=(await db.query('SELECT logical_bytes FROM target_private.system_state')).rows[0].logical_bytes;await db.query('UPDATE target_private.system_state SET logical_bytes=104857600');eq((await rpc('play',play(member))).error.code,'CAPACITY_LIMIT','Storage rejection consumes no entropy');await db.query('UPDATE target_private.system_state SET logical_bytes=$1',[capacity]);
+ eq((await rpc('play',request)).round,race[0].round,'Idempotent replay consumes no entropy');
+ eq((await rpc('play',play(other))).error.code,'INSUFFICIENT_BALANCE');
+ await db.query(rngOriginal);
+ const first=(await db.query('SELECT * FROM target_private.casino_rounds WHERE member_id=$1 AND request_id=$2',[member.memberId,request.requestId])).rows[0];
+ await reject('UPDATE target_private.casino_rounds SET net=net WHERE member_id=$1',[member.memberId],'42501');await reject('DELETE FROM target_private.casino_rounds WHERE member_id=$1',[member.memberId],'42501');eq((await db.query('SELECT * FROM target_private.casino_rounds WHERE member_id=$1 AND request_id=$2',[member.memberId,request.requestId])).rows[0],first);
+ const current=await rpc('snapshot',{memberId:member.memberId});await db.query('UPDATE target_private.profiles SET total_points=total_points WHERE member_id=$1',[member.memberId]);eq((await rpc('snapshot',{memberId:member.memberId})).walletRevision,current.walletRevision+1,'Old financial UPDATE statements are automatically versioned');
+ const wallet=await shop('wallet',member);eq(wallet.walletRevision,current.walletRevision+1);eq(wallet.mapSpent,0);eq(wallet.spent,100000,'Existing latest wallet retains the historic spend proof');
+ const acl=(await db.query("SELECT has_table_privilege('anon','target_private.casino_rounds','SELECT') AS rows,has_function_privilege('anon','public.target_games_rpc(text,text,jsonb)','EXECUTE') AS rpc,has_function_privilege('authenticated','public.target_games_rpc(text,text,jsonb)','EXECUTE') AS auth_rpc,has_function_privilege('anon','target_private.games_wallet(uuid)','EXECUTE') AS helper,relrowsecurity AS rls FROM pg_class WHERE oid='target_private.casino_rounds'::regclass")).rows[0];eq(acl,{rows:false,rpc:true,auth_rpc:false,helper:false,rls:true});
+ console.log(JSON.stringify({gamesDatabase:'passed',checks,concurrentRetries:40,slotOutcomes:216,oldRpcDefinitionsPreserved:true,hostedWrites:false}));
+}finally{await db.end();}})().catch(error=>{console.error('Games database verification failed: '+error.name+' '+error.message.replace(/\s+/g,' ').slice(0,200));process.exitCode=1;});
