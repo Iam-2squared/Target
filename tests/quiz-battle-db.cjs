@@ -65,8 +65,8 @@ async function openMatch(stake=200,hp=100){
  eq(m.status,'playing');eq(m.pot,2*stake,'funded match escrows both deposits');
  return m;
 }
-async function putQuestion(member,matchId,number){
- return (await sprint(member,'next',{matchId,question:makeQuestion(number)})).match;
+async function putQuestion(member,matchId,question){
+ return (await sprint(member,'next',{matchId,question})).match;
 }
 async function answer(member,matchId,q,correct=true,id=uid(),client=db){
  const choice=correct?q.choices[0].id:q.choices[1].id;
@@ -126,8 +126,8 @@ async function main(){
  eq(result.match.guest.streak,1);
  for(let i=0;i<5;i++){
    const q=makeQuestion(10+i);
-   hostM=await putQuestion(host,m.id,q.number);
-   eq(hostM.question.id,q.id===hostM.question.id?q.id:hostM.question.id,'host has a current question');
+   hostM=await putQuestion(host,m.id,q);
+   eq(hostM.question.id,q.id,'host receives requested private question');
    const own=hostM.question;
    const correctId=q.correctChoiceId;
    result=await sprint(host,'answer',{matchId:m.id,questionId:own.id,choiceId:correctId});
@@ -143,7 +143,7 @@ async function main(){
  }
  for(let i=0;i<5;i++){
    const q=makeQuestion(20+i);
-   hostM=await putQuestion(host,m.id,q.number);
+   hostM=await putQuestion(host,m.id,q);
    result=await answer(host,m.id,q,true);
    if(i===4){
      eq(result.answer.streakBonus,true,'tenth correct triggers a second recovery');
@@ -156,10 +156,10 @@ async function main(){
 
  other=new Client({connectionString:url.href});await other.connect();
  const hq=makeQuestion(40),gq=makeQuestion(41);
- hostM=await putQuestion(host,m.id,hq.number);
- guestM=await putQuestion(guest,m.id,gq.number);
- eq(hostM.question.id,hq.id===hostM.question.id?hq.id:hostM.question.id);
- eq(guestM.question.id,gq.id===guestM.question.id?gq.id:guestM.question.id);
+ hostM=await putQuestion(host,m.id,hq);
+ guestM=await putQuestion(guest,m.id,gq);
+ eq(hostM.question.id,hq.id);
+ eq(guestM.question.id,gq.id);
  const before=(await sprint(host,'state',{matchId:m.id})).match;
  const outcomes=await Promise.all([
    sprint(host,'answer',{matchId:m.id,questionId:hq.id,choiceId:hq.correctChoiceId},uid(),db),
