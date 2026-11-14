@@ -205,7 +205,7 @@
     document.body.dataset.view=view;
     for(const id of views)$(id+'View').hidden=id!==view;
     if(scroll)window.scrollTo({top:0,behavior:'instant'});
-    document.title=['home','memorize'].includes(view)?'暗記':({memorySetup:'暗記の範囲選択',setup:setupMode==='review'?'解き直し':'テスト',quiz:'テスト',result:'テスト結果',ranking:'ランキング',mastery:'定着率',battle:'リアタイバトル'}[view]+' | 暗記');
+    document.title=view==='battle'?'リアタイバトル | Target':(['home','memorize'].includes(view)?'暗記':({memorySetup:'暗記の範囲選択',setup:setupMode==='review'?'解き直し':'テスト',quiz:'テスト',result:'テスト結果',ranking:'ランキング',mastery:'定着率'}[view]+' | 暗記'));
   }
   function home() {window.TargetBattleUI?.close();memoryTicket++;clearMastery();show('home');renderIdentity();renderSectionControls();void loadRanking('homeRanking');}
   function goHome() {if(activeView==='quiz'&&quiz&&!quiz.finished){openQuit();return;}home();}

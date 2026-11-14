@@ -68,7 +68,7 @@
   }
   function build(){
     $('battleApp').innerHTML=[
-      "<p class='battle-intro'>同じ4択を早押し！先に正解した側だけが相手のHPを5減らせます。</p>",
+      "<p class='battle-intro'>同じ問題で早押し · 正解で相手 −5 HP / 誤答で自分 −10 HP</p>",
       "<p id='battleStatus' class='battle-status' role='status' aria-live='polite'></p>",
       "<section id='battleLobby'>",
       "<div class='battle-heading battle-online-heading'><div class='battle-heading-title'><h2>ログイン中</h2><small id='battleOnlineCount' aria-live='polite'>—</small></div><button id='battleLobbyRefresh' class='battle-refresh' type='button' aria-label='ログイン中のユーザーとランキングを更新' title='更新'>↻</button></div>",
@@ -130,7 +130,9 @@
     $('battleLobbyRefresh').addEventListener('click',()=>void refresh());
     $('battleOnlineList').addEventListener('click',event=>{
       const id=event.target.closest('[data-person]')?.dataset.person;
-      if(!validId(id)||busy)return;selected=online.find(x=>x.id===id)||null;render();
+      if(!validId(id)||busy||!online.some(person=>person.id===id))return;
+      // Invitations contain no game settings. Both players negotiate them after acceptance.
+      void mutate('challenge',{targetId:id});
     });
     $('battleIncomingList').addEventListener('click',event=>{
       const button=event.target.closest('[data-invitation]');if(!button)return;
@@ -184,7 +186,7 @@
     for(const m of incoming){
       if(!validId(m?.id))continue;
       const card=make('div','battle-invite');card.append(make('strong','',m.host?.name||'招待'),
-        make('p','battle-intro',(books[m.book]?.[0]||'教材')+' / Section '+m.fromSection+'〜'+m.toSection+' / '+money(m.stake)));
+        make('p','battle-intro','対戦に招待されています。承認後に教材・Section・賭け金・HPを決めます。'));
       for(const [op,label] of [['accept','受ける'],['decline','断る']]){
         const b=make('button',op==='accept'?'primary-button':'secondary-button',label);
         b.type='button';b.dataset.action=op;b.dataset.invitation=m.id;card.append(b);
@@ -200,22 +202,19 @@
     }
   }
   function offerForm(m){
-    if(!m&&!selected){$('battleOffer').hidden=true;return;}
+    if(!m||m.status!=='setup'){$('battleOffer').hidden=true;return;}
     $('battleOffer').hidden=false;
-    $('battleOfferTitle').textContent=m?'対戦条件を確認':'対戦申し込み';
-    $('battleOfferSub').textContent=m?
-      (m.host.name+' × '+m.guest.name):(selected.name+' を指定中');
-    $('battleSendOffer').textContent=m?'条件を変更':'招待を送る';
-    $('battleApprovalsBlock').hidden=!m;
-    $('battleOfferBack').textContent=m?'対戦をキャンセル':'対戦相手を選び直す';
-    if(m){
-      if(offerVersion!==m.offerVersion){fill(m);offerVersion=m.offerVersion;}
-      const mine=m.myRole==='host'?m.host:m.guest;
-      $('battleApprovals').textContent=(m.host.ready?'✓':'○')+' '+m.host.name+'   '+
-        (m.guest.ready?'✓':'○')+' '+m.guest.name;
-      $('battleReady').disabled=!!mine?.ready||busy;
-      $('battleReady').textContent=mine?.ready?'承認済み・相手を待機':'この設定で承認';
-    }
+    $('battleOfferTitle').textContent='対戦設定';
+    $('battleOfferSub').textContent=m.host.name+' × '+m.guest.name;
+    $('battleSendOffer').textContent='条件を変更する';
+    $('battleApprovalsBlock').hidden=false;
+    $('battleOfferBack').textContent='対戦を取り消す';
+    if(offerVersion!==m.offerVersion){fill(m);offerVersion=m.offerVersion;}
+    const mine=m.myRole==='host'?m.host:m.guest;
+    $('battleApprovals').textContent=(m.host.ready?'✓':'○')+' '+m.host.name+
+      ' ／ '+(m.guest.ready?'✓':'○')+' '+m.guest.name;
+    $('battleReady').disabled=!!mine?.ready||busy;
+    $('battleReady').textContent=mine?.ready?'承認済み・相手を待機':'この条件で承認して開始';
     potPreview();
   }
   function nowServer(){return Date.now()+clockOffset;}
@@ -242,25 +241,35 @@
     });
   }
   function renderStamp(m){
-    const stamp=$('battleHitStamp'),result=m.roundResult;
-    if(m.roundPhase!=='cooldown'||!result){stamp.hidden=true;shownStampKey=null;return;}
-    const key=m.id+':'+result.round+':'+result.resolvedAt;
-    const attacker=result.attacker;
-    if(attacker===null){
-      if(shownStampKey!==key){
-        stamp.className='battle-hit-stamp is-neutral';
-        stamp.textContent='両者不正解・次の問題へ';
-        shownStampKey=key;
-      }
-    }else{
-      const won=attacker===m.myRole;
-      if(shownStampKey!==key){
-        stamp.className='battle-hit-stamp '+(won?'is-attack':'is-damage');
-        stamp.replaceChildren(make('span','battle-hit-symbol',won?'⚔':'💥'),
-          make('strong','',won?'攻撃成功  +'+result.damage:'被ダメージ  −'+result.damage),
-          make('small','',won?'相手HP −'+result.damage:'自分HP −'+result.damage));
-        shownStampKey=key;
-      }
+    const stamp=$('battleHitStamp'),result=m.roundResult,wrong=m.wrongHit;
+    const wrongThisRound=wrong?.round===m.round;
+    const isHit=m.roundPhase==='cooldown'&&result?.attacker;
+    const isOwnWrong=wrongThisRound&&nowServer()-Date.parse(wrong.createdAt)<1750;
+    let key=null,kind='',title='',hint='',symbol='';
+    if(isHit){
+      const attacking=result.attacker===m.myRole;
+      const extra=attacking?0:(wrongThisRound?10:0);
+      kind=attacking?'is-attack':'is-damage';
+      symbol=attacking?'⚔':'💥';
+      title=attacking?'攻撃成功 +'+result.damage:'被ダメージ −'+(result.damage+extra);
+      hint=attacking?'相手HP −'+result.damage:
+        (extra?'相手の攻撃 −'+result.damage+' / 誤答 −10':'相手の攻撃 −'+result.damage);
+      key=m.id+':'+result.round+':'+kind+':'+(result.damage+extra);
+    }else if(isOwnWrong){
+      kind='is-damage';symbol='💥';title='誤答 −10';hint='自分のHP −10';
+      key=m.id+':'+m.round+':wrong:'+wrong.createdAt;
+    }else if(m.roundPhase==='cooldown'&&result&&!result.attacker){
+      kind='is-neutral';title=wrongThisRound?'誤答 −10':'次の問題へ';
+      symbol=wrongThisRound?'💥':'';
+      hint=wrongThisRound?'自分のHP −10':'';
+      key=m.id+':'+result.round+':neutral:'+String(wrongThisRound);
+    }
+    if(!key){stamp.hidden=true;shownStampKey=null;return;}
+    if(shownStampKey!==key){
+      stamp.className='battle-hit-stamp '+(kind==='is-neutral'&&wrongThisRound?'is-damage':kind);
+      stamp.replaceChildren(make('span','battle-hit-symbol',symbol),
+        make('strong','',title),make('small','',hint));
+      shownStampKey=key;
     }
     stamp.hidden=false;
   }
@@ -303,12 +312,12 @@
     if(!active)return;
     const m=match;
     document.body.classList.toggle('battle-playing',m?.status==='playing');
+    document.body.classList.toggle('battle-setup',m?.status==='setup');
     $('battleLobby').hidden=!!m&&m.status!=='invited';
     $('battleGame').hidden=m?.status!=='playing';
     $('battleDone').hidden=!m||!['finished','cancelled'].includes(m.status);
     if(!m||m.status==='invited')renderLobby();
     if(m?.status==='setup')offerForm(m);
-    else if(!m)offerForm(null);
     else $('battleOffer').hidden=true;
     if(m?.status==='playing')renderGame(m);
     if(m&&['finished','cancelled'].includes(m.status))renderDone(m);
@@ -355,11 +364,9 @@
     finally{busy=false;if(active&&epoch===lease){render();void refresh();}}
   }
   function submitOffer(){
+    if(match?.status!=='setup')return status('招待が受理されてから設定してください。',true);
     let options;try{options=params();}catch(e){status(e.message,true);return;}
-    if(match?.status==='setup')
-      return void mutate('propose',{matchId:match.id,expectedVersion:match.offerVersion,...options});
-    if(!validId(selected?.id))return status('対戦相手を指定してください。',true);
-    void mutate('challenge',{targetId:selected.id,...options});
+    void mutate('propose',{matchId:match.id,expectedVersion:match.offerVersion,...options});
   }
   function approve(){
     if(match?.status!=='setup'||busy)return;
@@ -371,7 +378,6 @@
   }
   function cancelOffer(){
     if(match?.status==='setup')void mutate('cancel',{matchId:match.id});
-    else {selected=null;render();}
   }
   function forfeit(){
     if(match?.status==='playing'&&!busy&&window.confirm('降参すると賭け金を失い、相手に合計額が精算されます。降参しますか？'))
@@ -389,7 +395,8 @@
       const response=await api('answer',pendingAnswer);
       if(!active||lease!==epoch)return;
       const correct=response.answer?.correct;
-      feedback=correct===false?'不正解・この問題はもう押せません':correct===true?'正解！ 攻撃を確定しました':'';
+      feedback=correct===false?'誤答：自分のHP −10（この問題は回答済み）':
+        correct===true?'正解！ 相手のHP −5':'';
       pendingAnswer=null;
       if(response.match)match=response.match;status('');
     }catch(e){
@@ -404,7 +411,9 @@
     finally{busy=false;if(active&&lease===epoch){render();void refresh();}}
   }
   function close(){
-    active=false;epoch++;syncRevision++;document.body.classList.remove('battle-playing');if(timer)clearInterval(timer);timer=null;
+    active=false;epoch++;syncRevision++;
+    document.body.classList.remove('battle-playing','battle-setup');
+    if(timer)clearInterval(timer);timer=null;
     identity=null;matchId=null;match=null;online=[];ranking=[];incoming=[];outgoing=[];
     selected=null;offerVersion=null;questionId=null;pendingAnswer=null;feedback='';shownStampKey=null;busy=false;fetching=false;lastLobbyPoll=0;clockOffset=0;
     if($('battleApp'))$('battleApp').replaceChildren();

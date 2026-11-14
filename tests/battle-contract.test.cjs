@@ -4,7 +4,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
 const root=path.resolve(__dirname,'..');
-const {settings,input,matchIdInUrl,BOOK_SECTIONS,HP_OPTIONS}=require('../server/battle.cjs');
+const {settings,input,matchIdInUrl,BOOK_SECTIONS,HP_OPTIONS,INVITE_DEFAULTS}=require('../server/battle.cjs');
 const UUID='123e4567-e89b-42d3-a456-426614174000';
 const OPPONENT='123e4567-e89b-42d3-a456-426614174001';
 const valid={book:'target1900',fromSection:1,toSection:19,stake:100,initialHp:100};
@@ -31,8 +31,12 @@ test('Battle stake and Section inputs fail closed on fractions, missing keys and
 });
 
 test('Battle mutation contract rejects fake identities and extra client data',()=>{
-  const request={requestId:UUID,targetId:OPPONENT,...valid};
+  const request={requestId:UUID,targetId:OPPONENT};
+  assert.deepEqual(INVITE_DEFAULTS,{book:'target1900',fromSection:1,toSection:1,stake:100,initialHp:100},
+    'placeholder is not a user-approved stake');
   assert.deepEqual(input('challenge',request),request);
+  assert.throws(()=>input('challenge',{...request,...valid}),{code:'INVALID_BATTLE_REQUEST'},
+    'invitation must have no fixed subject, stake, Section or HP');
   assert.throws(()=>input('challenge',{...request,memberId:OPPONENT}),{code:'INVALID_BATTLE_REQUEST'});
   assert.throws(()=>input('challenge',{...request,correctChoiceId:UUID}),{code:'INVALID_BATTLE_REQUEST'});
   assert.throws(()=>input('challenge',{...request,requestId:'fake'}),{code:'INVALID_BATTLE_REQUEST'});
@@ -119,4 +123,32 @@ test('Buzzer database migration keeps correctness and money server-owned',()=>{
     assert(sql.includes(term),'migration '+term);
   assert(!sql.includes('DROP TABLE target_private.profiles'));
   assert(!sql.includes('DELETE FROM target_private.two_player_wallet_events'));
+});
+
+
+test('Accepted invitation is the first time setup appears and battle UI has no memorization header',()=>{
+  const js=fs.readFileSync(path.join(root,'public/battle.js'),'utf8');
+  const css=fs.readFileSync(path.join(root,'public/battle.css'),'utf8');
+  const html=fs.readFileSync(path.join(root,'public/index.html'),'utf8');
+  const app=fs.readFileSync(path.join(root,'public/app.js'),'utf8');
+  assert.doesNotThrow(()=>new Function(js));
+  assert(js.includes("void mutate('challenge',{targetId:id})"),'invite sends only the opponent ID');
+  assert(js.includes("if(!m||m.status!=='setup')"),'terms not shown before acceptance');
+  assert(js.includes("if(match?.status!=='setup')"),'terms can only be proposed after acceptance');
+  assert(html.includes('<h1 id="battleTitle">リアタイバトル</h1>'));
+  assert(html.includes('class="view-toolbar battle-topbar"'));
+  assert(css.includes('body[data-view="battle"] .app-header'),'hide unnecessary 暗記 header');
+  assert(css.includes('body.battle-setup .battle-form'),'setup has a compact but readable layout');
+  assert(app.includes("view==='battle'?'リアタイバトル | Target'"));
+});
+
+test('Shared buzzer restores server-owned -10 HP on wrong answers without allowing double attacks',()=>{
+  const sql=fs.readFileSync(path.join(root,'supabase/migrations/20261114121000_target_buzzer_wrong_self_damage.sql'),'utf8');
+  const js=fs.readFileSync(path.join(root,'public/battle.js'),'utf8');
+  for(const marker of ['damage_value:=10','new_host_hp:=greatest(0,m.host_hp-',
+    'new_guest_hp:=greatest(0,m.guest_hp-','PERFORM target_private.battle_settle',
+    "'wrongHit'","'damage',10","IF new_host_hp=0 OR new_guest_hp=0"])
+    assert(sql.includes(marker),marker);
+  assert(js.includes('誤答 −10'),'red wrong-answer stamp');
+  assert(js.includes("wrongHit"),'only the answering player receives their mistake feedback');
 });

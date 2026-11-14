@@ -125,14 +125,21 @@ async function main(){
     'new question stays shared, regardless of which client opened it');
   await nap(1750);
   result=await buzzer(guest,'answer',{matchId:match.id,questionId:q2.id,choiceId:q2.choices[1].id});
-  eq(result.answer.correct,false);eq(result.answer.damage,0,'a wrong buzz never attacks');
-  eq(result.match.host.hp,50);eq(result.match.guest.hp,45,'wrong buzz does not damage either side');
+  eq(result.answer.correct,false);eq(result.answer.damage,10,'a wrong buzz costs itself ten HP');
+  eq(result.match.host.hp,50);eq(result.match.guest.hp,35,
+    'first wrong answer damages the answering guest, not the host');
+  eq(result.match.wrongHit.damage,10,'private UI stamp reports self-damage');
+  eq((await buzzer(host,'state',{matchId:match.id})).match.wrongHit,null,
+    'opponent cannot access the other player’s private answer status');
   eq(result.match.answered,true,'wrong guess consumes the only attempt for that user');
   eq((await buzzer(guest,'answer',{matchId:match.id,questionId:q2.id,choiceId:q2.choices[0].id})).error.code,
     'BATTLE_ALREADY_ANSWERED','cannot brute-force all four options');
   result=await buzzer(host,'answer',{matchId:match.id,questionId:q2.id,choiceId:q2.choices[1].id});
   eq(result.answer.correct,false);eq(result.match.roundPhase,'cooldown','both wrong closes round');
-  eq(result.match.roundResult.damage,0);eq(result.match.guest.hp,45);eq(result.match.host.hp,50);
+  eq(result.match.roundResult.damage,0);
+  eq(result.answer.damage,10);
+  eq(result.match.guest.hp,35);eq(result.match.host.hp,40);
+  eq(result.match.wrongHit.damage,10,'both wrong answers each cost their own HP');
 
   await nap(2050);
   const q3={...question,id:uid(),number:3,choices:choices.map(c=>({...c,id:uid()}))};
@@ -142,7 +149,7 @@ async function main(){
   await nap(1750);
   result=await buzzer(guest,'answer',{matchId:match.id,questionId:q3.id,choiceId:q3.choices[0].id});
   eq(result.match.roundResult.attacker,'guest','either side can win the buzzer race');
-  eq(result.match.host.hp,45);eq(result.match.guest.hp,45);
+  eq(result.match.host.hp,35);eq(result.match.guest.hp,35);
   eq((await buzzer(host,'answer',{matchId:match.id,questionId:q3.id,choiceId:q3.choices[0].id})).error.code,
     'BATTLE_ROUND_CLOSED','a later correct answer is rejected');
 
@@ -172,7 +179,7 @@ async function main(){
   eq(attempts.filter(x=>x.error?.code==='BATTLE_ROUND_CLOSED').length,1,
     'other correct answer is locked out after first settlement');
   const contest=(await buzzer(host,'state',{matchId:match.id})).match;
-  eq(contest.host.hp+contest.guest.hp,85,'one race deals only 5 total HP loss');
+  eq(contest.host.hp+contest.guest.hp,65,'one race deals 5 more damage after two -10 mistakes');
   ok(['host','guest'].includes(contest.roundResult.attacker),'server chooses one attacker');
   await reconcile();
   result=await rpc(guest,'cancel',{matchId:match.id});
@@ -195,6 +202,25 @@ async function main(){
     ok(!(await db.query("SELECT has_table_privilege($1,'target_private.battle_matches','SELECT') x",[role])).rows[0].x,
       'private match table inaccessible');
   }
+  // Synthetic self-KO: a wrong answer at 10 HP must instantly settle a win for
+  // the opponent, with no second ledger payout, and no correct answer required.
+  let ko=(await rpc(host,'challenge',{targetId:guest.memberId,...settings})).match;
+  ko=(await rpc(guest,'accept',{matchId:ko.id})).match;
+  ko=(await rpc(host,'ready',{matchId:ko.id,expectedVersion:ko.offerVersion})).match;
+  ko=(await rpc(guest,'ready',{matchId:ko.id,expectedVersion:ko.offerVersion})).match;
+  eq(ko.status,'playing','KO fixture funded by both accepted users');
+  await db.query('UPDATE target_private.battle_matches SET guest_hp=10 WHERE id=$1',[ko.id]);
+  const koQuestion={...question,id:uid(),choices:choices.map(c=>({...c,id:uid()}))};
+  koQuestion.correctChoiceId=koQuestion.choices[0].id;koQuestion.correctText=koQuestion.choices[0].text;
+  ko=(await buzzer(host,'next',{matchId:ko.id,question:koQuestion})).match;
+  await nap(1750);
+  const koAnswer=await buzzer(guest,'answer',{
+    matchId:ko.id,questionId:koQuestion.id,choiceId:koQuestion.choices[1].id});
+  eq(koAnswer.answer.correct,false);eq(koAnswer.answer.damage,10);
+  eq(koAnswer.match.status,'finished');
+  eq(koAnswer.match.winner,'host','self-inflicted KO awards opponent the pot');
+  eq((await events(ko.id)).length,4,'self-KO creates exactly two reserves and two settlement entries');
+  await reconcile();
   // Production bridge proves the previously deployed separate-question client
   // still works without touching prior played matches, if shared_enabled=false.
   eq((await db.query('SELECT shared_enabled FROM target_private.battle_release_flags WHERE singleton')).rows[0].shared_enabled,true,

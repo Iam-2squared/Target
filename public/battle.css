@@ -203,3 +203,74 @@ body.battle-playing .battle-forfeit {
 @media (prefers-reduced-motion:reduce){
   .battle-hit-stamp { animation:none; }
 }
+
+
+/* Battle-specific page shell: no duplicate 暗記 masthead and no large blank gap. */
+body[data-view="battle"] .app-header,
+body[data-view="battle"] .app-footer { display:none!important; }
+body[data-view="battle"] .app-shell {
+  padding-top:max(10px,env(safe-area-inset-top));
+  padding-bottom:max(12px,env(safe-area-inset-bottom));
+}
+#battleView .battle-topbar {
+  display:flex;align-items:center;justify-content:space-between;
+  min-height:43px;margin:0 0 5px;gap:8px;
+}
+#battleTitle { margin:0;font-size:clamp(20px,5vw,24px);line-height:1.35;font-weight:700; }
+.battle-top-actions { display:flex;justify-content:flex-end;align-items:center;gap:10px; }
+.battle-top-actions .back-button,
+.battle-top-actions .text-button { min-height:40px;padding:4px 7px;font-size:13px; }
+#battleApp>.battle-intro { margin:2px 0 3px;color:#66788a;font-size:12px;line-height:1.5; }
+#battleStatus { margin:0 0 3px;min-height:0;line-height:1.4; }
+#battleStatus:empty { display:none; }
+#battleLobby .battle-online-heading { margin-top:9px;padding:4px 0 6px; }
+#battleLobby .battle-people { margin:6px 0 1px;gap:9px; }
+#battleLobby .battle-person { min-height:59px;padding:10px 14px; }
+#battleLobby #battleOnlineEmpty { margin:8px 0 12px; }
+#battleInvitations,#battleSentInvitations { margin-top:15px; }
+.battle-invite { margin-bottom:8px;padding:11px 13px; }
+.battle-invite .battle-intro { margin:3px 0 8px;line-height:1.5; }
+.battle-ranking-panel { margin:26px 0 20px; }
+.battle-ranking-list { margin-top:7px;gap:8px; }
+.battle-ranking-row { min-height:62px;padding:12px 15px; }
+
+/* Setup is entered ONLY after the invited player accepts. Keep fields
+   comfortable while making the confirmation visible on normal phones. */
+body.battle-setup #battleApp>.battle-intro { display:none; }
+body.battle-setup #battleOffer {
+  padding:15px 16px;margin:5px 0 10px;border-radius:11px;
+}
+body.battle-setup #battleOfferTitle { margin:0 0 2px;font-size:19px; }
+body.battle-setup #battleOfferSub { margin:0 0 8px;font-size:12px;line-height:1.45; }
+body.battle-setup .battle-form { gap:10px;margin-top:8px; }
+body.battle-setup .battle-form label { gap:5px;font-size:12px; }
+body.battle-setup .battle-form select,
+body.battle-setup .battle-form input {
+  min-height:44px;padding:8px 10px;font-size:15px;
+}
+body.battle-setup .battle-range { gap:12px; }
+body.battle-setup .battle-pot-preview { font-size:13px; }
+body.battle-setup #battleSendOffer,
+body.battle-setup #battleReady { min-height:45px; }
+body.battle-setup #battleApprovalsBlock { margin-top:13px;padding-top:11px; }
+body.battle-setup #battleApprovals { font-size:12px;margin:0 0 7px; }
+body.battle-setup .battle-caution { margin:7px 0;font-size:11px;line-height:1.55; }
+body.battle-setup #battleOfferBack { min-height:35px;margin:5px auto 0; }
+
+/* The game retains its one-screen four-option layout and a tiny Home action.
+   No リアタイバトル page title is repeated above the HP bars. */
+body.battle-playing #battleTitle,
+body.battle-playing #battleRefresh { display:none!important; }
+body.battle-playing #battleView .battle-topbar {
+  justify-content:flex-start;min-height:28px;margin:0 0 2px;
+}
+body.battle-playing .battle-top-actions { justify-content:flex-start;gap:0; }
+body.battle-playing #battleView .battle-top-actions .back-button {
+  min-height:28px;padding:0 5px;font-size:12px;
+}
+@media (max-width:374px) {
+  #battleView .battle-topbar { gap:3px; }
+  .battle-top-actions { gap:5px; }
+  body.battle-setup #battleOffer { padding:12px; }
+  body.battle-setup .battle-form { gap:8px; }
+}
