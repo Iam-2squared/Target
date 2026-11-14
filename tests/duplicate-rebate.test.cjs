@@ -43,3 +43,18 @@ test('rebate SQL always has one immutable credit per purchase, and accounts for 
   }
   assert(!/DROP TABLE|TRUNCATE|DELETE FROM target_private\.profiles/i.test(sql));
 });
+
+test('Target accepts exact rarity-based frame receipts and keeps prior 10k rebates immutable',()=>{
+ const cases={c01:1000,r11:10000,e06:10000,l08:100000};
+ for(const [id,credit] of Object.entries(cases)){
+   const base=shop.guestWallet(),totalIncome=1000000,spent=200000-credit,rid=crypto.randomUUID();
+   const value={...base,totalIncome,spent,balance:totalIncome-spent,drawCount:2,refundedSpend:credit,
+     ownedFrames:[id],frameQuantities:[{id,quantity:2}],walletRevision:3};
+   const receipt={...value,requestId:rid,itemType:'frame',itemId:id,frameId:id,
+     rarity:shop.FRAME_ODDS&&id[0]==='c'?'common':id[0]==='r'?'rare':id[0]==='e'?'epic':'legendary',
+     quantity:2,cost:100000,duplicateRefund:credit};
+   assert.deepEqual(shop.validateWallet(receipt,{requestId:rid,itemType:'frame'}),receipt);
+   assert(shop.validPayout(10000,'frame',id),'historic replay allowed');
+   for(const invalid of [0,9999,null,true,'10000',999999])assert.throws(()=>shop.validateWallet({...receipt,duplicateRefund:invalid},{requestId:rid,itemType:'frame'}),e=>e.status===503);
+ }
+});
