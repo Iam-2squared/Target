@@ -12,6 +12,10 @@ const FRAMES=Object.freeze([['c',15],['r',15],['e',10],['l',8]].flatMap(([prefix
 const FRAME_ODDS=Object.freeze({common:62,rare:25,epic:10,legendary:3});
 const FRAME_RARITY=Object.freeze({c:'common',r:'rare',e:'epic',l:'legendary'});
 const PRICE=100000,LEGACY_PRICE=10000,SELL_PRICE=10000,MAX_POINTS=10000000000000;
+const FRAME_PAYOUTS=Object.freeze({common:1000,rare:10000,epic:10000,legendary:100000});
+const payoutFor=(type,id)=>type==='sticker'?SELL_PRICE:type==='frame'&&FRAMES.includes(id)?FRAME_PAYOUTS[FRAME_RARITY[id[0]]]:null;
+// 10k historical refunds are immutable even after the new rarity rates begin.
+const validPayout=(amount,type,id)=>Number.isSafeInteger(amount)&&amount>0&&(amount===payoutFor(type,id)||(type==='frame'&&amount===SELL_PRICE));
 function authorize(req,config=getConfig()){
   const supplied=typeof req.headers?.authorization==='string'&&req.headers.authorization.length<=8192?req.headers.authorization:'';
   const expected=crypto.createHash('sha256').update('Bearer '+config.integrationSecret).digest();
@@ -87,8 +91,8 @@ function validateModernWallet(value,{requestId,itemType}={}){
     // Server-signed receipt marker. The real Target ledger alone decides if
     // this purchase earned a 10,000-todō duplicate rebate (including replay).
     if(Object.hasOwn(value,'duplicateRefund')){
-      if(value.duplicateRefund!==10000)throw invalid();
-      result.duplicateRefund=10000;
+      if(!validPayout(value.duplicateRefund,pool,value.itemId))throw invalid();
+      result.duplicateRefund=value.duplicateRefund;
     }
   }
   return result;
@@ -132,8 +136,8 @@ async function perform(action,input){
   await Promise.all([require('./calculus.cjs').refreshMembers([parsed.memberId]),require('./birthday.cjs').refresh()]);
   if(action==='sell'){
     const res=await store.sellRpc('sell',parsed),result=validateWallet(res);
-    if(res.requestId?.toLowerCase()!==parsed.requestId.toLowerCase()||res.itemType!==parsed.itemType||res.itemId!==parsed.itemId||res.soldAmount!==SELL_PRICE||result.catalogVersion!==CATALOG_VERSION||result.soldItemCount<1)throw new HttpError(503,'売却結果を確認できませんでした。','SHOP_UNAVAILABLE');
-    return {...result,requestId:parsed.requestId.toLowerCase(),itemType:parsed.itemType,itemId:parsed.itemId,soldAmount:SELL_PRICE};
+    if(res.requestId?.toLowerCase()!==parsed.requestId.toLowerCase()||res.itemType!==parsed.itemType||res.itemId!==parsed.itemId||!validPayout(res.soldAmount,parsed.itemType,parsed.itemId)||result.catalogVersion!==CATALOG_VERSION||result.soldItemCount<1)throw new HttpError(503,'売却結果を確認できませんでした。','SHOP_UNAVAILABLE');
+    return {...result,requestId:parsed.requestId.toLowerCase(),itemType:parsed.itemType,itemId:parsed.itemId,soldAmount:res.soldAmount};
   }
   // Historical acknowledgements remain compatible with old DB versions.
   // New purchases require an explicit price, catalog and pool acknowledgment.
@@ -144,4 +148,4 @@ async function perform(action,input){
   return validateWallet(await store.shopRpc(action,forwarded),action==='draw'?{requestId:parsed.requestId,itemType:parsed.itemType||'sticker'}:{});
 }
 function guestWallet(){return{balance:0,totalIncome:0,spent:0,ownedStickers:[],ownedFrames:[],stickerQuantities:[],frameQuantities:[],drawCount:0,legacyDiscountedDraws:0,price:PRICE,catalogVersion:CATALOG_VERSION,catalogSize:ACTIVE_STICKERS.length,frameCatalogSize:FRAMES.length,duplicatesAllowed:true,frameOdds:{...FRAME_ODDS}};}
-module.exports={authorize,parseInput,validateWallet,wallet,perform,guestWallet,STICKERS,ACTIVE_STICKERS,LEGACY_STICKERS,FRAMES,FRAME_ODDS,CATALOG_VERSION,PRICE,LEGACY_PRICE,validHistoricalSpend};
+module.exports={authorize,parseInput,validateWallet,wallet,perform,guestWallet,STICKERS,ACTIVE_STICKERS,LEGACY_STICKERS,FRAMES,FRAME_ODDS,CATALOG_VERSION,PRICE,LEGACY_PRICE,validHistoricalSpend,payoutFor,validPayout};
