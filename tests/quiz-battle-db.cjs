@@ -39,9 +39,9 @@ async function reconcile(){
   eq(conservation.rows[0].n,0,'stake receipts conserve total money + escrow');
 }
 async function adjust(member,amount){
- const batch={version:1,reason:'Synthetic Target sprint financial gate',targets:[{memberId:member.memberId,expectedName:member.name,totalIncome:amount}]};
+ const batch={version:1,reason:'Disposable Target quiz battle ledger test',targets:[{memberId:member.memberId,expectedName:member.name,totalIncome:amount}]};
  await db.query('SELECT target_private.adjust_wallet_income($1,$2::jsonb)',
-   ['sprint_test_'+crypto.randomBytes(8).toString('hex'),JSON.stringify(batch)]);
+   ['income_adjust_battle_'+crypto.randomBytes(8).toString('hex'),JSON.stringify(batch)]);
 }
 function makeQuestion(number){
  const choices=Array.from({length:4},(_,i)=>({id:uid(),text:'意味'+number+'-'+i}));
