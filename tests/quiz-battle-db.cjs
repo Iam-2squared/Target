@@ -195,6 +195,33 @@ async function main(){
     ok(!(await db.query("SELECT has_table_privilege($1,'target_private.battle_matches','SELECT') x",[role])).rows[0].x,
       'private match table inaccessible');
   }
+  // Production bridge proves the previously deployed separate-question client
+  // still works without touching prior played matches, if shared_enabled=false.
+  eq((await db.query('SELECT shared_enabled FROM target_private.battle_release_flags WHERE singleton')).rows[0].shared_enabled,true,
+    'fresh CI and future Production builds keep shared-buzzer behavior by default');
+  await db.query('UPDATE target_private.battle_release_flags SET shared_enabled=false WHERE singleton');
+  let oldMatch=(await rpc(host,'challenge',{targetId:guest.memberId,...settings})).match;
+  oldMatch=(await rpc(guest,'accept',{matchId:oldMatch.id})).match;
+  oldMatch=(await rpc(host,'ready',{matchId:oldMatch.id,expectedVersion:oldMatch.offerVersion})).match;
+  oldMatch=(await rpc(guest,'ready',{matchId:oldMatch.id,expectedVersion:oldMatch.offerVersion})).match;
+  eq(oldMatch.status,'playing','legacy room can still be funded under flag');
+  const legacyChoices=Array.from({length:4},(_,i)=>({id:uid(),text:'legacy '+i}));
+  const legacyQuestion={id:uid(),number:1,prompt:'Legacy production client',choices:legacyChoices,
+    correctChoiceId:legacyChoices[0].id,correctText:legacyChoices[0].text};
+  oldMatch=(await rpc(host,'next',{matchId:oldMatch.id,question:legacyQuestion})).match;
+  eq(oldMatch.question.id,legacyQuestion.id,'legacy private question DTO is available only with flag disabled');
+  ok(!Object.hasOwn(oldMatch.question,'correctChoiceId'),'legacy question does not expose grading');
+  eq((await rpc(guest,'state',{matchId:oldMatch.id})).match.question,null,
+    'legacy question remains private to answering player');
+  const legacyAnswer=await rpc(host,'answer',{
+    matchId:oldMatch.id,questionId:legacyQuestion.id,choiceId:legacyChoices[0].id});
+  eq(legacyAnswer.match.guest.hp,95,'unchanged legacy correct answer grading remains functional');
+  eq((await rpc(guest,'cancel',{matchId:oldMatch.id})).match.status,'finished');
+  await reconcile();
+  await db.query('UPDATE target_private.battle_release_flags SET shared_enabled=true WHERE singleton');
+  eq((await rpc(host,'next',{matchId:oldMatch.id,question:legacyQuestion})).error.code,
+    'BATTLE_SHARED_ROUNDS_ONLY','legacy entry closes again after Production upgrade flag');
+  await reconcile();
   console.log(JSON.stringify({battle:'passed',checks,hostedWrites:false}));
 }
 main().catch(e=>{console.error(e.stack||e);process.exitCode=1;}).finally(async()=>{
