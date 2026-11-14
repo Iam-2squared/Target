@@ -140,7 +140,7 @@ BEGIN
     p_input IS NULL OR jsonb_typeof(p_input)<>'object' OR pg_column_size(p_input)>12000 THEN
    RETURN target_private.error_result(400,'INVALID_REQUEST','送信内容を確認してください。'); END IF;
  allowed:=ARRAY['memberId','name','sessionHash','matchId'];
- IF p_action='next' THEN allowed:=allowed||'question'; END IF;
+ IF p_action='next' THEN allowed:=allowed||ARRAY['question']; END IF;
  IF p_action='answer' THEN allowed:=allowed||ARRAY['requestId','questionId','choiceId']; END IF;
  SELECT count(*) INTO actual_keys FROM jsonb_object_keys(p_input);
  IF actual_keys<>array_length(allowed,1) OR
@@ -266,8 +266,8 @@ BEGIN
 
  IF was_correct THEN
    damage_value:=5;
-   new_host_hp:=greatest(0,m.host_hp-CASE WHEN member_side='guest' THEN 5 ELSE 0 END);
-   new_guest_hp:=greatest(0,m.guest_hp-CASE WHEN member_side='host' THEN 5 ELSE 0 END);
+   new_host_hp:=greatest(0,m.host_hp-(CASE WHEN member_side='guest' THEN 5 ELSE 0 END));
+   new_guest_hp:=greatest(0,m.guest_hp-(CASE WHEN member_side='host' THEN 5 ELSE 0 END));
    UPDATE target_private.battle_matches
      SET host_hp=new_host_hp,guest_hp=new_guest_hp,updated_at=now_at,
        expires_at=now_at+interval '10 minutes' WHERE id=m.id;
