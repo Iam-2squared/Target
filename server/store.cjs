@@ -83,4 +83,5 @@ const calculusRpc=(action,input={})=>runRpc('target_calculus_rpc',action,input);
 const birthdayRpc=(action,input={},options={})=>runRpc('target_birthday_rpc',action,input,options);
 const gamesRpc=(action,input={})=>runRpc('target_games_rpc',action,input);
 const battleRpc=(action,input={})=>runRpc('target_battle_rpc',action,input);
-module.exports = {rpc, badgesRpc, shopRpc, sellRpc, mapRpc, territoryRpc, calculusRpc, birthdayRpc, gamesRpc, battleRpc, closeStore};
+const buzzerRpc=(action,input={})=>runRpc('target_buzzer_rpc',action,input);
+module.exports = {rpc, badgesRpc, shopRpc, sellRpc, mapRpc, territoryRpc, calculusRpc, birthdayRpc, gamesRpc, battleRpc, buzzerRpc, closeStore};

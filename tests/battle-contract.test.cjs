@@ -87,3 +87,36 @@ test('Battle lobby shows logged-in self, online refresh and victory ranking inde
     assert(css.includes(token),token+' has styling');
   }
 });
+
+
+test('Buzzer shares the same question, displays attack / damage stamps, and keeps four choices onscreen',()=>{
+  const js=fs.readFileSync(path.join(root,'public/battle.js'),'utf8');
+  const css=fs.readFileSync(path.join(root,'public/battle.css'),'utf8');
+  const html=fs.readFileSync(path.join(root,'public/index.html'),'utf8');
+  const server=fs.readFileSync(path.join(root,'server/battle.cjs'),'utf8');
+  const store=fs.readFileSync(path.join(root,'server/store.cjs'),'utf8');
+  assert.doesNotThrow(()=>new Function(js));
+  for(const token of ['battleHitStamp','is-attack','is-damage','攻撃成功','被ダメージ',
+    'roundCanAnswer','roundPhase','roundResult','answered','startsAt','deadlineAt','nowServer',
+    "timer=setInterval(()=>{updateRoundClock();void refresh();},480)"])
+    assert(js.includes(token),'buzzer script '+token);
+  assert(!js.includes('自分のHP -10'),'old self-damage text is removed');
+  assert(server.includes("store.buzzerRpc('next'"),'both users use one server-owned question');
+  assert(server.includes("store.buzzerRpc('state'"),'state reads the shared round');
+  assert(store.includes("runRpc('target_buzzer_rpc'"),'buzzer backend is private server RPC');
+  assert(css.includes('grid-template-rows:repeat(4,minmax(0,1fr))'),'all answer rows fit screen');
+  assert(css.includes('height:100dvh'),'game uses dynamic viewport');
+  assert(css.includes('body.battle-playing #battleView>.section-heading'),'heading hidden in game');
+  assert(html.includes('id="battleTitle"'),'accessible lobby heading retained');
+});
+
+test('Buzzer database migration keeps correctness and money server-owned',()=>{
+  const sql=fs.readFileSync(path.join(root,'supabase/migrations/20261114094000_target_shared_buzzer_rounds.sql'),'utf8');
+  for(const term of ['battle_buzzer_rounds','battle_buzzer_attempts','public.target_buzzer_rpc',
+    'BATTLE_SHARED_ROUNDS_ONLY','BATTLE_ROUND_CLOSED','BATTLE_ALREADY_ANSWERED',
+    'BATTLE_ROUND_NOT_STARTED','PERFORM pg_advisory_xact_lock(991101)',
+    "damage_value:=5", "damage_value integer:=0","p_action='next'","p_action='answer'"])
+    assert(sql.includes(term),'migration '+term);
+  assert(!sql.includes('DROP TABLE target_private.profiles'));
+  assert(!sql.includes('DELETE FROM target_private.two_player_wallet_events'));
+});

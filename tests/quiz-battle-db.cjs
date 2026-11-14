@@ -8,7 +8,7 @@ const {Client}=require('pg');
 const root=path.resolve(__dirname,'..');
 const uid=()=>crypto.randomUUID(),secret=crypto.randomBytes(40).toString('hex');
 const database='target_quiz_hp_battle_'+process.pid+'_'+crypto.randomBytes(4).toString('hex')+'_test';
-let admin,db,created=false,checks=0;
+let admin,db,other,created=false,checks=0;
 const eq=(x,y,msg)=>{checks++;assert.deepEqual(x,y,msg);};
 const ok=(x,msg)=>{checks++;assert(x,msg);};
 const actor=name=>({memberId:uid(),name,sessionHash:crypto.randomBytes(32).toString('hex')});
@@ -18,6 +18,13 @@ async function rpc(member,action,params={},id=uid(),key=secret){
   if(!['lobby','state','next'].includes(action))input.requestId=id;
   return (await db.query('SELECT public.target_battle_rpc($1,$2,$3::jsonb) x',[key,action,JSON.stringify(input)])).rows[0].x;
 }
+async function buzzer(member,action,params={},id=uid(),client=db,key=secret){
+  const body={...member,...params};
+  if(action==='answer')body.requestId=id;
+  return (await client.query('SELECT public.target_buzzer_rpc($1,$2,$3::jsonb) x',
+    [key,action,JSON.stringify(body)])).rows[0].x;
+}
+const nap=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function profile(p){return(await db.query('SELECT total_points,spent_points,casino_net FROM target_private.profiles WHERE member_id=$1',[p.memberId])).rows[0];}
 async function wallet(p){return(await db.query('SELECT target_private.games_wallet($1) x',[p.memberId])).rows[0].x;}
 async function events(id){return(await db.query('SELECT member_id,phase,kind,delta FROM target_private.battle_wallet_events WHERE match_id=$1 ORDER BY member_id,phase',[id])).rows;}
@@ -75,21 +82,99 @@ async function main(){
   eq((await events(match.id)).length,2,'retry does not double-reserve');
   await reconcile();
   const choices=Array.from({length:4},(_,i)=>({id:uid(),text:['正解','不正解1','不正解2','不正解3'][i]}));
-  const question={id:uid(),number:1,prompt:'合成データのテスト問題',choices,
+  const question={id:uid(),number:1,prompt:'2人で共通のテスト問題',choices,
     correctChoiceId:choices[0].id,correctText:choices[0].text};
-  const next=(await rpc(host,'next',{matchId:match.id,question})).match;
+  eq((await rpc(host,'next',{matchId:match.id,question})).error.code,'BATTLE_SHARED_ROUNDS_ONLY',
+    'legacy per-player question API is disabled');
+  eq((await buzzer(host,'state',{matchId:match.id},uid(),db,'bad-secret')).error.code,'RPC_FORBIDDEN',
+    'a private server secret is required before reading shared questions');
+  const next=(await buzzer(host,'next',{matchId:match.id,question})).match;
+  eq(next.round,1,'first shared question number');
+  eq(next.roundPhase,'countdown','rounds have a server start gate');
   eq(next.question.id,question.id);
   ok(!Object.hasOwn(next.question,'correctChoiceId')&&!Object.hasOwn(next.question,'correctText'),
-    'grading answers stay on server');
+    'private answer stays server-side');
+  const guestView=(await buzzer(guest,'state',{matchId:match.id})).match;
+  eq(guestView.question,next.question,'both users receive exactly identical choices and prompt');
+  eq(guestView.startsAt,next.startsAt,'the two clients have one common opening time');
+  eq((await buzzer(host,'answer',{matchId:match.id,questionId:question.id,choiceId:choices[0].id})).error.code,
+    'BATTLE_ROUND_NOT_STARTED','early answer cannot steal initiative');
+  await nap(1750);
   const answerId=uid();
-  let result=await rpc(host,'answer',{matchId:match.id,questionId:question.id,choiceId:choices[0].id},answerId);
-  eq(result.answer.correct,true);eq(result.match.guest.hp,45,'correct: rival -5');
-  eq((await rpc(host,'answer',{matchId:match.id,questionId:question.id,choiceId:choices[0].id},answerId)).replayed,true);
-  const q2={...question,id:uid(),choices:choices.map(c=>({...c,id:uid()}))};
+  let result=await buzzer(host,'answer',{matchId:match.id,questionId:question.id,choiceId:choices[0].id},answerId);
+  eq(result.answer.correct,true);eq(result.answer.damage,5,'first correct buzz attacks 5');
+  eq(result.match.guest.hp,45,'correct: only rival loses 5 HP');
+  eq(result.match.host.hp,50,'attacker does not lose HP');
+  eq(result.match.roundResult.attacker,'host','attack owner comes from server grading');
+  eq(result.match.roundPhase,'cooldown','round closes after the first correct answer');
+  eq((await buzzer(host,'answer',{matchId:match.id,questionId:question.id,choiceId:choices[0].id},answerId)).replayed,true,
+    'same request ID is idempotent');
+  eq((await buzzer(guest,'answer',{matchId:match.id,questionId:question.id,choiceId:choices[0].id})).error.code,
+    'BATTLE_ROUND_CLOSED','second correct player cannot deal duplicate damage');
+  eq((await buzzer(guest,'state',{matchId:match.id})).match.roundResult.attacker,'host',
+    'loser sees the same server-confirmed attack event');
+  eq((await buzzer(host,'next',{matchId:match.id,question:{...question,id:uid()}})).match.round,1,
+    'cannot skip required result display cooldown');
+
+  await nap(2050);
+  const q2={...question,id:uid(),number:2,choices:choices.map(c=>({...c,id:uid()}))};
   q2.correctChoiceId=q2.choices[0].id;q2.correctText=q2.choices[0].text;
-  await rpc(guest,'next',{matchId:match.id,question:q2});
-  result=await rpc(guest,'answer',{matchId:match.id,questionId:q2.id,choiceId:q2.choices[1].id});
-  eq(result.answer.correct,false);eq(result.match.guest.hp,35,'wrong: own -10');
+  const newRound=(await buzzer(guest,'next',{matchId:match.id,question:q2})).match;
+  eq(newRound.round,2);eq(newRound.question.id,q2.id);
+  eq((await buzzer(host,'state',{matchId:match.id})).match.question,newRound.question,
+    'new question stays shared, regardless of which client opened it');
+  await nap(1750);
+  result=await buzzer(guest,'answer',{matchId:match.id,questionId:q2.id,choiceId:q2.choices[1].id});
+  eq(result.answer.correct,false);eq(result.answer.damage,0,'a wrong buzz never attacks');
+  eq(result.match.host.hp,50);eq(result.match.guest.hp,45,'wrong buzz does not damage either side');
+  eq(result.match.answered,true,'wrong guess consumes the only attempt for that user');
+  eq((await buzzer(guest,'answer',{matchId:match.id,questionId:q2.id,choiceId:q2.choices[0].id})).error.code,
+    'BATTLE_ALREADY_ANSWERED','cannot brute-force all four options');
+  result=await buzzer(host,'answer',{matchId:match.id,questionId:q2.id,choiceId:q2.choices[1].id});
+  eq(result.answer.correct,false);eq(result.match.roundPhase,'cooldown','both wrong closes round');
+  eq(result.match.roundResult.damage,0);eq(result.match.guest.hp,45);eq(result.match.host.hp,50);
+
+  await nap(2050);
+  const q3={...question,id:uid(),number:3,choices:choices.map(c=>({...c,id:uid()}))};
+  q3.correctChoiceId=q3.choices[0].id;q3.correctText=q3.choices[0].text;
+  const third=(await buzzer(host,'next',{matchId:match.id,question:q3})).match;
+  eq(third.round,3);
+  await nap(1750);
+  result=await buzzer(guest,'answer',{matchId:match.id,questionId:q3.id,choiceId:q3.choices[0].id});
+  eq(result.match.roundResult.attacker,'guest','either side can win the buzzer race');
+  eq(result.match.host.hp,45);eq(result.match.guest.hp,45);
+  eq((await buzzer(host,'answer',{matchId:match.id,questionId:q3.id,choiceId:q3.choices[0].id})).error.code,
+    'BATTLE_ROUND_CLOSED','a later correct answer is rejected');
+
+  // Two actual PostgreSQL connections race to open and answer one new round.
+  // Only one server-serialized correct arrival may reduce HP.
+  await nap(2050);
+  other=new Client({connectionString:url.href});await other.connect();
+  const q4={...question,id:uid(),number:4,choices:choices.map(c=>({...c,id:uid()}))};
+  q4.correctChoiceId=q4.choices[0].id;q4.correctText=q4.choices[0].text;
+  const q5={...question,id:uid(),number:5,choices:choices.map(c=>({...c,id:uid()}))};
+  q5.correctChoiceId=q5.choices[0].id;q5.correctText=q5.choices[0].text;
+  const openings=await Promise.all([
+    buzzer(host,'next',{matchId:match.id,question:q4}),
+    buzzer(guest,'next',{matchId:match.id,question:q5},uid(),other)
+  ]);
+  eq(openings[0].match.question,openings[1].match.question,
+    'two simultaneous generators cannot fork into different questions');
+  const activeQuestion=openings[0].match.question;
+  const correctChoice=(activeQuestion.id===q4.id?q4:q5).correctChoiceId;
+  await nap(1750);
+  const attempts=await Promise.all([
+    buzzer(host,'answer',{matchId:match.id,questionId:activeQuestion.id,choiceId:correctChoice}),
+    buzzer(guest,'answer',{matchId:match.id,questionId:activeQuestion.id,choiceId:correctChoice},uid(),other)
+  ]);
+  eq(attempts.filter(x=>x.answer?.correct===true).length,1,
+    'exactly one correct answer wins simultaneous requests');
+  eq(attempts.filter(x=>x.error?.code==='BATTLE_ROUND_CLOSED').length,1,
+    'other correct answer is locked out after first settlement');
+  const contest=(await buzzer(host,'state',{matchId:match.id})).match;
+  eq(contest.host.hp+contest.guest.hp,85,'one race deals only 5 total HP loss');
+  ok(['host','guest'].includes(contest.roundResult.attacker),'server chooses one attacker');
+  await reconcile();
   result=await rpc(guest,'cancel',{matchId:match.id});
   eq(result.match.status,'finished');eq(result.match.winner,'host','forfeit awards rival');
   eq((await wallet(host)).balance,10200,'winner receives two deposits, net +200');
@@ -113,6 +198,7 @@ async function main(){
   console.log(JSON.stringify({battle:'passed',checks,hostedWrites:false}));
 }
 main().catch(e=>{console.error(e.stack||e);process.exitCode=1;}).finally(async()=>{
+  if(other)await other.end();
   if(db)await db.end();
   if(admin){if(created)await admin.query('DROP DATABASE "'+database+'"');await admin.end();}
 });
