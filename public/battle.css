@@ -103,3 +103,103 @@
   .battle-ranking-row { gap:10px; padding-inline:12px; }
   .battle-person>.secondary-button { padding-inline:9px; }
 }
+
+
+/* Shared buzzer: fit all four choices in iPhone dynamic viewport without
+   requiring a whole-page scroll to answer. The ordinary lobby is unchanged. */
+body.battle-playing .app-header,
+body.battle-playing .app-footer,
+body.battle-playing #battleView>.section-heading,
+body.battle-playing #battleApp>.battle-intro { display:none!important; }
+body.battle-playing .app-shell {
+  display:flex;flex-direction:column;max-width:620px;width:100%;
+  height:100dvh;min-height:0;
+  padding:max(4px,env(safe-area-inset-top)) 12px max(6px,env(safe-area-inset-bottom));
+}
+body.battle-playing #main { display:flex; flex:1; min-height:0; }
+body.battle-playing #battleView { display:flex; flex-direction:column; flex:1; min-height:0; min-width:0; }
+body.battle-playing #battleView>.view-toolbar { flex:0 0 30px;min-height:30px;margin:0 0 2px; }
+body.battle-playing #battleView>.view-toolbar .back-button,
+body.battle-playing #battleView>.view-toolbar .text-button { min-height:28px;padding:0 4px;font-size:12px; }
+body.battle-playing #battleApp { display:flex;flex:1;flex-direction:column;min-height:0; }
+body.battle-playing #battleStatus { flex:0 0 auto;min-height:0;max-height:19px;line-height:1.3;overflow:hidden;font-size:11px;margin:0; }
+body.battle-playing #battleStatus:empty { display:none; }
+body.battle-playing #battleGame { display:flex; flex:1;flex-direction:column;min-height:0;overflow:hidden; }
+body.battle-playing .battle-board { flex:0 0 auto;margin:0 0 6px;padding:7px 10px 6px;border-radius:9px; }
+body.battle-playing .battle-names { gap:4px; }
+body.battle-playing .battle-names>strong { font-size:clamp(10px,2.5vw,13px);line-height:1.25; }
+body.battle-playing .battle-pot { gap:0; }
+body.battle-playing .battle-pot small { font-size:9px; }
+body.battle-playing .battle-pot strong { font-size:clamp(11px,3vw,16px); }
+body.battle-playing .battle-bars { height:14px;margin:8px 0 6px; }
+body.battle-playing .battle-avatars { align-items:center; }
+body.battle-playing .battle-avatars>div { display:flex;align-items:center;gap:6px; }
+body.battle-playing .battle-avatars>div:last-child { flex-direction:row-reverse; }
+body.battle-playing .battle-avatars .battle-avatar { width:30px;height:30px;font-size:12px; }
+body.battle-playing .battle-avatars b { font-size:10px; }
+body.battle-playing .battle-question {
+  display:flex;flex:1;flex-direction:column;min-height:0;margin:0;padding:0;
+}
+body.battle-playing #battleQuestionMeta { flex:0 0 auto;min-height:17px;font-size:10px; }
+body.battle-playing .battle-question h2 {
+  flex:0 0 auto;margin:2px 0 7px!important;text-align:center;
+  font-size:clamp(18px,5.2vw,26px)!important;line-height:1.35;
+  max-height:4.05em;overflow-y:auto;overflow-wrap:anywhere;
+}
+body.battle-playing .battle-choice-stage { display:flex;position:relative;flex:1;min-height:0; }
+body.battle-playing .battle-choices {
+  display:grid;grid-template-rows:repeat(4,minmax(0,1fr));flex:1;
+  min-height:0;gap:6px;
+}
+body.battle-playing .battle-choice {
+  min-height:0;max-height:none;height:100%;padding:5px 12px;
+  font-size:clamp(14px,3.6vw,19px);line-height:1.3;overflow-y:auto;
+  border-radius:9px;word-break:normal;
+}
+body.battle-playing .battle-letter { width:23px;height:23px;font-size:12px; }
+body.battle-playing .battle-feedback { flex:0 0 auto;min-height:0;margin:4px 0 0;font-size:12px;line-height:1.3; }
+body.battle-playing .battle-feedback:empty { display:none; }
+body.battle-playing #battleAnswerRetry { flex:0 0 auto;min-height:34px;margin:2px 0;padding:4px; }
+body.battle-playing .battle-forfeit {
+  flex:0 0 29px;min-height:29px;align-self:center;
+  padding:2px 8px;margin:1px 0 0;font-size:11px;
+}
+/* Pop-in stamps are shown above the four answers, without consuming
+   additional vertical layout space. Both players see the same server event. */
+.battle-hit-stamp {
+  position:absolute;z-index:3;top:0;left:50%;
+  transform:translate(-50%,-12%);
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  max-width:96%;padding:10px 16px;border:1px solid;
+  border-radius:12px;box-shadow:0 8px 24px #23354724;
+  font-weight:800;white-space:nowrap;pointer-events:none;
+  animation:battle-hit-arrive .28s cubic-bezier(.17,1.35,.34,1) both;
+}
+.battle-hit-stamp strong { font-size:clamp(19px,5vw,26px);font-variant-numeric:tabular-nums; }
+.battle-hit-stamp small { font-size:11px; }
+.battle-hit-symbol { font-size:23px; }
+.battle-hit-stamp.is-attack { background:#e2f5e8;color:#13613d;border-color:#6cb38b; }
+.battle-hit-stamp.is-damage { background:#fff0ed;color:#af392f;border-color:#e99b91; }
+.battle-hit-stamp.is-neutral { background:#f3f5f7;color:#435d72;border-color:#cbd5de;font-size:14px; }
+@keyframes battle-hit-arrive {
+  from { opacity:0;transform:translate(-50%,-12%) scale(.75); }
+  to { opacity:1;transform:translate(-50%,-12%) scale(1); }
+}
+@media (max-height:710px) {
+  body.battle-playing .app-shell { padding-top:max(2px,env(safe-area-inset-top));padding-bottom:max(2px,env(safe-area-inset-bottom)); }
+  body.battle-playing .battle-board { padding:4px 6px;margin-bottom:4px; }
+  body.battle-playing .battle-avatars .battle-avatar { width:25px;height:25px; }
+  body.battle-playing .battle-question h2 { margin:0 0 4px!important;font-size:clamp(17px,4.6vw,24px)!important;max-height:2.7em; }
+  body.battle-playing .battle-choice { padding:3px 10px;font-size:clamp(13px,3.4vw,17px); }
+  body.battle-playing .battle-choices { gap:4px; }
+  body.battle-playing .battle-feedback { margin:0; }
+}
+@media (max-width:380px) {
+  body.battle-playing .app-shell { padding-left:7px;padding-right:7px; }
+  .battle-hit-stamp { padding:8px 10px;gap:4px; }
+  .battle-hit-stamp strong { font-size:17px; }
+  .battle-hit-stamp small { font-size:10px; }
+}
+@media (prefers-reduced-motion:reduce){
+  .battle-hit-stamp { animation:none; }
+}
