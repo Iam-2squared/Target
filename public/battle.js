@@ -7,10 +7,11 @@
   const validId=id=>typeof id==='string'&&/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(id);
   const first=name=>[...String(name||'?')][0];
   const freshId=()=>crypto.randomUUID();
-  let active=false,identity=null,epoch=0,syncRevision=0,timer=null,fetching=false,busy=false,matchId=null,match=null;
-  let online=[],ranking=[],incoming=[],outgoing=[],selected=null,offerVersion=null,questionId=null,pendingAnswer=null,feedback='';
+  let active=false,identity=null,epoch=0,syncRevision=0,timer=null,fetching=false,busy=false,matchId=null,match=null,clockOffset=0,lastLobbyPoll=0;
+  let online=[],ranking=[],incoming=[],outgoing=[],selected=null,offerVersion=null,questionId=null,pendingAnswer=null,feedback='',shownStampKey=null;
   function status(message,error=false){const el=$('battleStatus');if(el){el.textContent=message;el.classList.toggle('is-error',error);}}
   async function api(action,body){
+    const sentAt=Date.now();
     const controller=new AbortController(),t=setTimeout(()=>controller.abort(),14000);
     try{
       const response=await fetch('/api/battle/'+action,{method:body===undefined?'GET':'POST',
@@ -18,8 +19,16 @@
         headers:body===undefined?{'Accept':'application/json'}:{'Accept':'application/json','Content-Type':'application/json'},
         body:body===undefined?undefined:JSON.stringify(body),signal:controller.signal});
       let data;try{data=await response.json();}catch{throw new Error('サーバーの応答を確認できませんでした。');}
-      if(!response.ok||data?.error)throw new Error(data?.error?.message||'サーバーへ接続できませんでした。');
+      if(!response.ok||data?.error){
+        const failure=new Error(data?.error?.message||'サーバーへ接続できませんでした。');
+        failure.code=data?.error?.code||'';
+        failure.status=response.status;
+        throw failure;
+      }
       if(data?.ok!==true)throw new Error('対戦データを確認できませんでした。');
+      const serverStamp=Number(response.headers.get('X-Target-Now'));
+      if(Number.isFinite(serverStamp)&&serverStamp>0&&serverStamp<Date.now()+60000)
+        clockOffset=serverStamp-(sentAt+Date.now())/2;
       return data;
     }catch(e){if(e.name==='AbortError')throw new Error('通信がタイムアウトしました。');throw e;}
     finally{clearTimeout(t);}
@@ -59,7 +68,7 @@
   }
   function build(){
     $('battleApp').innerHTML=[
-      "<p class='battle-intro'>4択に正解すると相手のHP -5、不正解なら自分のHP -10。</p>",
+      "<p class='battle-intro'>同じ4択を早押し！先に正解した側だけが相手のHPを5減らせます。</p>",
       "<p id='battleStatus' class='battle-status' role='status' aria-live='polite'></p>",
       "<section id='battleLobby'>",
       "<div class='battle-heading battle-online-heading'><div class='battle-heading-title'><h2>ログイン中</h2><small id='battleOnlineCount' aria-live='polite'>—</small></div><button id='battleLobbyRefresh' class='battle-refresh' type='button' aria-label='ログイン中のユーザーとランキングを更新' title='更新'>↻</button></div>",
@@ -95,7 +104,8 @@
       "<div class='battle-avatars'><div><span class='battle-avatar' id='battleHostAvatar'></span><b id='battleHostHP'></b></div>",
       "<div><span class='battle-avatar' id='battleGuestAvatar'></span><b id='battleGuestHP'></b></div></div></div>",
       "<div id='battleQuestionBlock' class='battle-question'><small id='battleQuestionMeta'></small><h2 id='battlePrompt'></h2>",
-      "<div id='battleChoices' class='battle-choices'></div></div>",
+      "<div class='battle-choice-stage'><div id='battleHitStamp' class='battle-hit-stamp' role='status' aria-live='polite' hidden></div>",
+      "<div id='battleChoices' class='battle-choices'></div></div></div>",
       "<p id='battleFeedback' class='battle-feedback' role='status'></p>",
       "<button id='battleAnswerRetry' class='secondary-button wide' type='button' hidden>同じ回答を再確認</button>",
       "<button id='battleForfeit' class='text-button battle-forfeit' type='button'>降参する</button></section>",
@@ -208,21 +218,51 @@
     }
     potPreview();
   }
+  function nowServer(){return Date.now()+clockOffset;}
+  function roundCanAnswer(m){
+    if(!m||m.status!=='playing'||!m.question||m.answered||busy||pendingAnswer)return false;
+    if(m.roundPhase==='cooldown'||m.roundPhase==='timeout'||m.roundPhase==='inactive')return false;
+    const start=Date.parse(m.startsAt),deadline=Date.parse(m.deadlineAt),now=nowServer();
+    return Number.isFinite(start)&&Number.isFinite(deadline)&&now>=start&&now<deadline;
+  }
   function displayQuestion(m){
     const q=m.question;
     if(questionId===q?.id)return;
-    if(!q){questionId=null;$('battleQuestionBlock').hidden=true;return;}
-    questionId=q.id;pendingAnswer=null;feedback='';
+    questionId=q?.id||null;pendingAnswer=null;feedback='';
     $('battleQuestionBlock').hidden=false;
-    $('battlePrompt').textContent=q?.prompt||'次の問題を準備しています…';
-    $('battleQuestionMeta').textContent=q?'Section '+Math.ceil(q.number/100)+' / #'+q.number:'';
+    $('battlePrompt').textContent=q?.prompt||'次の共通問題を準備中…';
+    $('battleQuestionMeta').textContent=q?'Section '+Math.ceil(q.number/100)+' / ROUND '+m.round:'同じ問題を2人に配信します';
     $('battleChoices').replaceChildren();
     if(q&&Array.isArray(q.choices))q.choices.forEach((option,index)=>{
-      const b=make('button','battle-choice'),letter=make('span','battle-letter','ABCD'[index]||'');
-      b.type='button';b.append(letter,make('span','',option.text));
-      b.addEventListener('click',()=>void answer(q.id,option.id));
-      $('battleChoices').append(b);
+      const button=make('button','battle-choice');
+      button.type='button';
+      button.append(make('span','battle-letter','ABCD'[index]||''),make('span','',option.text));
+      button.addEventListener('click',()=>void answer(q.id,option.id));
+      $('battleChoices').append(button);
     });
+  }
+  function renderStamp(m){
+    const stamp=$('battleHitStamp'),result=m.roundResult;
+    if(m.roundPhase!=='cooldown'||!result){stamp.hidden=true;shownStampKey=null;return;}
+    const key=m.id+':'+result.round+':'+result.resolvedAt;
+    const attacker=result.attacker;
+    if(attacker===null){
+      if(shownStampKey!==key){
+        stamp.className='battle-hit-stamp is-neutral';
+        stamp.textContent='両者不正解・次の問題へ';
+        shownStampKey=key;
+      }
+    }else{
+      const won=attacker===m.myRole;
+      if(shownStampKey!==key){
+        stamp.className='battle-hit-stamp '+(won?'is-attack':'is-damage');
+        stamp.replaceChildren(make('span','battle-hit-symbol',won?'⚔':'💥'),
+          make('strong','',won?'攻撃成功  +'+result.damage:'被ダメージ  −'+result.damage),
+          make('small','',won?'相手HP −'+result.damage:'自分HP −'+result.damage));
+        shownStampKey=key;
+      }
+    }
+    stamp.hidden=false;
   }
   function renderGame(m){
     $('battleHostName').textContent=m.host.name;$('battleGuestName').textContent=m.guest.name;
@@ -233,10 +273,24 @@
     $('battleGuestHP').textContent=m.guest.hp+' / '+m.initialHp+' HP';
     $('battleHostFill').style.width=(Math.max(0,Math.min(1,m.host.hp/m.initialHp))*100)+'%';
     $('battleGuestFill').style.width=(Math.max(0,Math.min(1,m.guest.hp/m.initialHp))*100)+'%';
-    displayQuestion(m);
+    displayQuestion(m);renderStamp(m);
     $('battleAnswerRetry').hidden=!pendingAnswer;
     $('battleFeedback').textContent=feedback;
-    $('battleChoices').querySelectorAll('button').forEach(b=>b.disabled=busy||!!pendingAnswer);
+    updateRoundClock();
+  }
+  function updateRoundClock(){
+    if(!active||match?.status!=='playing')return;
+    const m=match,meta=$('battleQuestionMeta');
+    if(m.roundPhase==='cooldown'){
+      const next=Math.max(0,Math.ceil((Date.parse(m.nextAt)-nowServer())/1000));
+      meta.textContent='次の問題まで '+next+' 秒';
+    }else if(m.roundPhase==='countdown'||m.roundPhase==='open'){
+      const until=Date.parse(m.startsAt)-nowServer();
+      if(until>0)meta.textContent='同時スタートまで '+Math.max(1,Math.ceil(until/1000))+' 秒';
+      else if(m.answered)meta.textContent='回答済み・相手の正解を待機中';
+      else meta.textContent='ROUND '+m.round+'  ·  残り'+Math.max(0,Math.ceil((Date.parse(m.deadlineAt)-nowServer())/1000))+'秒';
+    }else if(m.roundPhase==='timeout')meta.textContent='この問題は時間切れ';
+    for(const button of $('battleChoices').querySelectorAll('button'))button.disabled=!roundCanAnswer(m);
   }
   function renderDone(m){
     const myWin=m.winner===m.myRole;
@@ -248,6 +302,7 @@
   function render(){
     if(!active)return;
     const m=match;
+    document.body.classList.toggle('battle-playing',m?.status==='playing');
     $('battleLobby').hidden=!!m&&m.status!=='invited';
     $('battleGame').hidden=m?.status!=='playing';
     $('battleDone').hidden=!m||!['finished','cancelled'].includes(m.status);
@@ -260,27 +315,36 @@
   }
   async function refresh(){
     if(!active||fetching||busy||document.hidden)return;
+    const inGame=match?.status==='playing'&&validId(matchId);
+    if(!inGame&&Date.now()-lastLobbyPoll<2600)return;
     fetching=true;const lease=epoch,revision=syncRevision;
+    if(!inGame)lastLobbyPoll=Date.now();
     try{
-      const snapshot=await api('lobby');
-      if(!active||epoch!==lease||revision!==syncRevision)return;
-      online=Array.isArray(snapshot.online)?snapshot.online:[];
-      ranking=Array.isArray(snapshot.ranking)?snapshot.ranking:[];
-      incoming=Array.isArray(snapshot.incoming)?snapshot.incoming:[];
-      outgoing=Array.isArray(snapshot.outgoing)?snapshot.outgoing:[];
-      if(validId(snapshot.match?.id))matchId=snapshot.match.id;
-      if(matchId){
-        const detail=await api('state?matchId='+encodeURIComponent(matchId));
+      if(inGame){
+        const result=await api('state?matchId='+encodeURIComponent(matchId));
         if(!active||epoch!==lease||revision!==syncRevision)return;
-        match=detail.match||null;
-      }else match=null;
+        match=result.match||null;
+      }else{
+        const snapshot=await api('lobby');
+        if(!active||epoch!==lease||revision!==syncRevision)return;
+        online=Array.isArray(snapshot.online)?snapshot.online:[];
+        ranking=Array.isArray(snapshot.ranking)?snapshot.ranking:[];
+        incoming=Array.isArray(snapshot.incoming)?snapshot.incoming:[];
+        outgoing=Array.isArray(snapshot.outgoing)?snapshot.outgoing:[];
+        if(validId(snapshot.match?.id))matchId=snapshot.match.id;
+        if(matchId){
+          const detail=await api('state?matchId='+encodeURIComponent(matchId));
+          if(!active||epoch!==lease||revision!==syncRevision)return;
+          match=detail.match||null;
+        }else match=null;
+      }
       render();status('');
     }catch(e){if(active&&epoch===lease)status(e.message,true);}
     finally{fetching=false;}
   }
   async function mutate(action,fields){
     if(busy||!active)return;
-    busy=true;syncRevision++;const lease=epoch;status('確認中…');
+    busy=true;syncRevision++;lastLobbyPoll=0;const lease=epoch;status('確認中…');
     try{
       const result=await api(action,{requestId:freshId(),...fields});
       if(!active||epoch!==lease)return;
@@ -314,7 +378,7 @@
       void mutate('cancel',{matchId:match.id});
   }
   function answer(qid,cid){
-    if(!match||match.status!=='playing'||!validId(qid)||!validId(cid)||busy||pendingAnswer)return;
+    if(!roundCanAnswer(match)||!validId(qid)||!validId(cid)||qid!==match.question?.id)return;
     pendingAnswer={requestId:freshId(),matchId:match.id,questionId:qid,choiceId:cid};
     void submitAnswer();
   }
@@ -325,22 +389,30 @@
       const response=await api('answer',pendingAnswer);
       if(!active||lease!==epoch)return;
       const correct=response.answer?.correct;
-      feedback=correct===true?'正解！ 相手のHP -5':correct===false?'不正解。自分のHP -10':'';
-      pendingAnswer=null;questionId=null;
+      feedback=correct===false?'不正解・この問題はもう押せません':correct===true?'正解！ 攻撃を確定しました':'';
+      pendingAnswer=null;
       if(response.match)match=response.match;status('');
-    }catch(e){if(active&&lease===epoch)status(e.message+' 同じ回答で再確認できます。',true);}
+    }catch(e){
+      if(active&&lease===epoch){
+        if(['BATTLE_ROUND_CLOSED','BATTLE_ALREADY_ANSWERED','BATTLE_QUESTION_CHANGED','BATTLE_NOT_PLAYING'].includes(e.code)){
+          pendingAnswer=null;feedback='次の問題をお待ちください。';status(''); 
+        }else if(e.code==='BATTLE_ROUND_NOT_STARTED'){
+          pendingAnswer=null;status('同時スタートの合図をお待ちください。');
+        }else status(e.message+' 同じ回答で再確認できます。',true);
+      }
+    }
     finally{busy=false;if(active&&lease===epoch){render();void refresh();}}
   }
   function close(){
-    active=false;epoch++;syncRevision++;if(timer)clearInterval(timer);timer=null;
+    active=false;epoch++;syncRevision++;document.body.classList.remove('battle-playing');if(timer)clearInterval(timer);timer=null;
     identity=null;matchId=null;match=null;online=[];ranking=[];incoming=[];outgoing=[];
-    selected=null;offerVersion=null;questionId=null;pendingAnswer=null;feedback='';busy=false;fetching=false;
+    selected=null;offerVersion=null;questionId=null;pendingAnswer=null;feedback='';shownStampKey=null;busy=false;fetching=false;lastLobbyPoll=0;clockOffset=0;
     if($('battleApp'))$('battleApp').replaceChildren();
   }
   function open(member){
     close();if(!validId(member?.id)||typeof member?.name!=='string')return;
     identity={id:member.id,name:member.name};active=true;build();
-    timer=setInterval(()=>void refresh(),2800);
+    timer=setInterval(()=>{updateRoundClock();void refresh();},480);
     status('ログイン中のユーザーを読み込んでいます…');void refresh();
   }
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refresh();});
