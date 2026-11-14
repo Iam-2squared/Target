@@ -7,6 +7,9 @@ const {HttpError} = require('./errors.cjs');
 const MAX_WALLET = 10000000000000;
 const BOOK_SECTIONS = Object.freeze({target1900:19,target1000:10,kobun400:4});
 const HP_OPTIONS = Object.freeze([50,100,150,200,300]);
+// The invitation never fixes any game terms. These placeholders are shown only
+// after acceptance; both members must explicitly approve before money is held.
+const INVITE_DEFAULTS = Object.freeze({book:'target1900',fromSection:1,toSection:1,stake:100,initialHp:100});
 const UUID = identity.UUID;
 const endpoints = Object.freeze({
   '/api/battle/lobby':['GET','lobby'],
@@ -40,7 +43,7 @@ function settings(value) {
 }
 function input(action,body) {
   const fields={
-    challenge:['requestId','targetId','book','fromSection','toSection','stake','initialHp'],
+    challenge:['requestId','targetId'],
     accept:['requestId','matchId'],decline:['requestId','matchId'],
     propose:['requestId','matchId','expectedVersion','book','fromSection','toSection','stake','initialHp'],
     ready:['requestId','matchId','expectedVersion'],
@@ -54,7 +57,7 @@ function input(action,body) {
      (fields.includes('questionId')&&!uuid(body.questionId))||
      (fields.includes('choiceId')&&!uuid(body.choiceId))||
      (fields.includes('expectedVersion')&&(!Number.isSafeInteger(body.expectedVersion)||body.expectedVersion<1||body.expectedVersion>1000000)))throw invalid();
-  if(['challenge','propose'].includes(action))settings(body);
+  if(action==='propose')settings(body);
   return body;
 }
 function queryArguments(url,action) {
@@ -106,6 +109,9 @@ async function dispatch({pathname,req,res,url,config,readJson}) {
   if(action==='state')return state(actor,matchIdInUrl(url),sessionHash);
   if(queryArguments(url,action).length)throw invalid();
   const body=input(action,await readJson(req));
-  return await (action==='answer'?store.buzzerRpc(action,{...actor,...body,sessionHash}):store.battleRpc(action,{...actor,...body,sessionHash}));
+  const payload=action==='challenge'
+    ? {...actor,...body,...INVITE_DEFAULTS,sessionHash}
+    : {...actor,...body,sessionHash};
+  return await (action==='answer'?store.buzzerRpc(action,payload):store.battleRpc(action,payload));
 }
-module.exports={dispatch,settings,input,matchIdInUrl,BOOK_SECTIONS,HP_OPTIONS,MAX_WALLET};
+module.exports={dispatch,settings,input,matchIdInUrl,BOOK_SECTIONS,HP_OPTIONS,MAX_WALLET,INVITE_DEFAULTS};
