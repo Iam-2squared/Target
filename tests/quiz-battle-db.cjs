@@ -8,7 +8,7 @@ const {Client}=require('pg');
 const root=path.resolve(__dirname,'..');
 const uid=()=>crypto.randomUUID(),secret=crypto.randomBytes(40).toString('hex');
 const database='target_quiz_hp_battle_'+process.pid+'_'+crypto.randomBytes(4).toString('hex')+'_test';
-let admin,db,created=false,checks=0;
+let admin,db,other,created=false,checks=0;
 const eq=(x,y,msg)=>{checks++;assert.deepEqual(x,y,msg);};
 const ok=(x,msg)=>{checks++;assert(x,msg);};
 const actor=name=>({memberId:uid(),name,sessionHash:crypto.randomBytes(32).toString('hex')});
@@ -145,6 +145,36 @@ async function main(){
   eq(result.match.host.hp,45);eq(result.match.guest.hp,45);
   eq((await buzzer(host,'answer',{matchId:match.id,questionId:q3.id,choiceId:q3.choices[0].id})).error.code,
     'BATTLE_ROUND_CLOSED','a later correct answer is rejected');
+
+  // Two actual PostgreSQL connections race to open and answer one new round.
+  // Only one server-serialized correct arrival may reduce HP.
+  await nap(2050);
+  other=new Client({connectionString:url.href});await other.connect();
+  const q4={...question,id:uid(),number:4,choices:choices.map(c=>({...c,id:uid()}))};
+  q4.correctChoiceId=q4.choices[0].id;q4.correctText=q4.choices[0].text;
+  const q5={...question,id:uid(),number:5,choices:choices.map(c=>({...c,id:uid()}))};
+  q5.correctChoiceId=q5.choices[0].id;q5.correctText=q5.choices[0].text;
+  const openings=await Promise.all([
+    buzzer(host,'next',{matchId:match.id,question:q4}),
+    buzzer(guest,'next',{matchId:match.id,question:q5},uid(),other)
+  ]);
+  eq(openings[0].match.question,openings[1].match.question,
+    'two simultaneous generators cannot fork into different questions');
+  const activeQuestion=openings[0].match.question;
+  const correctChoice=(activeQuestion.id===q4.id?q4:q5).correctChoiceId;
+  await nap(1750);
+  const attempts=await Promise.all([
+    buzzer(host,'answer',{matchId:match.id,questionId:activeQuestion.id,choiceId:correctChoice}),
+    buzzer(guest,'answer',{matchId:match.id,questionId:activeQuestion.id,choiceId:correctChoice},uid(),other)
+  ]);
+  eq(attempts.filter(x=>x.answer?.correct===true).length,1,
+    'exactly one correct answer wins simultaneous requests');
+  eq(attempts.filter(x=>x.error?.code==='BATTLE_ROUND_CLOSED').length,1,
+    'other correct answer is locked out after first settlement');
+  const contest=(await buzzer(host,'state',{matchId:match.id})).match;
+  eq(contest.host.hp+contest.guest.hp,85,'one race deals only 5 total HP loss');
+  ok(['host','guest'].includes(contest.roundResult.attacker),'server chooses one attacker');
+  await reconcile();
   result=await rpc(guest,'cancel',{matchId:match.id});
   eq(result.match.status,'finished');eq(result.match.winner,'host','forfeit awards rival');
   eq((await wallet(host)).balance,10200,'winner receives two deposits, net +200');
@@ -168,6 +198,7 @@ async function main(){
   console.log(JSON.stringify({battle:'passed',checks,hostedWrites:false}));
 }
 main().catch(e=>{console.error(e.stack||e);process.exitCode=1;}).finally(async()=>{
+  if(other)await other.end();
   if(db)await db.end();
   if(admin){if(created)await admin.query('DROP DATABASE "'+database+'"');await admin.end();}
 });
