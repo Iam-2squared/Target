@@ -76,17 +76,19 @@ function matchIdInUrl(url) {
   return pairs[0][1];
 }
 async function state(actor,matchId,sessionHash) {
-  const current=await store.buzzerRpc('state',{...actor,matchId,sessionHash});
+  const current=await store.sprintRpc('state',{...actor,matchId,sessionHash});
   if(current?.match?.status!=='playing'||!current.match?.id)return current;
-  const phase=current.match.roundPhase;
-  if(!['waiting','cooldown','timeout'].includes(phase))return current;
-  if(phase==='cooldown'&&Date.parse(current.match.nextAt)>Date.now())return current;
+  // A completed answer clears only this player's current question.
+  // Generate their next question without waiting for the opponent.
+  if(current.match.question)return current;
   const {book,fromSection,toSection}=current.match;
   if(!Object.hasOwn(BOOK_SECTIONS,book)||!Number.isInteger(fromSection)||!Number.isInteger(toSection)||
      fromSection<1||toSection>BOOK_SECTIONS[book]||fromSection>toSection)throw new HttpError(503,'出題範囲が不正です。','BATTLE_DATA_ERROR');
-  const candidate=generateQuestions({book,direction:'japanese',count:10,
-    from:(fromSection-1)*100+1,to:toSection*100,requestId:cryptoRandomUuid()})[0];
-  return await store.buzzerRpc('next',{...actor,matchId,sessionHash,question:candidate});
+  const candidates=generateQuestions({book,direction:'japanese',count:10,
+    from:(fromSection-1)*100+1,to:toSection*100,requestId:cryptoRandomUuid()});
+  const previous=current.match.myLastNumber;
+  const candidate=candidates.find(q=>q.number!==previous)||candidates[0];
+  return await store.sprintRpc('next',{...actor,matchId,sessionHash,question:candidate});
 }
 function cryptoRandomUuid() {
   return require('node:crypto').randomUUID();
@@ -112,6 +114,14 @@ async function dispatch({pathname,req,res,url,config,readJson}) {
   const payload=action==='challenge'
     ? {...actor,...body,...INVITE_DEFAULTS,sessionHash}
     : {...actor,...body,sessionHash};
-  return await (action==='answer'?store.buzzerRpc(action,payload):store.battleRpc(action,payload));
+  if(action==='answer'){
+    const answered=await store.sprintRpc(action,payload);
+    if(answered?.match?.status==='playing'&&answered?.answer){
+      const next=await state(actor,body.matchId,sessionHash);
+      return {...answered,match:next.match??answered.match,wallet:next.wallet??answered.wallet};
+    }
+    return answered;
+  }
+  return await store.battleRpc(action,payload);
 }
 module.exports={dispatch,settings,input,matchIdInUrl,BOOK_SECTIONS,HP_OPTIONS,MAX_WALLET,INVITE_DEFAULTS};
