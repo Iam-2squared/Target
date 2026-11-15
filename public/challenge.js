@@ -21,6 +21,7 @@
   const shownSpecials=new Set();
   let answerPreview=null,previewTimer=null;
   const shownPreviews=new Set();
+  const abortedRuns=new Set();
 
   function art(kind,level){return window.ChallengeArt?.[kind]?.(level)||'';}
   function svgNode(kind,level,cls){const node=make('span',cls);node.innerHTML=art(kind,level);node.setAttribute('aria-hidden','true');return node;}
@@ -223,7 +224,20 @@
     }
     finally{clearTimeout(timeout);}
   }
+  function resetAbortedView(){
+    clearPreview();clearSpecial();
+    if(specialResume){specialResume.cancelled=true;specialResume.controller?.abort();}
+    if(specialCancel)clearTimeout(specialCancel.timer);
+    run=null;levels=[];pending=null;queuedAnswer=null;pauseOperation=null;specialResume=null;specialCancel=null;specialFinishRunId=null;
+    pauseIntent=false;manualPauseNeeded=false;canonicalNeeded=false;retryStart=null;mode='map';drawnMode='';lastHp=null;feedback='';mapNeeded=true;
+    schedule(0);window.scrollTo({top:0,behavior:'instant'});
+  }
   function accept(data,{map=false}={}){
+    const incoming=map?data.activeRun:data.run;
+    if(incoming&&abortedRuns.has(incoming.id)&&(incoming.status!=='aborted'||run?.id!==incoming.id)){
+      if(data.wallet)callbacks.onWallet?.(data.wallet);
+      if(map){mapNeeded=true;schedule(0);}return;
+    }
     if(map){
       if(!Array.isArray(data.levels)||data.levels.length!==10||data.levels.some((l,i)=>l?.level!==i+1||typeof l.unlocked!=='boolean'||typeof l.cleared!=='boolean'))throw new Error('ステージを確認できませんでした。');
       levels=data.levels;
@@ -233,6 +247,10 @@
     if(pauseIntent&&run?.status==='playing')run={...run,question:null};
     if(queuedAnswer&&(run?.status!=='playing'||run.id!==queuedAnswer.operation.body.runId||run.question?.id!==queuedAnswer.operation.body.questionId))queuedAnswer=null;
     if(data.wallet)callbacks.onWallet?.(data.wallet);
+    if(run?.status==='aborted'){
+      abortedRuns.add(run.id);if(abortedRuns.size>128)abortedRuns.delete(abortedRuns.values().next().value);
+      if(!homeIntent&&retryLevel===null){resetAbortedView();return;}
+    }
     if(terminal(run)){
       if(!homeIntent&&retryLevel===null)mode='result';
       pauseIntent=false;pauseOperation=null;pending=null;
@@ -609,6 +627,21 @@
     const content=make('div','challenge-clearer-content');renderNames(content,names,mapNeeded?'確認中…':'まだいません');section.append(content);
     root.append(section);
   }
+  function renderMistakes(root){
+    if(run?.status!=='lost')return;
+    const section=make('section','challenge-mistakes');section.id='challengeMistakes';
+    const title=make('h2','','間違えた問題');title.id='challengeMistakesTitle';section.setAttribute('aria-labelledby',title.id);section.append(title);
+    const limits={target1900:1900,target1000:1000,kobun400:400},seen=new Set(),list=make('dl','challenge-mistake-list');
+    for(const entry of Array.isArray(run.mistakes)?run.mistakes:[]){
+      if(!entry||typeof entry.book!=='string'||!Object.hasOwn(limits,entry.book)||!Number.isSafeInteger(entry.number)||entry.number<1||entry.number>limits[entry.book]||
+        typeof entry.prompt!=='string'||!entry.prompt.trim()||typeof entry.correctText!=='string'||!entry.correctText.trim())continue;
+      const key=entry.book+':'+entry.number;if(seen.has(key))continue;seen.add(key);
+      const row=make('div','challenge-mistake-row');row.dataset.book=entry.book;row.dataset.number=String(entry.number);
+      row.append(make('dt','challenge-mistake-prompt',entry.prompt),make('dd','challenge-mistake-meaning',entry.correctText));list.append(row);
+    }
+    if(list.childElementCount)section.append(list);else section.append(make('p','challenge-mistakes-empty','記録なし'));
+    root.append(section);
+  }
   function renderResult(){
     const root=shell(),won=run.status==='won',level=run.level;
     const panel=make('div','challenge-result '+(won?'is-victory':'is-defeat'));
@@ -623,7 +656,7 @@
     const actions=make('div','challenge-result-actions');
     actions.append(button(won?'もう一度':'リトライ','primary-button',()=>start(level)),button('戻る','secondary-button',backToMap));
     for(const b of actions.children)b.disabled=inFlight||!!pending;
-    copy.append(actions);panel.append(copy);root.append(panel);renderClearers(root);
+    copy.append(actions);panel.append(copy);root.append(panel);renderClearers(root);renderMistakes(root);
     if(pending||message)root.append(button('もう一度確認','secondary-button challenge-retry',retry));
   }
   function render(){
@@ -639,7 +672,7 @@
     if(active&&(specialBeat||specialResume||specialCancel||answerPreview?.specialOwned))invalidateSpecial({force:true});
     if(sessionChange){const change=sessionChange;sessionChange=null;clearTimeout(change.timer);if(!inFlight&&!pending&&!manualPauseNeeded&&(!run||terminal(run)||run.status==='paused'))change.resolve();else change.reject(new Error('一時停止を確認できませんでした。もう一度お試しください。'));}
     if(specialCancel)clearTimeout(specialCancel.timer);
-    active=false;epoch++;clearTimers();shownSpecials.clear();shownPreviews.clear();specialFinishRunId=null;specialResume=null;specialCancel=null;manualPauseNeeded=false;canonicalNeeded=false;callbacks={};identity=null;levels=[];run=null;queuedAnswer=null;pending=null;pauseOperation=null;pauseIntent=false;homeIntent=false;exitDestination='app';retryLevel=null;retryStart=null;
+    active=false;epoch++;clearTimers();shownSpecials.clear();shownPreviews.clear();abortedRuns.clear();specialFinishRunId=null;specialResume=null;specialCancel=null;manualPauseNeeded=false;canonicalNeeded=false;callbacks={};identity=null;levels=[];run=null;queuedAnswer=null;pending=null;pauseOperation=null;pauseIntent=false;homeIntent=false;exitDestination='app';retryLevel=null;retryStart=null;
     inFlight=false;readInFlight=false;mode='map';mapNeeded=false;pollFailures=0;message='';feedback='';drawnMode='';drawnQuestion=null;lastHp=null;layoutSignature='';
     document.body.classList.remove('challenge-is-game');document.body.style.removeProperty('--challenge-scene');document.body.style.removeProperty('--challenge-viewport-height');$('challengeApp')?.classList.remove('is-compact','is-dense','has-overflow');$('challengeApp')?.replaceChildren();
   }

@@ -42,7 +42,7 @@ async function clear(level,actor=member){
  for(let n=0;n<20*level&&['playing','paused'].includes(r.status);n++){
   r=await supply(r,actor);
   // Remove wall-clock test-machine speed from this deterministic combat check.
-  await db.query("UPDATE target_private.challenge_runs SET next_attack_at=clock_timestamp()+interval '3 seconds' WHERE id=$1",[r.id]);
+  await db.query("UPDATE target_private.challenge_runs SET next_attack_at=clock_timestamp()+(CASE WHEN level>=6 THEN 3000-200*(level-5) ELSE 3000 END)*interval '1 millisecond' WHERE id=$1",[r.id]);
   // Reset the minute quota in this fixture; production has no automated answer loop.
   if(n%100===0)await db.query('UPDATE target_private.challenge_rates SET calls=1 WHERE member_id=$1',[actor.memberId]);
   last=await answer(r,true,uid(),actor);ok(last.ok,JSON.stringify(last));r=last.run;
@@ -56,7 +56,7 @@ async function reconcile(){
 }
 async function accounting(){
  const tables=['challenge_runs','challenge_badges','challenge_reward_events','challenge_requests','challenge_rates'];
- const query='SELECT coalesce(sum(bytes),0)::bigint expected FROM ('+tables.map(t=>'SELECT pg_column_size(to_jsonb(t))+128 bytes FROM target_private.'+t+' t').join(' UNION ALL ')+') rows';
+ const query='SELECT coalesce(sum(bytes),0)::bigint expected FROM ('+tables.map(t=>'SELECT pg_column_size(to_jsonb(t))+128'+(t==='challenge_requests'?"+CASE WHEN action='answer' AND response#>>'{answer,correct}'='false' AND jsonb_typeof(response#>'{answer,mistake}')='object' THEN 128 ELSE 0 END":'')+' bytes FROM target_private.'+t+' t').join(' UNION ALL ')+') rows';
  const expected=String(BigInt((await db.query(query)).rows[0].expected)+baselineBytes);
  eq((await db.query('SELECT logical_bytes FROM target_private.system_state WHERE singleton')).rows[0].logical_bytes,expected,'logical quota equals actual retained challenge rows without upsert leakage');
 }
@@ -222,7 +222,9 @@ async function httpChecks(databaseUrl){
    eq(verifies-before,expectedVerifies,'every supported challenge read/mutation revalidates KGS identity');
    ok(/private/.test(response.headers.get('cache-control'))&&/no-store/.test(response.headers.get('cache-control')));
    const {answer:gradedAnswer,...publicState}=data;
-   ok(!JSON.stringify(publicState).includes('correctChoiceId')&&!text.includes('correctText'),'HTTP never exposes an upcoming answer key or private correct text');
+   const {mistakes,...current}=publicState.run||{},unreviewed={...publicState,...(publicState.run?{run:current}:{})};
+   ok(!JSON.stringify(unreviewed).includes('correctChoiceId')&&!JSON.stringify(unreviewed).includes('correctText')&&!Object.hasOwn(gradedAnswer||{},'mistake')&&!Object.hasOwn(gradedAnswer||{},'correctText'),'HTTP never exposes an upcoming answer key or private snapshot outside the defeat review');
+   if(publicState.run?.status!=='lost')eq(mistakes||[],[]);
    if(gradedAnswer?.correctChoiceId)ok(/^[0-9a-f-]{36}$/i.test(gradedAnswer.correctChoiceId),'accepted answer correction is a UUID');
    for(const key of [secret,cookieSecret,integrationSecret])ok(!text.includes(key));
    return {status:response.status,data};
@@ -272,14 +274,14 @@ async function main(){
   if(file==='20261115092352_target_challenge_gentler_clock_and_late_kobun.sql')await transitionChecks(migration);
   else await db.query(migration);
  }
- const existingBytes=(await db.query("SELECT coalesce(sum(bytes),0)::bigint bytes FROM (SELECT pg_column_size(to_jsonb(t))+128 bytes FROM target_private.challenge_runs t UNION ALL SELECT pg_column_size(to_jsonb(t))+128 FROM target_private.challenge_rates t UNION ALL SELECT pg_column_size(to_jsonb(t))+128 FROM target_private.challenge_requests t) retained")).rows[0].bytes;
+ const existingBytes=(await db.query("SELECT coalesce(sum(bytes),0)::bigint bytes FROM (SELECT pg_column_size(to_jsonb(t))+128 bytes FROM target_private.challenge_runs t UNION ALL SELECT pg_column_size(to_jsonb(t))+128 FROM target_private.challenge_rates t UNION ALL SELECT pg_column_size(to_jsonb(t))+128+CASE WHEN action='answer' AND response#>>'{answer,correct}'='false' AND jsonb_typeof(response#>'{answer,mistake}')='object' THEN 128 ELSE 0 END FROM target_private.challenge_requests t) retained")).rows[0].bytes;
  baselineBytes=BigInt((await db.query('SELECT logical_bytes FROM target_private.system_state WHERE singleton')).rows[0].logical_bytes)-BigInt(existingBytes);
  await db.query("INSERT INTO target_private.server_credentials(singleton,key_hash) VALUES(true,encode(sha256(convert_to($1,'UTF8')),'hex')) ON CONFLICT(singleton) DO NOTHING",[secret]);
  for(const actor of [member,stranger])await db.query('INSERT INTO target_private.profiles(member_id,name) VALUES($1,$2)',[actor.memberId,actor.name]);
  eq((await rpc('map',{},member,db,'wrong')).error.code,'RPC_FORBIDDEN');
  eq((await rpc('start',{level:2})).error.code,'CHALLENGE_LOCKED');
  let map=await rpc('map');eq(map.levels.filter(x=>x.unlocked).map(x=>x.level),[1]);eq(map.activeRun,null);
- eq(map.levels.map(row=>row.attackIntervalMs),Array(10).fill(3000));
+ eq(map.levels.map(row=>row.attackIntervalMs),[3000,3000,3000,3000,3000,2800,2600,2400,2200,2000]);
  for(let n=0;n<20;n++)await rpc('map');await accounting();
  for(let level=1;level<=10;level++){
   const block=questionBlock(level);
@@ -330,7 +332,7 @@ async function main(){
   map=await rpc('map');eq(map.levels[level-1].cleared,true);
   if(level<10)eq(map.levels[level].unlocked,true);
  }
- eq(result.run.playerMaxHp,550);eq(result.run.enemyMaxHp,1000);eq(result.run.attackIntervalMs,3000);eq(result.run.attackDamage,15);
+ eq(result.run.playerMaxHp,550);eq(result.run.enemyMaxHp,1000);eq(result.run.attackIntervalMs,2000);eq(result.run.attackDamage,15);
  const earnedBefore=result.wallet.totalIncome,revisionBefore=result.wallet.walletRevision;
  result=await clear(1);eq(result.badgeAwarded,false);eq(result.wallet.totalIncome,earnedBefore+100000);eq(result.wallet.balance,result.wallet.totalIncome);
  eq(result.wallet.walletRevision,revisionBefore+1,'reward advances shared wallet revision exactly once');

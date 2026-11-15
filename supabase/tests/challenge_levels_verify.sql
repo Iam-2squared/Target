@@ -1,4 +1,4 @@
--- Strict read-only postflight through 20261115142451_target_challenge_graded_choice_feedback,
+-- Strict read-only postflight through 20261115150438_target_challenge_progress_reset_and_late_level_pace,
 -- preserving the latest Epic/Legendary financial projection.
 -- No fixture identities, secrets, rewards, cleanup, or wallet writes are performed.
 -- Quiz cleanup intentionally deletes answers after their retention period while
@@ -15,10 +15,10 @@ DECLARE item record; actual text; helper regprocedure; role_name text; charged b
  carry_digest text; expected_carry_digest text;
 BEGIN
  FOR item IN SELECT * FROM (VALUES
-  ('public.target_challenge_rpc(text,text,jsonb)','66e060d1532f0fa08800f30579897d9a',true),
-  ('target_private.challenge_dto(uuid,uuid)','f4f5f936f9d5b046b6d9baee36512532',false),
-  ('target_private.challenge_tick(uuid,timestamptz)','88458e872af0fd28593b35511ec9099a',false),
-  ('target_private.challenge_storage_charge()','69be621da1580b84ed1d793cc7f95737',false),
+  ('public.target_challenge_rpc(text,text,jsonb)','6bcffc66c8f4cf01aab57219ff140aae',true),
+  ('target_private.challenge_dto(uuid,uuid)','d0fdbe59478a7ebc3b479dc854090e29',false),
+  ('target_private.challenge_tick(uuid,timestamptz)','a81f2b827c4146ada04e2240a49cfc52',false),
+  ('target_private.challenge_storage_charge()','71d4ba2553f5ef56ca0ebc65063f42d9',false),
   ('target_private.wallet_finance_projection(timestamptz)','bd93399757a066fdfb8f35e7e29af2dc',false)
  ) expected(signature,digest,definer) LOOP
   helper:=to_regprocedure(item.signature);
@@ -32,6 +32,10 @@ BEGIN
    END LOOP;
   END IF;
  END LOOP;
+ IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='target_private.challenge_requests'::regclass
+  AND conname='challenge_requests_response_check'
+  AND pg_get_constraintdef(oid)='CHECK (((jsonb_typeof(response) = ''object''::text) AND (pg_column_size(response) <= 16384)))') THEN
+  RAISE EXCEPTION 'Challenge defeat receipt capacity bound changed'; END IF;
  IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='target_private.challenge_runs'::regclass
   AND conname='challenge_runs_attack_remaining_ms_check'
   AND pg_get_constraintdef(oid)='CHECK (((attack_remaining_ms >= 0) AND (attack_remaining_ms <= 3000)))') OR
@@ -80,6 +84,7 @@ BEGIN
   ('challenge_one_active_run','CREATE UNIQUE INDEX challenge_one_active_run ON target_private.challenge_runs USING btree (member_id) WHERE (status = ANY (ARRAY[''playing''::text, ''paused''::text]))'),
   ('challenge_rates_pkey','CREATE UNIQUE INDEX challenge_rates_pkey ON target_private.challenge_rates USING btree (member_id)'),
   ('challenge_requests_pkey','CREATE UNIQUE INDEX challenge_requests_pkey ON target_private.challenge_requests USING btree (member_id, request_id)'),
+  ('challenge_mistake_run','CREATE INDEX challenge_mistake_run ON target_private.challenge_requests USING btree (run_id, member_id, created_at, request_id) WHERE ((action = ''answer''::text) AND ((response #>> ''{answer,correct}''::text[]) = ''false''::text) AND (jsonb_typeof((response #> ''{answer,mistake}''::text[])) = ''object''::text))'),
   ('challenge_reward_events_pkey','CREATE UNIQUE INDEX challenge_reward_events_pkey ON target_private.challenge_reward_events USING btree (run_id)'),
   ('challenge_rewards_member','CREATE INDEX challenge_rewards_member ON target_private.challenge_reward_events USING btree (member_id, created_at)'),
   ('challenge_runs_pkey','CREATE UNIQUE INDEX challenge_runs_pkey ON target_private.challenge_runs USING btree (id)')
@@ -160,6 +165,26 @@ BEGIN
    jsonb_typeof(q.response#>'{answer,correctChoiceId}') IS DISTINCT FROM 'string' OR
    coalesce(q.response#>>'{answer,correctChoiceId}','')!~'^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$')) THEN
   RAISE EXCEPTION 'Challenge graded-choice correction ID is invalid'; END IF;
+ -- Private review snapshots belong only to accepted wrong answers. They carry
+ -- exactly the prompt/meaning and stable book/number keys, never chosen options.
+ IF EXISTS(SELECT 1 FROM target_private.challenge_requests q WHERE (q.response->'answer') ? 'mistake' AND (
+  q.action<>'answer' OR q.response#>>'{answer,correct}' IS DISTINCT FROM 'false' OR
+  jsonb_typeof(q.response#>'{answer,mistake}') IS DISTINCT FROM 'object' OR
+  NOT ((q.response#>'{answer,mistake}') ?& ARRAY['book','number','prompt','correctText']) OR
+  (q.response#>'{answer,mistake}')-ARRAY['book','number','prompt','correctText']<>'{}'::jsonb OR
+  jsonb_typeof(q.response#>'{answer,mistake,book}') IS DISTINCT FROM 'string' OR
+  jsonb_typeof(q.response#>'{answer,mistake,number}') IS DISTINCT FROM 'number' OR
+  coalesce(q.response#>>'{answer,mistake,book}','') NOT IN ('target1900','target1000','kobun400') OR
+  coalesce(q.response#>>'{answer,mistake,number}','')!~'^[0-9]{1,4}$' OR
+  jsonb_typeof(q.response#>'{answer,mistake,prompt}') IS DISTINCT FROM 'string' OR
+  length(coalesce(q.response#>>'{answer,mistake,prompt}','')) NOT BETWEEN 1 AND 3000 OR
+  jsonb_typeof(q.response#>'{answer,mistake,correctText}') IS DISTINCT FROM 'string' OR
+  length(coalesce(q.response#>>'{answer,mistake,correctText}','')) NOT BETWEEN 1 AND 2000)) THEN
+  RAISE EXCEPTION 'Challenge private defeat snapshot is invalid'; END IF;
+ IF EXISTS(SELECT 1 FROM target_private.challenge_requests q WHERE (q.response->'answer') ? 'mistake' AND
+  (q.response#>>'{answer,mistake,number}')::integer NOT BETWEEN 1 AND
+   CASE q.response#>>'{answer,mistake,book}' WHEN 'target1900' THEN 1900 WHEN 'target1000' THEN 1000 WHEN 'kobun400' THEN 400 END) THEN
+  RAISE EXCEPTION 'Challenge private defeat snapshot number is out of range'; END IF;
  -- Older immutable receipts lack pause metadata. New receipts attest the pause
  -- created by that answer; later current run state may legitimately differ.
  IF EXISTS(SELECT 1 FROM target_private.challenge_requests q WHERE q.action='answer'
@@ -172,6 +197,8 @@ BEGIN
     q.response ? 'reward'
    ELSE jsonb_typeof(q.response#>'{answer,specialPausedAt}') IS DISTINCT FROM 'null' END)) THEN
   RAISE EXCEPTION 'Challenge special pause receipt metadata is inconsistent'; END IF;
+ -- Badges represent current progress. Historical won-run badge_awarded flags
+ -- remain true after the authorized reset even when their old badge row is gone.
  IF EXISTS(SELECT 1 FROM target_private.challenge_badges b LEFT JOIN target_private.challenge_runs r ON r.id=b.run_id
   WHERE r.id IS NULL OR r.status<>'won' OR r.member_id<>b.member_id OR r.level<>b.level OR NOT r.badge_awarded) OR
   EXISTS(SELECT 1 FROM target_private.challenge_badges b WHERE b.level>1 AND NOT EXISTS(
@@ -181,7 +208,8 @@ BEGIN
   SELECT pg_column_size(to_jsonb(t))+128 bytes FROM target_private.challenge_runs t UNION ALL
   SELECT pg_column_size(to_jsonb(t))+128 FROM target_private.challenge_badges t UNION ALL
   SELECT pg_column_size(to_jsonb(t))+128 FROM target_private.challenge_reward_events t UNION ALL
-  SELECT pg_column_size(to_jsonb(t))+128 FROM target_private.challenge_requests t UNION ALL
+  SELECT pg_column_size(to_jsonb(t))+128+CASE WHEN action='answer' AND response#>>'{answer,correct}'='false'
+   AND jsonb_typeof(response#>'{answer,mistake}')='object' THEN 128 ELSE 0 END FROM target_private.challenge_requests t UNION ALL
   SELECT pg_column_size(to_jsonb(t))+128 FROM target_private.challenge_rates t
  ) retained;
  SELECT logical_bytes INTO budget FROM target_private.system_state WHERE singleton;
@@ -190,7 +218,7 @@ BEGIN
 END; $verify$;
 -- Public contract cost proof: no stake, every win pays, first-win badge is separate from gacha frames.
 SELECT level,100*level AS enemy_max_hp,100+50*(level-1) AS player_max_hp,
- 3000 AS enemy_attack_interval_ms,
+ CASE WHEN level>=6 THEN 3000-200*(level-5) ELSE 3000 END AS enemy_attack_interval_ms,
  CASE WHEN level=10 THEN 15 ELSE 5+(level-1) END AS enemy_attack_damage,
  level*100000 AS reward_every_clear,0 AS attempt_cost,
  5 AS normal_correct_damage,10 AS special_every_consecutive_correct,

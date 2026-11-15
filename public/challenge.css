@@ -224,3 +224,12 @@ body.challenge-special-open>:not(#challengeSpecialHit){visibility:hidden!importa
 .challenge-health-player .challenge-health-label>.streak-tier-5{color:#fff1bb;border-color:#c6a65c;background:linear-gradient(110deg,#344f67,#66567d)}
 .streak-tier-4:before,.streak-tier-5:before,.streak-tier-5:after{content:'';position:absolute;width:2px;height:2px;top:1px;right:1px;background:currentColor;transform:rotate(45deg)}
 .streak-tier-5:after{top:auto;right:auto;bottom:1px;left:1px}
+
+.challenge-mistakes{max-width:580px;margin:16px auto 0;padding:20px 4px 8px;border-top:1px solid #deded3}
+.challenge-mistakes>h2{font-size:14px;line-height:1.5;margin:0 0 12px;color:#526b76}
+.challenge-mistake-list{margin:0;padding:0}
+.challenge-mistake-row{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);align-items:start;gap:12px;padding:12px 0;border-bottom:1px solid #e8e7de;font-size:14px;line-height:1.6}
+.challenge-mistake-row>dt,.challenge-mistake-row>dd{min-width:0;margin:0;overflow-wrap:anywhere;white-space:pre-line}
+.challenge-mistake-prompt{color:#314a61;font-weight:650}
+.challenge-mistake-meaning{color:#596d76}
+.challenge-mistakes-empty{font-size:12px;color:#92998f}
