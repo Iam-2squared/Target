@@ -145,7 +145,8 @@ test('Accepted invitation is the first time setup appears and battle UI has no m
   assert(html.includes('class="view-toolbar battle-topbar"'));
   assert(css.includes('body[data-view="battle"] .app-header'),'hide unnecessary 暗記 header');
   assert(css.includes('body.battle-setup .battle-form'),'setup has a compact but readable layout');
-  assert(app.includes("view==='battle'?'リアタイバトル | Target'"));
+  assert(app.includes("view==='battle'?'リアタイバトル | 暗記'"));
+  assert(app.includes("view==='challenge'?'挑戦 | 暗記'"));
 });
 
 test('Sprint database keeps -5 correct, -10 wrong, every five correct +10 heal and immutable receipts',()=>{

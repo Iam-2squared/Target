@@ -185,6 +185,7 @@ async function handler(req, res) {
     }
     if (req.method === 'POST') checkOrigin(req, config);
     if (pathname.startsWith('/api/battle/')) return send(res, 200, await battle.dispatch({pathname,req,res,url,config,readJson}));
+    if (pathname.startsWith('/api/challenge/')) return send(res, 200, await require('./challenge.cjs').dispatch({pathname,req,res,url,config,readJson}));
 
     if (pathname === '/api/session' && req.method === 'GET') {
       const token = identity.sessionToken(req, config);

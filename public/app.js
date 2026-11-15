@@ -6,7 +6,7 @@
     target1000: {title:'英熟語Target 1000',kind:'英熟語',total:1000,wordLabel:'英語',meaningLabel:'訳'},
     kobun400: {title:'古文単語',kind:'古文単語',total:400,wordLabel:'古語',meaningLabel:'現代語訳'}
   };
-  const views = ['home','memorySetup','memorize','setup','quiz','result','ranking','mastery','battle'];
+  const views = ['home','memorySetup','memorize','setup','quiz','result','ranking','mastery','battle','challenge'];
   const datasets = new Map(), datasetPromises = new Map();
   let selectedBook='target1900', activeView='home', member=null, lifetimeCorrect=0, lifetimePoints=0;
   let sessionKnown=false, sessionEpoch=0, sessionTicket=0, walletBalance=0, walletKnown=false, walletRevision=null;
@@ -205,10 +205,10 @@
     document.body.dataset.view=view;
     for(const id of views)$(id+'View').hidden=id!==view;
     if(scroll)window.scrollTo({top:0,behavior:'instant'});
-    document.title=view==='battle'?'リアタイバトル | Target':(['home','memorize'].includes(view)?'暗記':({memorySetup:'暗記の範囲選択',setup:setupMode==='review'?'解き直し':'テスト',quiz:'テスト',result:'テスト結果',ranking:'ランキング',mastery:'定着率'}[view]+' | 暗記'));
+    document.title=view==='challenge'?'挑戦 | 暗記':view==='battle'?'リアタイバトル | 暗記':(['home','memorize'].includes(view)?'暗記':({memorySetup:'暗記の範囲選択',setup:setupMode==='review'?'解き直し':'テスト',quiz:'テスト',result:'テスト結果',ranking:'ランキング',mastery:'定着率'}[view]+' | 暗記'));
   }
-  function home() {window.TargetBattleUI?.close();memoryTicket++;clearMastery();show('home');renderIdentity();renderSectionControls();void loadRanking('homeRanking');}
-  function goHome() {if(activeView==='quiz'&&quiz&&!quiz.finished){openQuit();return;}home();}
+  function home() {window.TargetBattleUI?.close();window.TargetChallengeUI?.close();memoryTicket++;clearMastery();show('home');renderIdentity();renderSectionControls();void loadRanking('homeRanking');}
+  function goHome() {if(activeView==='quiz'&&quiz&&!quiz.finished){openQuit();return;}if(activeView==='challenge'){window.TargetChallengeUI?.leaveHome();return;}home();}
   function appError(message,code='',status=0) {const error=new Error(message);error.code=code;error.status=status;return error;}
   async function api(path,body) {
     const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),20000);
@@ -294,13 +294,13 @@
       if(changed){resetWallet();if(sessionKnown)sessionEpoch++;}
       member=identity.member;lifetimeCorrect=identity.correctCount;applyWallet(identity);sessionKnown=true;
       if(member)bonus.update(identity.bonus,identity.timing);
-      if(changed&&activeView==='battle'){window.TargetBattleUI?.close();show('home');}
+      if(changed){window.TargetChallengeUI?.close();if(['battle','challenge'].includes(activeView)){window.TargetBattleUI?.close();show('home');}}
       $('connectionNotice').hidden=true;renderIdentity();
       if(activeView==='mastery')void loadMastery();
 
     } catch(error) {
       if(ticket!==sessionTicket||epoch!==sessionEpoch)return;
-      if(error.status===401){bonus.reset();clearMastery();member=null;lifetimeCorrect=0;resetWallet();sessionKnown=true;sessionEpoch++;sessionTicket++;if(activeView==='battle'){window.TargetBattleUI?.close();show('home');}}
+      if(error.status===401){bonus.reset();clearMastery();member=null;lifetimeCorrect=0;resetWallet();sessionKnown=true;sessionEpoch++;sessionTicket++;window.TargetChallengeUI?.close();if(['battle','challenge'].includes(activeView)){window.TargetBattleUI?.close();show('home');}}
       if(walletFeedback){walletKnown=false;if($('settingsDialog').open)setError('settingsError','保有金額を確認できませんでした。もう一度個人設定を開いてください。');}
       if(notify){$('connectionNotice').textContent='共有機能に接続できません。暗記とゲスト練習は利用できます。';$('connectionNotice').hidden=false;}
       renderIdentity();
@@ -704,6 +704,7 @@
     try {
       const identity=parseIdentity(await api('/login',{attendanceNumber,accountPin}));if(!identity.member)throw appError('ログイン情報を確認できませんでした。');
       clearRewardCelebration();bonus.reset();clearMastery();sessionEpoch++;sessionTicket++;resetWallet();member=identity.member;lifetimeCorrect=identity.correctCount;applyWallet(identity);sessionKnown=true;bonus.update(identity.bonus,identity.timing);$('accountPin').value='';$('attendanceNumber').value='';setPinVisible(false);$('connectionNotice').hidden=true;renderIdentity();$('settingsStatus').textContent='ログインしました。';
+      window.TargetChallengeUI?.close();if(activeView==='challenge')home();
       if(activeView==='mastery')void loadMastery();
 
     } catch(error){setError('settingsError',error.message);}
@@ -715,7 +716,7 @@
       await api('/logout',{});clearRewardCelebration();bonus.reset();clearMastery();sessionEpoch++;sessionTicket++;member=null;lifetimeCorrect=0;resetWallet();sessionKnown=true;$('accountPin').value='';$('attendanceNumber').value='';setPinVisible(false);renderIdentity();$('settingsStatus').textContent='ログアウトしました。';
       if(activeView==='mastery')void loadMastery();
       if(activeView==='quiz'&&quiz?.recorded){quiz=null;home();}
-      if(activeView==='battle'){window.TargetBattleUI?.close();home();}
+      window.TargetChallengeUI?.close();if(['battle','challenge'].includes(activeView)){window.TargetBattleUI?.close();home();}
     } catch(error){setError('settingsError',error.message);}
     finally{logoutPending=false;$('logoutButton').disabled=false;}
   }
@@ -730,6 +731,24 @@
   $('battleOpen').addEventListener('click',()=>{
     if(!member){toast('リアタイバトルにはログインが必要です。');openSettings();return;}
     show('battle');window.TargetBattleUI?.open({id:member.id,name:member.name});
+  });
+  $('challengeOpen').addEventListener('click',()=>{
+    if(!member?.id){toast('挑戦にはログインが必要です。');openSettings();return;}
+    const accountId=member.id,accountEpoch=sessionEpoch;
+    show('challenge');window.TargetChallengeUI?.open({id:accountId,name:member.name},{
+      onHome:home,
+      onWallet:snapshot=>{
+        if(accountEpoch!==sessionEpoch||member?.id!==accountId)return;
+        const totalPoints=snapshot?.totalIncome;
+        if(!validMoney(totalPoints)||!validMoney(snapshot.balance)||!validMoney(snapshot.spent,100)||snapshot.balance+snapshot.spent!==totalPoints||!validRevision(snapshot.walletRevision))return;
+        if(applyWallet({...snapshot,totalPoints}))renderIdentity();
+      },
+      onUnauthorized:()=>{
+        if(accountEpoch!==sessionEpoch||member?.id!==accountId)return;
+        bonus.reset();clearMastery();member=null;lifetimeCorrect=0;resetWallet();sessionKnown=true;sessionEpoch++;sessionTicket++;
+        home();toast('ログインし直してください。');
+      }
+    });
   });
   $('memoryNext').addEventListener('click',()=>memoryNext());$('memoryPrevious').addEventListener('click',()=>{if(memoryPage>0){memoryPage--;renderMemory();window.scrollTo({top:0,behavior:'instant'});}});
   $('memoryPage').addEventListener('change',()=>{memoryPage=Number($('memoryPage').value);renderMemory();window.scrollTo({top:0,behavior:'instant'});});

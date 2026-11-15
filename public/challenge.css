@@ -1,0 +1,104 @@
+.home-combat-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+.home-combat-actions .battle-home-button,.challenge-home-button{min-width:0;width:100%;min-height:62px;margin:0;border:1px solid #b2bdc7;border-radius:10px;background:#edf3fa;color:#203951;font-size:clamp(12px,3.4vw,16px);font-weight:700;text-align:center;padding:8px 4px}
+.challenge-home-button{background:#f3eedf;border-color:#c9b88b;color:#68522b;font-size:18px;letter-spacing:.08em}
+.challenge-home-button>span{font-size:24px;vertical-align:-2px;margin-right:4px}
+body[data-view=challenge] .app-header,body[data-view=challenge] .app-footer{display:none}
+body[data-view=challenge] .app-shell{max-width:1020px;padding:20px 24px max(24px,env(safe-area-inset-bottom))}
+body[data-view=challenge].challenge-is-game{background-color:#263d45;background-image:linear-gradient(#1a30433d,#182c435c),var(--challenge-scene);background-size:cover;background-position:center;background-attachment:fixed}
+#challengeView{max-width:920px;margin:auto;color:#273b50}
+.challenge-map-header,.challenge-game-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px;min-height:52px}
+.challenge-eyebrow{display:block;color:#8a7752;letter-spacing:.19em;font-size:10px;font-weight:750;line-height:1.8}
+.challenge-map-header h1{font-size:27px;letter-spacing:.12em}
+.challenge-nav{min-height:44px;padding:8px 15px;border:1px solid #d8d9d4;border-radius:8px;background:#fffdf8;color:#536073;font-size:13px;flex:0 0 auto}
+.challenge-status{margin:0 0 12px;padding:10px 12px;background:#f4eadd;border-radius:8px;color:#82533f;font-size:12px;overflow-wrap:anywhere}
+.challenge-map{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.challenge-tile{display:flex;flex-direction:column;overflow:hidden;min-width:0;padding:0;text-align:left;background:#fffdf8;border:1px solid #d8d8cb;border-radius:13px;box-shadow:0 3px 12px #34404409;transition:transform .16s,box-shadow .16s}
+.challenge-tile:not(:disabled):hover{transform:translateY(-3px);box-shadow:0 8px 22px #34404418}
+.challenge-tile:disabled{opacity:1}
+.challenge-tile-art{position:relative;display:block;isolation:isolate;width:100%;height:158px;background-color:#293b4a;background-size:cover;background-position:center 48%;overflow:hidden}
+.challenge-tile-art:after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,#111f2c26,transparent 55%,#13232b26);pointer-events:none}
+.challenge-tile-level{position:absolute;z-index:1;left:11px;top:10px;border:1px solid #ffffff55;border-radius:4px;padding:2px 8px;background:#172c3dbd;color:#fff7df;font-size:12px;font-weight:700;letter-spacing:.05em}
+.challenge-tile-badge{position:absolute;z-index:2;right:6px;bottom:3px;width:61px;height:67px;filter:drop-shadow(0 3px 5px #1117)}
+.challenge-tile-badge>svg{width:100%;height:100%}
+.challenge-tile-copy{display:flex;position:relative;flex-direction:column;align-items:flex-start;gap:3px;min-height:76px;padding:11px 12px;width:100%}
+.challenge-tile-copy>strong{font-size:14px;color:#314356}
+.challenge-tile-reward{color:#8f794d;font-size:11px;font-variant-numeric:tabular-nums}
+.challenge-clear-check{position:absolute;right:11px;bottom:12px;font-size:8px;letter-spacing:.06em;color:#587a60;font-weight:750}
+.challenge-tile.is-cleared{border-color:#afa47c}
+.challenge-tile.is-locked .challenge-tile-art{filter:saturate(.35)}
+.challenge-tile.is-locked .challenge-tile-art:after{background:#17273375}
+.challenge-tile.is-locked .challenge-tile-copy{background:#f2f1ed}
+.challenge-tile.is-locked .challenge-tile-copy>strong{color:#7f8585}
+.challenge-lock{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2;color:#f4f0dfb5;font-size:28px;line-height:1}
+.challenge-lock:after{content:'LOCKED';display:block;font-size:8px;letter-spacing:.13em;margin-top:7px;text-align:center}
+.challenge-loading{padding:80px 20px;text-align:center;color:#7a8490;font-size:13px}
+.challenge-retry{display:block;margin:20px auto 0}
+.challenge-game-header{margin-bottom:12px}
+.challenge-game-header h1{font-size:18px;letter-spacing:.04em}
+.challenge-is-game #challengeView{max-width:720px}
+.challenge-is-game .challenge-game-header{position:relative;background:#fcfbf8f5;box-shadow:0 0 0 8px #fcfbf8f5;border-radius:4px;margin-bottom:20px}
+.challenge-is-game .challenge-player-health{margin:10px 0 12px;padding:10px 12px;background:#fcfbf8f5;border-radius:9px;box-shadow:0 3px 12px #14263418}
+.challenge-is-game .challenge-feedback:not(:empty){margin-top:8px;border-radius:6px;background:#fcfbf8f5;align-items:center}
+.challenge-arena{position:relative;min-height:244px;border-radius:15px;overflow:hidden;background-color:#233745;background-position:center 48%;background-size:cover;border:1px solid #34495933;isolation:isolate;box-shadow:inset 0 -30px 40px #10223125}
+.challenge-arena:before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,#101f35a6,transparent 42%,#1725253d);z-index:-1}
+.challenge-enemy-health{position:relative;z-index:2;padding:15px 18px}
+.challenge-health-label{display:flex;align-items:baseline;justify-content:space-between;gap:12px;font-size:11px;line-height:1.5;margin-bottom:6px}
+.challenge-health-label>strong{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;letter-spacing:.04em}
+.challenge-health-label>span{font-size:10px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.challenge-health-enemy{color:#fff7e9;text-shadow:0 1px 4px #172635}
+.challenge-health-track{height:10px;border-radius:6px;background:#1b2e37a3;border:1px solid #ffffff4d;overflow:hidden;box-shadow:inset 0 1px 2px #132a3c42}
+.challenge-health-track>span{height:100%;display:block;border-radius:5px;transition:width .22s ease}
+.challenge-health-enemy .challenge-health-track>span{background:linear-gradient(90deg,#c75d55,#f0b17a)}
+.challenge-health-player .challenge-health-track{background:#e4e9e6;border-color:#cbd8d1}
+.challenge-health-player .challenge-health-track>span{background:linear-gradient(90deg,#52877c,#8cb39b)}
+.challenge-player-health{padding:13px 3px 15px}
+.challenge-health-player .challenge-health-label{color:#4c695f;font-size:12px}
+.challenge-health-player .challenge-health-label>span{font-size:11px}
+.challenge-mob{position:absolute;left:50%;bottom:0;display:block;transform:translateX(-50%);height:200px;width:240px;filter:drop-shadow(0 12px 7px #14222a66)}
+.challenge-mob>svg{height:100%;width:100%}
+.challenge-mob.is-hit{animation:challenge-hit .3s ease}
+.challenge-arena.is-damaged{animation:challenge-damage .35s ease}
+.challenge-strike{position:absolute;right:18px;bottom:13px;width:26px;height:26px;border:3px solid #eee7d48a;border-radius:50%;background:conic-gradient(#e6c17f calc(var(--attack-progress,1)*360deg),#182d4070 0);box-shadow:0 1px 5px #172d3b66}
+.challenge-strike:after{content:'';position:absolute;inset:4px;background:#344b54;border-radius:50%}
+.challenge-question-region{position:relative;min-height:298px;padding:18px 19px 20px;border-radius:13px;background:#fffdfa;border:1px solid #dddcd2;box-shadow:0 4px 14px #253a4e05}
+.challenge-prompt{font-size:clamp(23px,5.5vw,31px);line-height:1.4;text-align:center;color:#263c51;overflow-wrap:anywhere;margin:4px 0 20px;min-height:44px;display:flex;justify-content:center;align-items:center}
+.challenge-choices{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.challenge-choice{display:flex;align-items:center;gap:10px;width:100%;min-height:65px;padding:10px 12px;border:1px solid #d5dedf;border-radius:8px;background:#fff;color:#30475c;font-size:16px;font-weight:600;line-height:1.45;text-align:left;overflow-wrap:anywhere}
+.challenge-choice>span:last-child{min-width:0}
+.challenge-choice-letter{display:grid;place-items:center;flex:0 0 24px;height:24px;background:#eef2f3;border-radius:5px;font-size:10px;color:#8b999f;font-weight:500}
+.challenge-choice:not(:disabled):hover{border-color:#75949b;background:#f5f9f7}
+.challenge-choice:disabled{opacity:.6}
+.challenge-question-loading{display:grid;place-items:center;min-height:240px;font-size:13px;color:#7a8490}
+.challenge-feedback{height:27px;display:flex;align-items:end;justify-content:center;color:#658c79;font-size:12px;font-weight:750;letter-spacing:.08em}
+.challenge-question-region.is-paused{padding:0;background:#f2efe5;border-color:#d8d1bd}
+.challenge-pause-panel{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:12px;min-height:296px;padding:25px;background:#f2efe5;border-radius:13px;isolation:isolate}
+.challenge-pause-panel h2{font-size:18px;letter-spacing:.13em;color:#5d685f;margin-bottom:4px}
+.challenge-pause-mark{font-size:22px;color:#9d8b65;line-height:1;letter-spacing:.06em}
+.challenge-pause-panel>button{width:min(100%,230px);margin:0;min-height:45px}
+.challenge-answer-retry{display:block;margin:12px auto 0}
+.challenge-result{overflow:hidden;border:1px solid #ded8c6;border-radius:16px;background:#fffdfa;text-align:center;margin-top:20px}
+.challenge-result-scene{position:relative;display:grid;place-items:center;height:250px;background-position:center 48%;background-size:cover;background-color:#26394b;isolation:isolate}
+.challenge-result-scene:after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse,#152c3505,#12233450);z-index:-1}
+.challenge-result-art{display:block;width:190px;height:210px;filter:drop-shadow(0 12px 10px #101b3066)}
+.challenge-result-art>svg{width:100%;height:100%}
+.is-defeat .challenge-result-scene{filter:saturate(.5)}
+.challenge-result-copy{padding:25px 28px 29px}
+.challenge-result-copy h1{font-size:36px;letter-spacing:.1em;margin:3px 0 5px;font-weight:800}
+.is-victory h1{color:#927342}
+.is-defeat h1{color:#45586a}
+.challenge-result-note{font-size:13px;color:#81877f}
+.challenge-reward{display:block;color:#9b7640;font-size:27px;margin:15px 0 3px;font-variant-numeric:tabular-nums}
+.challenge-earned{font-size:11px;color:#8c7d56;margin:7px 0 0}
+.challenge-result-actions{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:23px}
+.challenge-result-actions>button{margin:0}
+.challenge-clearers{padding:24px 4px 8px}
+.challenge-clearers>h2{font-size:12px;letter-spacing:.04em;color:#687b83;margin-bottom:12px}
+.challenge-clearers>p{font-size:12px;color:#92998f}
+.challenge-clearers>ul{display:flex;flex-wrap:wrap;gap:7px;list-style:none;margin:0;padding:0}
+.challenge-clearers li{padding:5px 11px;background:#eeeee5;border:1px solid #e4e1d3;border-radius:6px;color:#617366;font-size:12px;max-width:100%;overflow-wrap:anywhere}
+@keyframes challenge-hit{30%{transform:translateX(-46%) rotate(5deg);filter:brightness(1.8) drop-shadow(0 12px 7px #14222a66)}70%{transform:translateX(-53%) rotate(-3deg)}}
+@keyframes challenge-damage{35%{box-shadow:inset 0 0 0 5px #df7d6d99;transform:translateX(2px)}65%{transform:translateX(-2px)}}
+@media(min-width:720px){.challenge-map{grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}.challenge-tile-art{height:180px}.challenge-map-header{margin-bottom:27px}.challenge-result{max-width:580px;margin:32px auto 0}.challenge-clearers{max-width:580px;margin:auto}.challenge-game-header{margin-top:2px}.challenge-arena{min-height:275px}.challenge-mob{height:230px;width:270px}.challenge-question-region{min-height:262px;padding:20px 24px}.challenge-pause-panel{min-height:260px}.challenge-choice{min-height:63px}.challenge-prompt{margin-bottom:17px}}
+@media(max-width:420px){body[data-view=challenge] .app-shell{padding:12px 16px max(20px,env(safe-area-inset-bottom))}.challenge-map{gap:11px}.challenge-tile-art{height:130px}.challenge-tile-copy{padding:9px 10px;min-height:76px}.challenge-tile-copy>strong{font-size:12px}.challenge-tile-reward{font-size:10px}.challenge-clear-check{font-size:7px;right:9px;bottom:9px}.challenge-tile-badge{width:53px;height:58px;right:3px}.challenge-arena{min-height:192px}.challenge-mob{height:158px;width:190px;bottom:-3px}.challenge-enemy-health{padding:12px 13px}.challenge-game-header{margin-bottom:10px}.challenge-game-header h1{font-size:16px}.challenge-choices{grid-template-columns:1fr;gap:8px}.challenge-choice{min-height:48px;padding:9px 11px;font-size:14px}.challenge-prompt{font-size:24px;min-height:35px;margin:0 0 13px}.challenge-question-region{min-height:295px;padding:16px 14px}.challenge-player-health{padding:10px 3px 12px}.challenge-pause-panel{min-height:293px}.challenge-result-scene{height:215px}.challenge-result-art{height:185px;width:165px}.challenge-result-copy{padding:23px 19px}.challenge-result-copy h1{font-size:31px}}
+@media(max-width:340px){body[data-view=challenge] .app-shell{padding-left:12px;padding-right:12px}.challenge-tile-art{height:115px}.challenge-tile-copy>strong{font-size:11px}.challenge-tile-level{font-size:10px;left:8px;top:8px}.challenge-tile-reward{font-size:9px}.challenge-clear-check{font-size:6px}.challenge-arena{min-height:172px}.challenge-mob{height:141px;width:172px}.challenge-map-header{margin-bottom:15px}}
+@media(prefers-reduced-motion:reduce){.challenge-tile,.challenge-health-track>span{transition:none}.challenge-mob.is-hit,.challenge-arena.is-damaged{animation:none}}
