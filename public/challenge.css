@@ -134,7 +134,9 @@ body[data-view=challenge].challenge-is-game .app-shell{--game-pad-top:max(6px,en
 .challenge-is-game .challenge-choice{min-height:62px;font-size:15px;padding:10px 12px;line-height:1.35}
 .challenge-is-game .challenge-feedback,.challenge-is-game .challenge-feedback:not(:empty){flex:0 0 18px;height:18px;margin:0;font-size:10px;align-items:center}
 .challenge-is-game .challenge-question-region.is-paused{padding:0}
-.challenge-is-game .challenge-pause-panel{min-height:220px;padding:16px;gap:10px}
+.challenge-is-game .challenge-pause-panel{min-height:220px;padding:12px;gap:8px}
+.challenge-is-game .challenge-pause-panel h2{margin-bottom:0}
+.challenge-is-game .challenge-pause-panel>button{min-height:44px;padding:9px 16px}
 .challenge-is-game .challenge-question-loading{min-height:180px}
 .challenge-is-game .challenge-answer-retry{margin-top:6px;min-height:38px;padding:6px 12px}
 @media(max-width:600px){.challenge-is-game .challenge-choices{grid-template-columns:1fr}}

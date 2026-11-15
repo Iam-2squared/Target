@@ -9,6 +9,7 @@
   const terminal=run=>run&&['won','lost','aborted'].includes(run.status);
   let active=false,epoch=0,callbacks={},identity=null,levels=[],run=null,mode='map';
   let inFlight=false,readInFlight=false,queuedAnswer=null,pending=null,pauseOperation=null,pauseIntent=false,homeIntent=false;
+  let exitDestination='app',retryLevel=null,retryStart=null;
   let pollTimer=null,pollFailures=0,mapNeeded=false,message='',feedback='',feedbackTimer=null;
   let drawnQuestion=null,drawnMode='',lastHp=null;
   let layoutFrame=null,layoutSignature='';
@@ -101,7 +102,8 @@
     if(queuedAnswer&&(run?.status!=='playing'||run.id!==queuedAnswer.operation.body.runId||run.question?.id!==queuedAnswer.operation.body.questionId))queuedAnswer=null;
     if(data.wallet)callbacks.onWallet?.(data.wallet);
     if(terminal(run)){
-      mode='result';pauseIntent=false;pauseOperation=null;pending=null;
+      if(!homeIntent&&retryLevel===null)mode='result';
+      pauseIntent=false;pauseOperation=null;pending=null;
       if(!map&&run.status!=='aborted')mapNeeded=true;
     }
   }
@@ -112,9 +114,11 @@
   }
   async function refresh(){
     if(!active||inFlight)return;
-    if(pauseIntent&&['start','resume'].includes(pending?.action)){void perform(pending);return;}
+    if(pauseIntent&&['start','resume'].includes(pending?.action)){replayPending();return;}
     if(homeIntent&&pending?.action==='abort'){void perform(pending);return;}
     if(pauseIntent&&run?.status==='playing'){void confirmPause();return;}
+    if(homeIntent&&(!run||terminal(run))&&!pending&&!pauseOperation){afterRequest();return;}
+    if(pending===retryStart&&retryStart?.retryAt&&!document.hidden){replayPending();return;}
     if(pending?.action==='answer'&&pending.retryAt&&!document.hidden&&!pauseIntent&&!homeIntent&&run?.status==='playing'&&
       run.id===pending.body.runId&&run.question?.id===pending.body.questionId){
       const delay=pending.retryAt-Date.now();if(delay>0){schedule(delay);return;}
@@ -137,11 +141,12 @@
     if(!active||inFlight)return;
     // Resolve an uncertain start/resume receipt before pausing. A delayed
     // original must not arrive after our pause and restart the clock offscreen.
-    if(pauseIntent&&['start','resume'].includes(pending?.action)){if(pollFailures)schedule();else void perform(pending);return;}
+    if(pauseIntent&&['start','resume'].includes(pending?.action)){if(pollFailures)schedule(Math.max(backoff(),(pending.retryAt||0)-Date.now()));else replayPending();return;}
     if(homeIntent&&pending?.action==='abort'){if(pollFailures)schedule();else void perform(pending);return;}
     if(pauseIntent&&run?.status==='playing'){if(pauseOperation&&pollFailures)schedule();else void confirmPause();return;}
     if(homeIntent&&run?.status==='paused'&&!pending&&!pauseOperation){void perform({action:'abort',body:{requestId:uuid(),runId:run.id}});return;}
-    if(homeIntent&&(!run||terminal(run))&&!pending&&!pauseOperation){const go=callbacks.onHome;close();go?.();return;}
+    if(homeIntent&&(!run||terminal(run))&&!pending&&!pauseOperation){finishExit();return;}
+    if(pending===retryStart&&retryStart?.retryAt){schedule(Math.max(0,retryStart.retryAt-Date.now()));return;}
     if(pending?.action==='answer'&&pending.retryAt){schedule(Math.max(0,pending.retryAt-Date.now()));return;}
     if(queuedAnswer){
       const queued=queuedAnswer,fields=queued.operation.body;queuedAnswer=null;
@@ -154,20 +159,41 @@
     if(mapNeeded&&!pending&&!pauseOperation){schedule(0);return;}
     schedule();
   }
+  function replayPending(){
+    if(!pending)return;
+    const delay=pending===retryStart?(pending.retryAt||0)-Date.now():0;
+    if(delay>0){schedule(delay);return;}
+    void perform(pending);
+  }
+  function finishExit(){
+    if(exitDestination==='retry'&&retryLevel!==null){
+      if(document.hidden){schedule();return;}
+      retryStart??={action:'start',body:{requestId:uuid(),level:retryLevel}};
+      homeIntent=false;pauseIntent=false;mode='game';mapNeeded=false;
+      void perform(retryStart);return;
+    }
+    if(exitDestination==='map'){
+      homeIntent=false;exitDestination='app';retryLevel=null;retryStart=null;
+      backToMap();window.scrollTo({top:0,behavior:'instant'});return;
+    }
+    const go=callbacks.onHome;close();go?.();
+  }
   async function perform(operation){
     if(!active||inFlight)return;
     inFlight=true;readInFlight=false;clearTimeout(pollTimer);const lease=epoch;
-    if(operation.action==='answer'){delete operation.retryAt;delete operation.rateLimitedUntil;}
+    if(operation.action==='answer'||operation===retryStart){delete operation.retryAt;delete operation.rateLimitedUntil;}
     if(operation.action!=='pause')pending=operation;
     render();
     try{
       const data=await api(operation.action,operation.body,{keepalive:['pause','abort'].includes(operation.action)});
       if(!active||lease!==epoch)return;
       if(operation.action==='abort'&&!terminal(checkRun(data.run)))throw new Error('終了状態を確認できませんでした。');
+      if(operation===retryStart){const next=checkRun(data.run);if(!next||next.level!==operation.body.level||next.id===run?.id)throw new Error('リトライを確認できませんでした。');}
       if(operation.action==='pause'){pauseOperation=null;pending=null;}
       else pending=null;
       if(operation.action==='resume')drawnQuestion=null;
       if(operation.action==='start'){mode='game';feedback='';drawnMode='';}
+      if(operation===retryStart){retryStart=null;retryLevel=null;lastHp=null;if(!homeIntent)exitDestination='app';}
       accept(data);pollFailures=0;showMessage('');
       if(operation.action==='answer'&&data.answer){
         const a=data.answer;feedback=a.correct?(a.streakBonus?'5 COMBO · HP +'+(a.healedHp||0):'GOOD · −5'):'MISS · HP −10';
@@ -180,9 +206,10 @@
           // Read the authoritative question after an already accepted answer.
           if(operation.action==='answer'){drawnQuestion=null;if(run?.status==='playing')run={...run,question:null};}
           if(operation.action==='start'){run=null;mapNeeded=true;}
+          if(operation===retryStart){retryStart=null;retryLevel=null;homeIntent=true;exitDestination='map';}
         }
         handleError(error);
-        if(active&&lease===epoch&&pending===operation&&operation.action==='answer'&&
+        if(active&&lease===epoch&&pending===operation&&(operation.action==='answer'||operation===retryStart)&&
           (error.status===503||error.status===429||error.transient===true)){
           operation.retryAt=Date.now()+Math.max(backoff(),error.status===429?error.retryAfterMs:0);
           if(error.status===429)operation.rateLimitedUntil=operation.retryAt;
@@ -195,7 +222,7 @@
     pauseIntent=false;homeIntent=false;void perform({action:'start',body:{requestId:uuid(),level}});
   }
   function answer(questionId,choiceId){
-    if(!active||pending||queuedAnswer||pauseIntent||homeIntent||run?.status!=='playing'||run.question?.id!==questionId||
+    if(!active||pending||queuedAnswer||pauseIntent||homeIntent||retryLevel!==null||run?.status!=='playing'||run.question?.id!==questionId||
       !run.question.choices.some(choice=>choice.id===choiceId)||inFlight&&!readInFlight)return;
     const operation={action:'answer',body:{requestId:uuid(),runId:run.id,questionId,choiceId}};
     if(readInFlight){queuedAnswer={operation,epoch};render();return;}
@@ -203,11 +230,11 @@
   }
   function requestPause(){
     queuedAnswer=null;
-    if(!active||terminal(run)&&pending?.action!=='start')return;
+    if(!active||terminal(run)&&pending?.action!=='start'&&retryLevel===null)return;
     pauseIntent=true;feedback='';drawnQuestion=null;
     if(run)run={...run,question:null};
     render();
-    if(!inFlight){if(['start','resume'].includes(pending?.action))void perform(pending);else void confirmPause();}
+    if(!inFlight){if(['start','resume'].includes(pending?.action))replayPending();else void confirmPause();}
   }
   function confirmPause(){
     if(!active||inFlight||!run||run.status!=='playing'||pending?.action==='resume')return;
@@ -216,14 +243,18 @@
   }
   function resume(){
     if(inFlight||!active)return;
-    if(homeIntent){retry();return;}
+    if(homeIntent||retryLevel!==null){retry();return;}
     if(pauseOperation){void perform(pauseOperation);return;}
     if(pauseIntent&&run?.status==='playing'){void confirmPause();return;}
     if(pending){if(pending.action==='resume')pauseIntent=false;void perform(pending);return;}
     if(run?.status==='paused'){pauseIntent=false;void perform({action:'resume',body:{requestId:uuid(),runId:run.id}});}
   }
-  function leaveHome(){
+  function leaveHome(){beginExit('app');}
+  function leaveMap(){beginExit('map');}
+  function restart(){if(!active||homeIntent||retryLevel!==null||!run)return;beginExit('retry',run.level);}
+  function beginExit(destination,level=null){
     if(!active)return;
+    exitDestination=destination;retryLevel=destination==='retry'?level:null;
     homeIntent=true;queuedAnswer=null;
     if(pending?.action==='abort'){if(!inFlight)void perform(pending);return;}
     if(!run&&!inFlight&&!pending){afterRequest();return;}
@@ -340,17 +371,19 @@
     });
   }
   function renderQuestion(){
-    const region=$('challengeQuestionRegion'),paused=pauseIntent||run.status==='paused';
+    const region=$('challengeQuestionRegion'),paused=pauseIntent||run.status==='paused'||homeIntent||retryLevel!==null;
     if(paused){
       // Remove the question and choices at once. The opaque panel never relies on blur.
       region.replaceChildren();drawnQuestion=null;region.classList.add('is-paused');
       const panel=make('div','challenge-pause-panel');panel.setAttribute('role','group');panel.setAttribute('aria-label','一時停止');
       const confirmed=run.status==='paused'&&!pauseOperation;
-      panel.append(make('span','challenge-pause-mark','Ⅱ'),make('h2','',homeIntent?'終了を確認中…':confirmed?'PAUSED':'停止を確認中…'));
-      const next=button(homeIntent?'再接続':confirmed?'続ける':pauseOperation&&!inFlight?'再接続':'続ける','primary-button',homeIntent?retry:resume);
-      next.id='challengeResume';next.disabled=inFlight||!homeIntent&&!confirmed&&!pauseOperation;
-      const homeButton=button('ホーム','secondary-button',leaveHome);homeButton.id='challengeHome';homeButton.disabled=inFlight;
-      panel.append(next,homeButton);region.append(panel);return;
+      const transitioning=homeIntent||retryLevel!==null;
+      panel.append(make('h2','',retryLevel!==null?'リトライを確認中…':homeIntent?'終了を確認中…':confirmed?'PAUSED':'停止を確認中…'));
+      const next=button(transitioning?'再接続':confirmed?'続ける':pauseOperation&&!inFlight?'再接続':'続ける','primary-button',transitioning?retry:resume);
+      next.id='challengeResume';next.disabled=inFlight||!transitioning&&!confirmed&&!pauseOperation;
+      const again=button('リトライ','secondary-button',restart);again.id='challengeRestart';again.disabled=inFlight||transitioning;
+      const homeButton=button('ホーム','secondary-button',leaveMap);homeButton.id='challengeHome';homeButton.disabled=inFlight;
+      panel.append(next,again,homeButton);region.append(panel);return;
     }
     region.classList.remove('is-paused');
     const question=run.question;
@@ -380,7 +413,7 @@
     if(previous&&previous.enemy>run.enemyHp){$('challengeMob').classList.remove('is-hit');void $('challengeMob').offsetWidth;$('challengeMob').classList.add('is-hit');}
     if(previous&&previous.player>run.playerHp){$('challengeArena').classList.remove('is-damaged');void $('challengeArena').offsetWidth;$('challengeArena').classList.add('is-damaged');}
     lastHp={player:run.playerHp,enemy:run.enemyHp};
-    $('challengePause').disabled=pauseIntent||run.status==='paused';
+    $('challengePause').disabled=pauseIntent||run.status==='paused'||homeIntent||retryLevel!==null;
     renderQuestion();$('challengeFeedback').textContent=pauseIntent?'':feedback;
     $('challengeStrike').style.setProperty('--attack-progress',String(Math.max(0,Math.min(1,(run.nextAttackInMs||0)/(run.attackIntervalMs||2000)))));
     queueLayout();
@@ -419,7 +452,7 @@
   }
   function render(){
     if(!active)return;
-    if(terminal(run))mode='result';
+    if(terminal(run)&&!homeIntent&&retryLevel===null)mode='result';
     const next=mode==='game'&&run?'game':mode==='result'&&run?'result':'map';
     document.body.classList.toggle('challenge-is-game',next==='game');
     if(next!=='game'){document.body.style.removeProperty('--challenge-scene');document.body.style.removeProperty('--challenge-viewport-height');$('challengeApp').classList.remove('is-compact','is-dense','has-overflow');layoutSignature='';}
@@ -427,7 +460,7 @@
     drawnMode=next;showMessage(message);
   }
   function close(){
-    active=false;epoch++;clearTimers();callbacks={};identity=null;levels=[];run=null;queuedAnswer=null;pending=null;pauseOperation=null;pauseIntent=false;homeIntent=false;
+    active=false;epoch++;clearTimers();callbacks={};identity=null;levels=[];run=null;queuedAnswer=null;pending=null;pauseOperation=null;pauseIntent=false;homeIntent=false;exitDestination='app';retryLevel=null;retryStart=null;
     inFlight=false;readInFlight=false;mode='map';mapNeeded=false;pollFailures=0;message='';feedback='';drawnMode='';drawnQuestion=null;lastHp=null;layoutSignature='';
     document.body.classList.remove('challenge-is-game');document.body.style.removeProperty('--challenge-scene');document.body.style.removeProperty('--challenge-viewport-height');$('challengeApp')?.classList.remove('is-compact','is-dense','has-overflow');$('challengeApp')?.replaceChildren();
   }
