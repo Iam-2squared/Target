@@ -12,10 +12,10 @@ const FRAMES=Object.freeze([['c',15],['r',15],['e',10],['l',8]].flatMap(([prefix
 const FRAME_ODDS=Object.freeze({common:62,rare:25,epic:10,legendary:3});
 const FRAME_RARITY=Object.freeze({c:'common',r:'rare',e:'epic',l:'legendary'});
 const PRICE=100000,LEGACY_PRICE=10000,SELL_PRICE=10000,MAX_POINTS=10000000000000;
-const FRAME_PAYOUTS=Object.freeze({common:1000,rare:10000,epic:10000,legendary:100000});
+const FRAME_PAYOUTS=Object.freeze({common:1000,rare:10000,epic:100000,legendary:1000000});
 const payoutFor=(type,id)=>type==='sticker'?SELL_PRICE:type==='frame'&&FRAMES.includes(id)?FRAME_PAYOUTS[FRAME_RARITY[id[0]]]:null;
 // 10k historical refunds are immutable even after the new rarity rates begin.
-const validPayout=(amount,type,id)=>Number.isSafeInteger(amount)&&amount>0&&(amount===payoutFor(type,id)||(type==='frame'&&amount===SELL_PRICE));
+const validPayout=(amount,type,id)=>Number.isSafeInteger(amount)&&amount>0&&payoutFor(type,id)!==null&&(amount===payoutFor(type,id)||(type==='frame'&&(amount===SELL_PRICE||(id[0]==='l'&&amount===100000))));
 function authorize(req,config=getConfig()){
   const supplied=typeof req.headers?.authorization==='string'&&req.headers.authorization.length<=8192?req.headers.authorization:'';
   const expected=crypto.createHash('sha256').update('Bearer '+config.integrationSecret).digest();

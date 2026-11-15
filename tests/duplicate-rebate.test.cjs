@@ -44,7 +44,7 @@ test('rebate SQL always has one immutable credit per purchase, and accounts for 
   assert(!/DROP TABLE|TRUNCATE|DELETE FROM target_private\.profiles/i.test(sql));
 });
 
-test('Target accepts exact rarity-based frame receipts and keeps prior 10k rebates immutable',()=>{
+test('Target accepts previously issued frame refund receipts without changing their amounts',()=>{
  const cases={c01:1000,r11:10000,e06:10000,l08:100000};
  for(const [id,credit] of Object.entries(cases)){
    const base=shop.guestWallet(),totalIncome=1000000,spent=200000-credit,rid=crypto.randomUUID();
@@ -57,4 +57,25 @@ test('Target accepts exact rarity-based frame receipts and keeps prior 10k rebat
    assert(shop.validPayout(10000,'frame',id),'historic replay allowed');
    for(const invalid of [0,9999,null,true,'10000',999999])assert.throws(()=>shop.validateWallet({...receipt,duplicateRefund:invalid},{requestId:rid,itemType:'frame'}),e=>e.status===503);
  }
+});
+
+test('new Epic 100k and Legendary 1m are earned income, not over-refunded draw cost',()=>{
+ for(const [id,award] of Object.entries({e06:100000,l08:1000000})){
+   const rid=crypto.randomUUID(),totalIncome=1000000+award,spent=200000;
+   const wallet={...shop.guestWallet(),totalIncome,spent,balance:totalIncome-spent,
+     drawCount:2,refundedSpend:0,ownedFrames:[id],frameQuantities:[{id,quantity:2}],walletRevision:9};
+   const receipt={...wallet,requestId:rid,itemType:'frame',itemId:id,frameId:id,
+     rarity:id[0]==='l'?'legendary':'epic',quantity:2,cost:100000,duplicateRefund:award};
+   assert.equal(shop.payoutFor('frame',id),award);
+   assert.deepEqual(shop.validateWallet(receipt,{requestId:rid,itemType:'frame'}),receipt);
+   assert.equal(receipt.spent,200000);
+   assert.equal(receipt.refundedSpend,0);
+   assert.equal(receipt.totalIncome,1000000+award);
+   assert.equal(receipt.balance,1000000+award-200000);
+   for(const wrong of [0,1000,99999,999999,'1000000',null]){
+     assert.throws(()=>shop.validateWallet({...receipt,duplicateRefund:wrong},{requestId:rid,itemType:'frame'}),e=>e.status===503);
+   }
+ }
+ assert(shop.validPayout(10000,'frame','e06'));
+ assert(shop.validPayout(100000,'frame','l08'));
 });

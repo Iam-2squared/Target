@@ -20,7 +20,7 @@ test('staged financial migration safeguards immutable prior 10k records and chan
  assert(sql.includes("'frame' AND amount IN(1000,10000,100000)"));
 });
 test('payouts are authoritative, unaffected by caller amount or frame artwork and limited to catalog IDs',()=>{
- for(const [id,expected] of Object.entries({c01:1000,c15:1000,r01:10000,r15:10000,e01:10000,e10:10000,l01:100000,l08:100000})){
+ for(const [id,expected] of Object.entries({c01:1000,c15:1000,r01:10000,r15:10000,e01:100000,e10:100000,l01:1000000,l08:1000000})){
   assert.equal(shop.payoutFor('frame',id),expected);
   assert(shop.validPayout(expected,'frame',id));
  }
