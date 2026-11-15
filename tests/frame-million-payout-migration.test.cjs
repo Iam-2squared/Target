@@ -16,7 +16,7 @@ test('one-time migration preserves existing ledgers, separates future income cre
   'target_private.guard_duplicate_rebate_insert','target_private.guard_item_sale_insert',
   'public.target_shop_rpc','public.target_sell_rpc',
   'UPDATE target_private.profiles SET',
-  "credit_mode='income_bonus'","credit_mode='spent_refund'",
+  "'income_bonus'","'spent_refund'",
   'total_points=total_points+CASE WHEN duplicate_draw',
   "spent_points=spent_points-CASE WHEN pool_kind='sticker'",
   "REVOKE ALL ON FUNCTION","NOTIFY pgrst",
