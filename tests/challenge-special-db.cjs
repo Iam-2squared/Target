@@ -8,6 +8,7 @@ const {Client}=require('pg');
 const {questionBlock}=require('../server/challenge.cjs');
 const root=path.resolve(__dirname,'..');
 const migrationName='20261115131403_target_challenge_special_animation_pause.sql';
+const feedbackMigration='20261115142451_target_challenge_graded_choice_feedback.sql';
 const uid=()=>crypto.randomUUID(),secret=crypto.randomBytes(40).toString('hex');
 const dbName='target_special_'+process.pid+'_'+crypto.randomBytes(4).toString('hex')+'_test';
 const actor=name=>({memberId:uid(),name,sessionHash:crypto.randomBytes(32).toString('hex')});
@@ -90,7 +91,7 @@ async function run(){
  const newMigrationSql=await fs.readFile(path.join(migrations,migrationName),'utf8');
  // Install the complete existing financial release before this new patch, as on
  // Production. The new migration also supports chronological fresh installs.
- for(const file of(await fs.readdir(migrations)).filter(x=>/^\d+_.*\.sql$/.test(x)&&x!==migrationName).sort())await db.query(await fs.readFile(path.join(migrations,file),'utf8'));
+ for(const file of(await fs.readdir(migrations)).filter(x=>/^\d+_.*\.sql$/.test(x)&&x!==migrationName&&x!==feedbackMigration).sort())await db.query(await fs.readFile(path.join(migrations,file),'utf8'));
  await db.query("INSERT INTO target_private.server_credentials(singleton,key_hash) VALUES(true,encode(sha256(convert_to($1,'UTF8')),'hex'))",[secret]);
  for(const who of[main,old,nextTen,nextTwenty,finisher])await db.query('INSERT INTO target_private.profiles(member_id,name) VALUES($1,$2)',[who.memberId,who.name]);
  // Preserve an actual fixed-ten-percent answer receipt at streak twenty. No retroactive
@@ -341,6 +342,9 @@ async function run(){
  }
  await reconcile();
  await assert.rejects(()=>db.query('UPDATE target_private.challenge_requests SET response=response WHERE member_id=$1 AND request_id=$2',[old.memberId,oldInput.requestId]),{code:'42501'});checks++;
+ const beforeFeedback=await snapshot();
+ await db.query(await fs.readFile(path.join(migrations,feedbackMigration),'utf8'));
+ eq(await snapshot(),beforeFeedback,'correction metadata migration leaves every historical row and active run unchanged');
  await db.query(await fs.readFile(path.join(root,'supabase/tests/challenge_levels_verify.sql'),'utf8'));checks++;
  console.log('Challenge ten-combo PostgreSQL checks passed:',checks);
 }

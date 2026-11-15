@@ -19,12 +19,43 @@
   let specialCancel=null;
   let sessionChange=null;
   const shownSpecials=new Set();
+  let answerPreview=null,previewTimer=null;
+  const shownPreviews=new Set();
 
   function art(kind,level){return window.ChallengeArt?.[kind]?.(level)||'';}
   function svgNode(kind,level,cls){const node=make('span',cls);node.innerHTML=art(kind,level);node.setAttribute('aria-hidden','true');return node;}
   function scene(node,level){const url=art('sceneURL',level);if(url)node.style.backgroundImage='url("'+url.replace(/"/g,'%22')+'")';}
   function button(label,cls,action){const node=make('button',cls,label);node.type='button';node.addEventListener('click',action);return node;}
-  function clearTimers(){clearTimeout(pollTimer);pollTimer=null;clearTimeout(feedbackTimer);feedbackTimer=null;cancelAnimationFrame(layoutFrame);layoutFrame=null;clearSpecial();}
+  function clearTimers(){clearTimeout(pollTimer);pollTimer=null;clearTimeout(feedbackTimer);feedbackTimer=null;cancelAnimationFrame(layoutFrame);layoutFrame=null;clearPreview();clearSpecial();}
+  function clearPreview(){clearTimeout(previewTimer);previewTimer=null;if(answerPreview)drawnQuestion=null;answerPreview=null;}
+  function answerCount(value){return Number.isSafeInteger(value?.correctCount)&&Number.isSafeInteger(value?.wrongCount)?value.correctCount+value.wrongCount:null;}
+  function currentPreview(preview){
+    if(!active||preview.epoch!==epoch||run?.id!==preview.runId||answerCount(run)!==preview.count)return false;
+    if(run.status==='paused')return preview.specialOwned&&run.updatedAt===preview.data.answer.specialPausedAt;
+    return ['playing','won','lost'].includes(run.status);
+  }
+  function beginPreview(operation,data){
+    const capture=operation.capture,a=data.answer;
+    if(!capture||typeof a?.correct!=='boolean'||shownPreviews.has(operation.body.requestId)||document.hidden||pauseIntent||homeIntent||retryLevel!==null)return false;
+    const question=capture.question,ids=question.choices.map(choice=>choice.id),chosen=operation.body.choiceId;
+    if(question.id!==operation.body.questionId||!ids.includes(chosen)||capture.count===null)return false;
+    const supplied=Object.hasOwn(a,'correctChoiceId');let correctId=supplied?a.correctChoiceId:null;
+    if(supplied&&(typeof correctId!=='string'||!ids.includes(correctId)||(correctId===chosen)!==a.correct))return false;
+    if(!correctId&&a.correct)correctId=chosen;
+    const preview={operation,data,question,chosen,correctId,correct:a.correct,runId:operation.body.runId,count:capture.count+1,epoch,
+      specialOwned:a.specialAttack===true&&a.specialPaused===true&&typeof a.specialPausedAt==='string'&&a.specialPausedAt===run?.updatedAt};
+    if(!currentPreview(preview))return false;
+    shownPreviews.add(operation.body.requestId);if(shownPreviews.size>128)shownPreviews.delete(shownPreviews.values().next().value);
+    clearPreview();answerPreview=preview;mode='game';queuedAnswer=null;clearTimeout(pollTimer);pollTimer=null;
+    previewTimer=setTimeout(()=>{
+      if(answerPreview!==preview)return;
+      const valid=currentPreview(preview)&&!document.hidden&&!pauseIntent&&!homeIntent&&retryLevel===null;
+      clearPreview();
+      if(valid)specialHit(operation,data);
+      render();afterRequest();
+    },450);
+    return true;
+  }
   function clearSpecial(){
     clearTimeout(specialTimer);specialTimer=null;specialKey=null;
     specialBeat=null;$('challengeSpecialHit')?.remove();document.body.classList.remove('challenge-special-open');
@@ -72,7 +103,7 @@
     void perform(specialResume);
   }
   function invalidateSpecial({force=false}={}){
-    const runId=specialResume?.body.runId||specialBeat?.runId||specialCancel?.runId;
+    const runId=specialResume?.body.runId||specialBeat?.runId||(answerPreview?.specialOwned?answerPreview.runId:null)||specialCancel?.runId;
     if(!active||!validId(runId))return;
     if(run?.id===runId&&terminal(run)&&!specialResume&&!pending?.autoSpecial)return;
     if(specialResume)specialResume.cancelled=true;
@@ -110,9 +141,10 @@
     const change=sessionChange;sessionChange=null;clearTimeout(change.timer);change.resolve();
   }
   function prepareSessionChange(){
-    clearSpecial();queuedAnswer=null;homeIntent=false;retryLevel=null;exitDestination='app';
+    if(answerPreview?.specialOwned)invalidateSpecial({force:true});
+    clearPreview();clearSpecial();queuedAnswer=null;homeIntent=false;retryLevel=null;exitDestination='app';
     if(pending!==retryStart)retryStart=null;
-    if(!active||(!run&&!pending)||(terminal(run)&&!pending))return Promise.resolve();
+    if(!active||(!run&&!pending)||(terminal(run)&&!pending)){if(active)render();return Promise.resolve();}
     if(sessionChange)return sessionChange.promise;
     let resolve,reject;const promise=new Promise((yes,no)=>{resolve=yes;reject=no;});
     const timer=setTimeout(()=>{if(sessionChange?.promise!==promise)return;sessionChange=null;reject(new Error('一時停止を確認できませんでした。もう一度お試しください。'));},20000);
@@ -197,6 +229,7 @@
       levels=data.levels;
       if(!run&&data.activeRun){run=checkRun(data.activeRun);mode='game';pauseIntent=true;}
     }else if(Object.hasOwn(data,'run'))run=checkRun(data.run);
+    if(answerPreview&&!currentPreview(answerPreview))clearPreview();
     if(pauseIntent&&run?.status==='playing')run={...run,question:null};
     if(queuedAnswer&&(run?.status!=='playing'||run.id!==queuedAnswer.operation.body.runId||run.question?.id!==queuedAnswer.operation.body.questionId))queuedAnswer=null;
     if(data.wallet)callbacks.onWallet?.(data.wallet);
@@ -213,7 +246,7 @@
     showMessage(error.message+(homeIntent?' 終了の確認待ちです。':pauseIntent?' 停止の確認待ちです。':''));
   }
   async function refresh(){
-    if(!active||inFlight||specialBeat)return;
+    if(!active||inFlight||specialBeat||answerPreview)return;
     if(specialCancel){afterRequest();return;}
     if(pauseIntent&&['start','resume'].includes(pending?.action)&&!pending.autoSpecial){replayPending();return;}
     if(homeIntent&&pending?.action==='abort'){void perform(pending);return;}
@@ -241,7 +274,7 @@
     finally{if(active&&lease===epoch){inFlight=false;readInFlight=false;render();afterRequest();}}
   }
   function afterRequest(){
-    if(!active||inFlight||specialBeat)return;
+    if(!active||inFlight||specialBeat||answerPreview)return;
     if(specialCancel){
       if(!specialCancel.confirmed){if(!specialCancel.promise)invalidateSpecial();return;}
       clearTimeout(specialCancel.timer);if(pending?.autoSpecial)pending=null;specialResume=null;specialCancel=null;manualPauseNeeded=false;render();
@@ -310,7 +343,7 @@
       if(operation===retryStart){retryStart=null;retryLevel=null;lastHp=null;if(!homeIntent)exitDestination='app';}
       accept(data);pollFailures=0;showMessage('');
       if(operation.action==='answer'&&data.answer){
-        const a=data.answer,freshSpecial=specialHit(operation,data);
+        const a=data.answer,previewed=beginPreview(operation,data),freshSpecial=previewed?false:specialHit(operation,data);
         if(a.specialAttack===true&&run?.status==='won'&&run.id===operation.body.runId&&Number.isSafeInteger(data.reward)&&data.reward>0)specialFinishRunId=run.id;
         feedback=a.specialAttack===true?(freshSpecial?'必殺 · −'+a.specialDamage:''):a.correct?(a.streakBonus?'5 COMBO · HP +'+(a.healedHp||0):'GOOD · −5'):'MISS · HP −10';
         clearTimeout(feedbackTimer);feedbackTimer=setTimeout(()=>{feedback='';const node=$('challengeFeedback');if(node)node.textContent='';},1000);
@@ -341,14 +374,15 @@
     pauseIntent=false;homeIntent=false;void perform({action:'start',body:{requestId:uuid(),level}});
   }
   function answer(questionId,choiceId){
-    if(!active||specialBeat||pending||queuedAnswer||pauseIntent||homeIntent||retryLevel!==null||run?.status!=='playing'||run.question?.id!==questionId||
+    if(!active||answerPreview||specialBeat||pending||queuedAnswer||pauseIntent||homeIntent||retryLevel!==null||run?.status!=='playing'||run.question?.id!==questionId||
       !run.question.choices.some(choice=>choice.id===choiceId)||inFlight&&!readInFlight)return;
-    const operation={action:'answer',body:{requestId:uuid(),runId:run.id,questionId,choiceId}};
+    const operation={action:'answer',body:{requestId:uuid(),runId:run.id,questionId,choiceId},capture:{count:answerCount(run),question:{...run.question,choices:run.question.choices.map(choice=>({...choice}))}}};
     if(readInFlight){queuedAnswer={operation,epoch};render();return;}
     void perform(operation);
   }
   function requestPause(){
-    if(specialBeat||specialResume||specialCancel)invalidateSpecial({force:true});
+    if(specialBeat||specialResume||specialCancel||answerPreview?.specialOwned)invalidateSpecial({force:true});
+    clearPreview();
     clearSpecial();
     queuedAnswer=null;
     if(!active)return;
@@ -378,7 +412,8 @@
   function restart(){if(!active||homeIntent||retryLevel!==null||!run)return;beginExit('retry',run.level);}
   function beginExit(destination,level=null){
     if(!active)return;
-    if(specialBeat||specialResume||specialCancel)invalidateSpecial({force:true});
+    if(specialBeat||specialResume||specialCancel||answerPreview?.specialOwned)invalidateSpecial({force:true});
+    clearPreview();
     clearSpecial();specialFinishRunId=null;
     if(pending?.autoSpecial){pauseIntent=true;manualPauseNeeded=true;}
     exitDestination=destination;retryLevel=destination==='retry'?level:null;
@@ -393,6 +428,7 @@
   }
   function backToMap(){
     if(inFlight||pending)return;
+    clearPreview();
     specialFinishRunId=null;
     run=null;mode='map';pauseIntent=false;pauseOperation=null;feedback='';drawnMode='';mapNeeded=true;
     render();void refresh();
@@ -452,7 +488,13 @@
   }
   function hp(role,label,value,max){
     const box=make('div','challenge-health challenge-health-'+role),heading=make('div','challenge-health-label');
-    heading.append(make('strong','',label),make('span','',value+' / '+max));
+    heading.append(make('strong','',label));
+    if(role==='player'){
+      const count=Number.isSafeInteger(run?.streak)&&run.streak>=0?run.streak:null;
+      const tier=count===null||count<5?0:count<10?1:count<20?2:count<30?3:count<40?4:5;
+      const chip=make('span','challenge-streak-chip streak-tier-'+tier,(count===null?'—':count)+'連続');chip.id='challengeStreak';chip.dataset.tier=String(tier);heading.append(chip);
+    }
+    heading.append(make('span','',value+' / '+max));
     const track=make('div','challenge-health-track'),fill=make('span');fill.style.width=(value/max*100)+'%';track.append(fill);
     track.setAttribute('role','progressbar');track.setAttribute('aria-label',label+' HP');track.setAttribute('aria-valuemin','0');track.setAttribute('aria-valuemax',String(max));track.setAttribute('aria-valuenow',String(value));
     box.append(heading,track);return box;
@@ -501,7 +543,7 @@
   }
   function renderQuestion(){
     const region=$('challengeQuestionRegion'),paused=pauseIntent||run.status==='paused'||homeIntent||retryLevel!==null||!!specialBeat;
-    if(paused){
+    if(paused&&!answerPreview){
       // Remove the question and choices at once. The opaque panel never relies on blur.
       region.replaceChildren();drawnQuestion=null;region.classList.add('is-paused');
       const panel=make('div','challenge-pause-panel');panel.setAttribute('role','group');panel.setAttribute('aria-label','一時停止');
@@ -515,7 +557,7 @@
       panel.append(next,again,homeButton);region.append(panel);return;
     }
     region.classList.remove('is-paused');
-    const question=run.question;
+    const question=answerPreview?.question||run.question;
     if(drawnQuestion!==question?.id){
       region.replaceChildren();drawnQuestion=question?.id||null;
       if(!question){region.append(make('div','challenge-question-loading','次の問題を準備中…'));return;}
@@ -528,7 +570,12 @@
       }
       region.append(prompt,choices);
     }
-    for(const option of region.querySelectorAll('button'))option.disabled=inFlight&&!readInFlight||!!pending||!!queuedAnswer;
+    for(const option of region.querySelectorAll('.challenge-choice')){
+      const id=option.dataset.choice,green=!!answerPreview&&id===answerPreview.correctId,red=!!answerPreview&&!answerPreview.correct&&id===answerPreview.chosen;
+      option.classList.toggle('is-answer-correct',green);option.classList.toggle('is-answer-wrong',red);
+      const text=question?.choices.find(choice=>choice.id===id)?.text;if(text!==undefined)option.setAttribute('aria-label',text+(green?'（正解）':red?'（不正解）':''));
+      option.disabled=!!answerPreview||inFlight&&!readInFlight||!!pending||!!queuedAnswer;
+    }
     region.querySelector('.challenge-answer-retry')?.remove();
     if(pending&&!inFlight){const retryButton=button('同じ回答を確認','secondary-button challenge-answer-retry',retry);retryButton.disabled=pending.rateLimitedUntil>Date.now();region.append(retryButton);}
   }
@@ -542,7 +589,7 @@
     if(previous&&previous.enemy>run.enemyHp){$('challengeMob').classList.remove('is-hit');void $('challengeMob').offsetWidth;$('challengeMob').classList.add('is-hit');}
     if(previous&&previous.player>run.playerHp){$('challengeArena').classList.remove('is-damaged');void $('challengeArena').offsetWidth;$('challengeArena').classList.add('is-damaged');}
     lastHp={player:run.playerHp,enemy:run.enemyHp};
-    $('challengePause').disabled=pauseIntent||run.status==='paused'||homeIntent||retryLevel!==null;
+    $('challengePause').disabled=pauseIntent||run.status==='paused'&&!answerPreview||homeIntent||retryLevel!==null;
     renderQuestion();$('challengeFeedback').textContent=pauseIntent?'':feedback;
     $('challengeStrike').style.setProperty('--attack-progress',String(Math.max(0,Math.min(1,(run.nextAttackInMs||0)/(run.attackIntervalMs||3000)))));
     queueLayout();
@@ -581,7 +628,7 @@
   }
   function render(){
     if(!active)return;
-    if(terminal(run)&&!specialBeat&&!homeIntent&&retryLevel===null)mode='result';
+    if(terminal(run)&&!answerPreview&&!specialBeat&&!homeIntent&&retryLevel===null)mode='result';
     const next=mode==='game'&&run?'game':mode==='result'&&run?'result':'map';
     document.body.classList.toggle('challenge-is-game',next==='game');
     if(next!=='game'){clearSpecial();document.body.style.removeProperty('--challenge-scene');document.body.style.removeProperty('--challenge-viewport-height');$('challengeApp').classList.remove('is-compact','is-dense','has-overflow');layoutSignature='';}
@@ -589,10 +636,10 @@
     drawnMode=next;showMessage(message);
   }
   function close(){
-    if(active&&(specialBeat||specialResume||specialCancel))invalidateSpecial({force:true});
+    if(active&&(specialBeat||specialResume||specialCancel||answerPreview?.specialOwned))invalidateSpecial({force:true});
     if(sessionChange){const change=sessionChange;sessionChange=null;clearTimeout(change.timer);if(!inFlight&&!pending&&!manualPauseNeeded&&(!run||terminal(run)||run.status==='paused'))change.resolve();else change.reject(new Error('一時停止を確認できませんでした。もう一度お試しください。'));}
     if(specialCancel)clearTimeout(specialCancel.timer);
-    active=false;epoch++;clearTimers();shownSpecials.clear();specialFinishRunId=null;specialResume=null;specialCancel=null;manualPauseNeeded=false;canonicalNeeded=false;callbacks={};identity=null;levels=[];run=null;queuedAnswer=null;pending=null;pauseOperation=null;pauseIntent=false;homeIntent=false;exitDestination='app';retryLevel=null;retryStart=null;
+    active=false;epoch++;clearTimers();shownSpecials.clear();shownPreviews.clear();specialFinishRunId=null;specialResume=null;specialCancel=null;manualPauseNeeded=false;canonicalNeeded=false;callbacks={};identity=null;levels=[];run=null;queuedAnswer=null;pending=null;pauseOperation=null;pauseIntent=false;homeIntent=false;exitDestination='app';retryLevel=null;retryStart=null;
     inFlight=false;readInFlight=false;mode='map';mapNeeded=false;pollFailures=0;message='';feedback='';drawnMode='';drawnQuestion=null;lastHp=null;layoutSignature='';
     document.body.classList.remove('challenge-is-game');document.body.style.removeProperty('--challenge-scene');document.body.style.removeProperty('--challenge-viewport-height');$('challengeApp')?.classList.remove('is-compact','is-dense','has-overflow');$('challengeApp')?.replaceChildren();
   }
@@ -602,10 +649,10 @@
   }
   document.addEventListener('visibilitychange',()=>{
     if(!active)return;
-    if(document.hidden){if(specialBeat||specialResume||run?.status==='playing'||inFlight&&mode==='map'||['start','resume'].includes(pending?.action))requestPause();}
+    if(document.hidden){if(answerPreview||specialBeat||specialResume||run?.status==='playing'||inFlight&&mode==='map'||['start','resume'].includes(pending?.action))requestPause();}
     else if(pauseOperation)void retry();else if(pauseIntent&&run?.status==='playing')void confirmPause();else void refresh();
   });
-  window.addEventListener('pagehide',()=>{if(active&&(specialBeat||specialResume||run?.status==='playing'))requestPause();});
+  window.addEventListener('pagehide',()=>{if(active&&(answerPreview||specialBeat||specialResume||run?.status==='playing'))requestPause();});
   window.addEventListener('resize',updateViewport);window.visualViewport?.addEventListener('resize',updateViewport);
   window.TargetChallengeUI={open,close,leaveHome,refresh,prepareSessionChange};
 })();

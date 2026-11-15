@@ -221,7 +221,9 @@ async function httpChecks(databaseUrl){
    const text=await response.text(),data=JSON.parse(text);
    eq(verifies-before,expectedVerifies,'every supported challenge read/mutation revalidates KGS identity');
    ok(/private/.test(response.headers.get('cache-control'))&&/no-store/.test(response.headers.get('cache-control')));
-   ok(!text.includes('correctChoiceId')&&!text.includes('correctText'),'HTTP never exposes private answer keys');
+   const {answer:gradedAnswer,...publicState}=data;
+   ok(!JSON.stringify(publicState).includes('correctChoiceId')&&!text.includes('correctText'),'HTTP never exposes an upcoming answer key or private correct text');
+   if(gradedAnswer?.correctChoiceId)ok(/^[0-9a-f-]{36}$/i.test(gradedAnswer.correctChoiceId),'accepted answer correction is a UUID');
    for(const key of [secret,cookieSecret,integrationSecret])ok(!text.includes(key));
    return {status:response.status,data};
   }

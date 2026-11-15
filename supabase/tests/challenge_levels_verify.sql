@@ -1,4 +1,4 @@
--- Strict read-only postflight through 20261115131403_target_challenge_special_animation_pause,
+-- Strict read-only postflight through 20261115142451_target_challenge_graded_choice_feedback,
 -- preserving the latest Epic/Legendary financial projection.
 -- No fixture identities, secrets, rewards, cleanup, or wallet writes are performed.
 -- Quiz cleanup intentionally deletes answers after their retention period while
@@ -15,7 +15,7 @@ DECLARE item record; actual text; helper regprocedure; role_name text; charged b
  carry_digest text; expected_carry_digest text;
 BEGIN
  FOR item IN SELECT * FROM (VALUES
-  ('public.target_challenge_rpc(text,text,jsonb)','b74f38f7d92fc6839eeaf854292f4f12',true),
+  ('public.target_challenge_rpc(text,text,jsonb)','66e060d1532f0fa08800f30579897d9a',true),
   ('target_private.challenge_dto(uuid,uuid)','f4f5f936f9d5b046b6d9baee36512532',false),
   ('target_private.challenge_tick(uuid,timestamptz)','88458e872af0fd28593b35511ec9099a',false),
   ('target_private.challenge_storage_charge()','69be621da1580b84ed1d793cc7f95737',false),
@@ -152,6 +152,14 @@ BEGIN
     (q.response#>>'{answer,specialPower}')::integer<>0 OR
     ((q.response->'answer') ? 'specialPercent' AND (q.response#>>'{answer,specialPercent}')::integer IS DISTINCT FROM 0) END)) THEN
   RAISE EXCEPTION 'Challenge special-attack receipt damage is inconsistent'; END IF;
+ -- Older answer receipts have no correction ID. New accepted answers reveal a
+ -- UUID for the already-graded question only; private text is never returned.
+ IF EXISTS(SELECT 1 FROM target_private.challenge_requests q
+  WHERE (q.response->'answer') ? 'correctChoiceId' AND (
+   q.action<>'answer' OR
+   jsonb_typeof(q.response#>'{answer,correctChoiceId}') IS DISTINCT FROM 'string' OR
+   coalesce(q.response#>>'{answer,correctChoiceId}','')!~'^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$')) THEN
+  RAISE EXCEPTION 'Challenge graded-choice correction ID is invalid'; END IF;
  -- Older immutable receipts lack pause metadata. New receipts attest the pause
  -- created by that answer; later current run state may legitimately differ.
  IF EXISTS(SELECT 1 FROM target_private.challenge_requests q WHERE q.action='answer'
