@@ -18,6 +18,7 @@
   function scene(node,level){const url=art('sceneURL',level);if(url)node.style.backgroundImage='url("'+url.replace(/"/g,'%22')+'")';}
   function button(label,cls,action){const node=make('button',cls,label);node.type='button';node.addEventListener('click',action);return node;}
   function clearTimers(){clearTimeout(pollTimer);pollTimer=null;clearTimeout(feedbackTimer);feedbackTimer=null;cancelAnimationFrame(layoutFrame);layoutFrame=null;}
+  function backoff(){return Math.min(15000,1200*2**Math.min(4,pollFailures));}
   function updateViewport(){
     if(!active||!document.body.classList.contains('challenge-is-game'))return;
     const height=Math.floor(Math.min(window.innerHeight,window.visualViewport?.height||window.innerHeight));
@@ -40,7 +41,7 @@
   function schedule(delay){
     clearTimeout(pollTimer);
     if(!active)return;
-    const wait=delay??(pollFailures?Math.min(15000,1200*2**Math.min(4,pollFailures)):run?.status==='playing'?650:run?.status==='paused'?8000:20000);
+    const wait=delay??(pollFailures?backoff():run?.status==='playing'?650:run?.status==='paused'?8000:20000);
     pollTimer=setTimeout(()=>void refresh(),wait);
   }
   function showMessage(text=''){message=text;const node=$('challengeStatus');if(node){node.textContent=text;node.hidden=!text;}}
@@ -60,17 +61,34 @@
     }
     return value;
   }
+  function responseError(response,message,code){
+    const error=new Error(message);error.status=response.status;error.code=code;
+    if(response.status===429){
+      const value=response.headers.get('Retry-After'),seconds=value&&/^\d+(?:\.\d+)?$/.test(value)?Number(value):NaN;
+      const delay=Number.isFinite(seconds)?seconds*1000:value?Date.parse(value)-Date.now():NaN;
+      error.retryAfterMs=Number.isFinite(delay)?Math.max(0,Math.min(86400000,delay)):60000;
+    }
+    return error;
+  }
   async function api(action,body,{keepalive=false}={}){
     const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),12000);
     try{
       const response=await fetch('/api/challenge/'+action,{method:body===undefined?'GET':'POST',credentials:'same-origin',cache:'no-store',redirect:'error',keepalive,
         headers:body===undefined?{Accept:'application/json'}:{Accept:'application/json','Content-Type':'application/json'},
         body:body===undefined?undefined:JSON.stringify(body),signal:controller.signal});
-      let data;try{data=await response.json();}catch{throw new Error('サーバーの応答を確認できませんでした。');}
-      if(!response.ok||data?.error){const error=new Error(data?.error?.message||'接続を確認できませんでした。');error.status=response.status;error.code=data?.error?.code;throw error;}
+      let data;try{data=await response.json();}catch(error){
+        const failure=responseError(response,error.name==='AbortError'?'通信に時間がかかっています。':'サーバーの応答を確認できませんでした。');
+        if(error.name==='AbortError'||error instanceof TypeError)failure.transient=true;
+        throw failure;
+      }
+      if(!response.ok||data?.error)throw responseError(response,data?.error?.message||'接続を確認できませんでした。',data?.error?.code);
       if(data?.ok!==true)throw new Error('挑戦データを確認できませんでした。');
       return data;
-    }catch(error){if(error.name==='AbortError')throw new Error('通信に時間がかかっています。');throw error;}
+    }catch(error){
+      if(error.name==='AbortError'){const failure=new Error('通信に時間がかかっています。');failure.transient=true;throw failure;}
+      if(error instanceof TypeError)error.transient=true;
+      throw error;
+    }
     finally{clearTimeout(timeout);}
   }
   function accept(data,{map=false}={}){
@@ -97,6 +115,11 @@
     if(pauseIntent&&['start','resume'].includes(pending?.action)){void perform(pending);return;}
     if(homeIntent&&pending?.action==='abort'){void perform(pending);return;}
     if(pauseIntent&&run?.status==='playing'){void confirmPause();return;}
+    if(pending?.action==='answer'&&pending.retryAt&&!document.hidden&&!pauseIntent&&!homeIntent&&run?.status==='playing'&&
+      run.id===pending.body.runId&&run.question?.id===pending.body.questionId){
+      const delay=pending.retryAt-Date.now();if(delay>0){schedule(delay);return;}
+      void perform(pending);return;
+    }
     if(pending||pauseOperation){schedule();return;}
     if(document.hidden){schedule();return;}
     if(terminal(run)&&!mapNeeded)return;
@@ -119,6 +142,7 @@
     if(pauseIntent&&run?.status==='playing'){if(pauseOperation&&pollFailures)schedule();else void confirmPause();return;}
     if(homeIntent&&run?.status==='paused'&&!pending&&!pauseOperation){void perform({action:'abort',body:{requestId:uuid(),runId:run.id}});return;}
     if(homeIntent&&(!run||terminal(run))&&!pending&&!pauseOperation){const go=callbacks.onHome;close();go?.();return;}
+    if(pending?.action==='answer'&&pending.retryAt){schedule(Math.max(0,pending.retryAt-Date.now()));return;}
     if(queuedAnswer){
       const queued=queuedAnswer,fields=queued.operation.body;queuedAnswer=null;
       if(queued.epoch===epoch&&!pauseIntent&&!homeIntent&&!pending&&!pauseOperation&&run?.status==='playing'&&
@@ -133,6 +157,7 @@
   async function perform(operation){
     if(!active||inFlight)return;
     inFlight=true;readInFlight=false;clearTimeout(pollTimer);const lease=epoch;
+    if(operation.action==='answer'){delete operation.retryAt;delete operation.rateLimitedUntil;}
     if(operation.action!=='pause')pending=operation;
     render();
     try{
@@ -157,6 +182,11 @@
           if(operation.action==='start'){run=null;mapNeeded=true;}
         }
         handleError(error);
+        if(active&&lease===epoch&&pending===operation&&operation.action==='answer'&&
+          (error.status===503||error.status===429||error.transient===true)){
+          operation.retryAt=Date.now()+Math.max(backoff(),error.status===429?error.retryAfterMs:0);
+          if(error.status===429)operation.rateLimitedUntil=operation.retryAt;
+        }
       }
     }finally{if(active&&lease===epoch){inFlight=false;render();afterRequest();}}
   }
@@ -208,7 +238,7 @@
     run=null;mode='map';pauseIntent=false;pauseOperation=null;feedback='';drawnMode='';mapNeeded=true;
     render();void refresh();
   }
-  function retry(){if(inFlight)return;if(pauseOperation)void perform(pauseOperation);else if(pending)void perform(pending);else if(homeIntent)afterRequest();else if(pauseIntent)void confirmPause();else void refresh();}
+  function retry(){if(inFlight)return;if(pauseOperation)void perform(pauseOperation);else if(pending){if(pending.rateLimitedUntil>Date.now()){schedule(pending.rateLimitedUntil-Date.now());return;}void perform(pending);}else if(homeIntent)afterRequest();else if(pauseIntent)void confirmPause();else void refresh();}
 
   function shell(){
     const root=$('challengeApp');root.replaceChildren();
@@ -338,7 +368,7 @@
     }
     for(const option of region.querySelectorAll('button'))option.disabled=inFlight&&!readInFlight||!!pending||!!queuedAnswer;
     region.querySelector('.challenge-answer-retry')?.remove();
-    if(pending&&!inFlight){const retryButton=button('同じ回答を確認','secondary-button challenge-answer-retry',retry);region.append(retryButton);}
+    if(pending&&!inFlight){const retryButton=button('同じ回答を確認','secondary-button challenge-answer-retry',retry);retryButton.disabled=pending.rateLimitedUntil>Date.now();region.append(retryButton);}
   }
   function renderGame(){
     if(drawnMode!=='game'){buildGame();updateViewport();}

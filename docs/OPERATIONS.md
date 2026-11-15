@@ -27,3 +27,9 @@ Supabaseの公開可能なキー自体には成績DBの読書き権限を与え�
 採点はブラウザが送った得点を信用せず、保存した設問と選択肢でサーバーが判定します。同じ回答の再送で得点を増やさず、別ユーザーのテストへ回答できないことを確認してからデプロイします。KGSのBAN・PIN変更・共通コード変更がTarget側にも反映することを回帰確認してください。
 
 公開URL・コミット・デプロイ・実測の検証範囲は、作業完了時に検証記録へ追記します。
+
+## 本番の公開確認
+
+`kgs-target.vercel.app`へ公開するデプロイは、必ず`target: production`を明示して作成します（CLIでは`vercel --prod`）。Gitから作られたデプロイや既存プロジェクトの再利用でも、`target`が`null`のものはPreviewです。本番URLのaliasをPreviewへ向けたり、Previewのビルドを本番環境の設定で作り直さずに公開したりしません。必要な秘密はProductionだけに設定されているため、Previewでは`CONFIGURATION_REQUIRED`になります。
+
+公開後はcanonical URLのデプロイ情報が`READY`・`target: production`・意図したGit SHAであることを確認します。続けてCookieなしの`GET /api/session`がリダイレクトせずJSONの200を返し、`GET /api/challenge/map`がアプリのJSONの401を返すことを確認してください。VercelのログインHTMLが200で返っても正常とは扱いません。接続不良の修正のために秘密をPreviewへ複製したり、Deployment Protectionを無効化したりしません。
