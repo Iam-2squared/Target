@@ -19,27 +19,27 @@ async function rpc(action,params={},actor=member,client=db,key=secret){
  if(['start','answer','pause','resume','abort'].includes(action)&&!data.requestId)data.requestId=uid();
  return (await client.query('SELECT public.target_challenge_rpc($1,$2,$3::jsonb) x',[key,action,JSON.stringify(data)])).rows[0].x;
 }
-async function start(level=1){const value=await rpc('start',{level});ok(value.ok,JSON.stringify(value));return value.run;}
-async function supply(run){
- if(run.status==='playing'&&!run.question){const value=await rpc('next',{runId:run.id,questions:questionBlock(run.level)});ok(value.ok,JSON.stringify(value));return value.run;}
+async function start(level=1,actor=member){const value=await rpc('start',{level},actor);ok(value.ok,JSON.stringify(value));return value.run;}
+async function supply(run,actor=member){
+ if(run.status==='playing'&&!run.question){const value=await rpc('next',{runId:run.id,questions:questionBlock(run.level)},actor);ok(value.ok,JSON.stringify(value));return value.run;}
  return run;
 }
-async function answer(run,correct=true,requestId=uid()){
- run=await supply(run);
+async function answer(run,correct=true,requestId=uid(),actor=member){
+ run=await supply(run,actor);
  const q=(await db.query('SELECT questions->0 q FROM target_private.challenge_runs WHERE id=$1',[run.id])).rows[0].q;
  const choice=correct?q.correctChoiceId:q.choices.find(c=>c.id!==q.correctChoiceId).id;
  lastAnswerInput={runId:run.id,questionId:q.id,choiceId:choice,requestId};
- return rpc('answer',lastAnswerInput);
+ return rpc('answer',lastAnswerInput,actor);
 }
-async function clear(level){
- let r=await start(level),last;
+async function clear(level,actor=member){
+ let r=await start(level,actor),last;
  for(let n=0;n<20*level;n++){
-  r=await supply(r);
+  r=await supply(r,actor);
   // Remove wall-clock test-machine speed from this deterministic combat check.
   await db.query("UPDATE target_private.challenge_runs SET next_attack_at=clock_timestamp()+((CASE WHEN level=10 THEN 1000 ELSE 2000-100*(level-1) END)*interval '1 millisecond') WHERE id=$1",[r.id]);
   // Reset the minute quota in this fixture; production has no automated answer loop.
-  if(n%100===0)await db.query('UPDATE target_private.challenge_rates SET calls=1 WHERE member_id=$1',[member.memberId]);
-  last=await answer(r);ok(last.ok,JSON.stringify(last));r=last.run;
+  if(n%100===0)await db.query('UPDATE target_private.challenge_rates SET calls=1 WHERE member_id=$1',[actor.memberId]);
+  last=await answer(r,true,uid(),actor);ok(last.ok,JSON.stringify(last));r=last.run;
  }
  eq(r.status,'won','twenty correct hits per level defeats the enemy');
  eq(r.reward,level*100000);return last;
@@ -53,6 +53,79 @@ async function accounting(){
  const query='SELECT coalesce(sum(bytes),0)::bigint expected FROM ('+tables.map(t=>'SELECT pg_column_size(to_jsonb(t))+128 bytes FROM target_private.'+t+' t').join(' UNION ALL ')+') rows';
  const expected=String(BigInt((await db.query(query)).rows[0].expected)+baselineBytes);
  eq((await db.query('SELECT logical_bytes FROM target_private.system_state WHERE singleton')).rows[0].logical_bytes,expected,'logical quota equals actual retained challenge rows without upsert leakage');
+}
+async function legacyCarryChecks(verifySql){
+ const {generateQuestions}=require('../server/questions.cjs');
+ const actor={memberId:uid(),name:'Retained Study',sessionHash:crypto.randomBytes(32).toString('hex')};
+ const study=async(action,params={})=>(await db.query('SELECT public.target_rpc($1,$2,$3::jsonb) x',
+  [secret,action,JSON.stringify({memberId:actor.memberId,name:actor.name,...params})])).rows[0].x;
+ const beginQuiz=async()=>{
+  const questions=generateQuestions({book:'target1900',direction:'japanese',count:10,from:1,to:100,requestId:uid()});
+  const value=await study('start',{requestId:uid(),book:'target1900',direction:'japanese',from:1,to:100,questions});
+  ok(value.quizId,JSON.stringify(value));return {id:value.quizId,questions};
+ };
+ const correct=async(quiz,index)=>{
+  const q=quiz.questions[index],value=await study('answer',{requestId:uid(),quizId:quiz.id,questionId:q.id,choiceId:q.correctChoiceId});
+  eq(value.correct,true);ok(value.awardPoints>0);return value.awardPoints;
+ };
+ const profile=async()=>(await db.query('SELECT total_points,spent_points,casino_net,correct_count,answered_count,total_points-calculus_points-birthday_points-casino_net-calculus_forgiven_points AS raw_study FROM target_private.profiles WHERE member_id=$1',[actor.memberId])).rows[0];
+ const fingerprint=async()=>(await db.query("SELECT encode(sha256(convert_to(coalesce(jsonb_agg(jsonb_build_array(p.member_id,p.total_points-f.total_points) ORDER BY p.member_id),'[]'::jsonb)::text,'UTF8')),'hex') hash FROM target_private.profiles p JOIN target_private.wallet_finance_projection(NULL) f USING(member_id) WHERE p.total_points>f.total_points")).rows[0].hash;
+ const verify=()=>db.query(verifySql);
+ const rejectVerification=async(message,update,params=[])=>{
+  await db.query('BEGIN');
+  try{
+   if(update)await db.query(update,params);
+   await assert.rejects(verify,/Shared wallet (permanent components|study carry|legacy study carry)/,message);checks++;
+  }finally{await db.query('ROLLBACK');}
+ };
+ const first=await beginQuiz();const firstAward=await correct(first,0),secondAward=await correct(first,1);
+ const beforeCleanup=await profile();
+ eq((await db.query('SELECT count(*)::int n FROM target_private.answers WHERE quiz_id=$1',[first.id])).rows[0].n,2);
+ await db.query("UPDATE target_private.quizzes SET expires_at=clock_timestamp()-interval '9 days' WHERE id=$1",[first.id]);
+ const retained=await beginQuiz();
+ eq((await db.query('SELECT count(*)::int n FROM target_private.answers WHERE quiz_id=$1',[first.id])).rows[0].n,0,'actual quiz-start retention cleanup prunes old answer details');
+ eq(await profile(),beforeCleanup,'actual cleanup preserves lifetime study points and answer counts');
+ await correct(retained,0);
+ const carry=(await db.query('SELECT p.total_points-f.total_points AS carry FROM target_private.profiles p JOIN target_private.wallet_finance_projection(NULL) f USING(member_id) WHERE p.member_id=$1',[actor.memberId])).rows[0].carry;
+ eq(BigInt(carry),BigInt(firstAward+secondAward),'legacy residual equals the real awards removed by cleanup');
+ const pin=await fingerprint();
+ await db.query("SELECT set_config('target.challenge_legacy_study_carry_sha256','',false)");
+ await rejectVerification('positive legacy carry requires an independently reviewed baseline');
+ await db.query("SELECT set_config('target.challenge_legacy_study_carry_sha256',$1,false)",[pin]);
+ await verify();checks++;
+ const before=await profile(),won=await clear(1,actor),after=await profile();
+ eq(won.run.status,'won');eq(BigInt(after.total_points)-BigInt(before.total_points),100000n,'challenge adds exact gross income on top of legacy study carry');
+ eq(BigInt(after.casino_net)-BigInt(before.casino_net),100000n,'challenge adds exact games component on top of legacy study carry');
+ eq(after.spent_points,before.spent_points);eq(after.raw_study,before.raw_study);eq(after.correct_count,before.correct_count);eq(after.answered_count,before.answered_count);
+ eq(await fingerprint(),pin,'challenge win leaves each pinned legacy carry unchanged');await verify();checks++;
+ // A real purchase gives spending a positive baseline so both signed drift directions are representable.
+ const drawn=(await db.query('SELECT public.target_shop_rpc($1,$2,$3::jsonb) x',[secret,'draw',JSON.stringify({memberId:actor.memberId,name:actor.name,requestId:uid(),expectedPrice:100000,expectedCatalogVersion:5,itemType:'frame'})])).rows[0].x;
+ ok(!drawn.error,JSON.stringify(drawn));await verify();checks++;
+ for(const delta of [100,-100]){
+  await rejectVerification('changed positive total-income carry must not hide behind the legacy exception',
+   'UPDATE target_private.profiles SET total_points=total_points+$1 WHERE member_id=$2',[delta,actor.memberId]);
+ }
+ await rejectVerification('negative total-income residual is rejected even with a valid pin',
+  'UPDATE target_private.profiles p SET total_points=f.total_points-100 FROM target_private.wallet_finance_projection(NULL) f WHERE p.member_id=f.member_id AND p.member_id=$1',[actor.memberId]);
+ await rejectVerification('complete disappearance of the final positive carry must reject the nonempty baseline',
+  'UPDATE target_private.profiles p SET total_points=f.total_points FROM target_private.wallet_finance_projection(NULL) f WHERE p.member_id=f.member_id AND p.member_id=$1',[actor.memberId]);
+ for(const [column,step,income] of [['spent_points',100,false],['casino_net',100,true],['calculus_points',10000,true],['birthday_points',100000,true],['calculus_forgiven_points',10000,true]]){
+  for(const direction of [-1,1]){
+   await db.query('BEGIN');
+   try{
+    let schemaRejected=false;
+    try{await db.query('UPDATE target_private.profiles SET '+column+'='+column+'+$1'+(income?',total_points=total_points+$1':'')+' WHERE member_id=$2',[direction*step,actor.memberId]);}
+    catch(error){eq(error.code,'23514','unrepresentable component underflow fails at the existing schema boundary');schemaRejected=true;}
+    if(!schemaRejected){await assert.rejects(verify,/Shared wallet permanent components do not reconcile/,'all signed non-study/spending drift must reject');checks++;}
+   }finally{await db.query('ROLLBACK');}
+  }
+ }
+ await db.query('BEGIN');
+ try{
+  await db.query('INSERT INTO target_private.profiles(member_id,name,correct_count,answered_count,total_points) VALUES($1,$2,1,1,100)',[uid(),'Unreviewed Carry']);
+  await assert.rejects(verify,/legacy study carry differs/,'a new positive member/carry pair cannot reuse the old aggregate baseline');checks++;
+ }finally{await db.query('ROLLBACK');}
+ await verify();checks++;
 }
 async function httpChecks(databaseUrl){
  const http=require('node:http'),store=require('../server/store.cjs');
@@ -219,8 +292,10 @@ async function main(){
  await db.query('UPDATE target_private.system_state SET logical_bytes=$1 WHERE singleton',[used]);
  await reconcile();
  await httpChecks(url.href);await reconcile();await accounting();
- await db.query(await fs.readFile(path.join(root,'supabase/tests/challenge_levels_verify.sql'),'utf8'));
+ const verifySql=await fs.readFile(path.join(root,'supabase/tests/challenge_levels_verify.sql'),'utf8');
+ await db.query(verifySql);
  checks++;
+ await legacyCarryChecks(verifySql);
  console.log('Challenge PostgreSQL integration checks passed:',checks);
 }
 main().catch(e=>{console.error(e);process.exitCode=1}).finally(async()=>{

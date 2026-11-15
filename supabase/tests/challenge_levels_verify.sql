@@ -1,11 +1,17 @@
 -- Strict read-only postflight for 20261115084425_target_pve_challenge_levels.
 -- No fixture identities, secrets, rewards, cleanup, or wallet writes are performed.
+-- Quiz cleanup intentionally deletes answers after their retention period while
+-- preserving lifetime study totals (20261109064636, lines 241-246). A release with
+-- such preexisting carry must supply its separately captured pre-release digest:
+-- SET target.challenge_legacy_study_carry_sha256='<reviewed SHA-256>';
+-- This pins every positive member/carry pair; changing any amount fails verification.
 BEGIN;
 SET LOCAL lock_timeout='10s';
 SET LOCAL statement_timeout='30s';
 SELECT pg_advisory_xact_lock(991101);
 DO $verify$
 DECLARE item record; actual text; helper regprocedure; role_name text; charged bigint; budget bigint;
+ carry_digest text; expected_carry_digest text;
 BEGIN
  FOR item IN SELECT * FROM (VALUES
   ('public.target_challenge_rpc(text,text,jsonb)','40f9c42130bff6ea176973f5ba7d9c0e',true),
@@ -69,10 +75,39 @@ BEGIN
   SELECT indexdef INTO actual FROM pg_indexes WHERE schemaname='target_private' AND indexname=item.name;
   IF actual IS DISTINCT FROM item.definition THEN RAISE EXCEPTION 'Challenge index mismatch: %',item.name; END IF;
  END LOOP;
- IF EXISTS(SELECT 1 FROM target_private.profiles p JOIN target_private.wallet_finance_projection(NULL) f USING(member_id)
-  WHERE (p.total_points,p.spent_points,p.calculus_points,p.birthday_points,p.casino_net,p.calculus_forgiven_points)
-   IS DISTINCT FROM (f.total_points,f.spent_points,f.calculus_points,f.birthday_points,f.casino_net,f.calculus_forgiven_points)) THEN
-  RAISE EXCEPTION 'Shared wallet caches do not reconcile with all immutable histories'; END IF;
+ -- Spending and every non-study income component retain permanent evidence and
+ -- must match exactly, including the games component containing challenge wins.
+ IF EXISTS(SELECT 1 FROM target_private.profiles p FULL JOIN target_private.wallet_finance_projection(NULL) f USING(member_id)
+  WHERE p.member_id IS NULL OR f.member_id IS NULL OR
+   (p.spent_points,p.calculus_points,p.birthday_points,p.casino_net,p.calculus_forgiven_points)
+    IS DISTINCT FROM (f.spent_points,f.calculus_points,f.birthday_points,f.casino_net,f.calculus_forgiven_points)) THEN
+  RAISE EXCEPTION 'Shared wallet permanent components do not reconcile'; END IF;
+ -- Only removed study awards may account for a positive total-income residual.
+ -- Deleted histories cannot reconstruct the exact amount, so the reviewed
+ -- release digest below is required as well as these independent semantic bounds.
+ IF EXISTS(WITH retained AS (
+   SELECT member_id,count(*) FILTER(WHERE response->>'correct'='true') correct
+   FROM target_private.answers GROUP BY member_id)
+  SELECT 1 FROM target_private.profiles p JOIN target_private.wallet_finance_projection(NULL) f USING(member_id)
+   LEFT JOIN retained a USING(member_id)
+  WHERE p.total_points<f.total_points OR (p.total_points-f.total_points)%100<>0 OR
+   p.correct_count<coalesce(a.correct,0) OR
+   p.total_points-f.total_points>(p.correct_count-coalesce(a.correct,0))*100000 OR
+   p.total_points-p.calculus_points-p.birthday_points-p.casino_net-p.calculus_forgiven_points NOT BETWEEN 0 AND p.correct_count*100000 OR
+   (p.total_points-p.calculus_points-p.birthday_points-p.casino_net-p.calculus_forgiven_points)%100<>0 OR
+   p.total_points-f.total_points IS DISTINCT FROM
+    p.total_points-p.calculus_points-p.birthday_points-p.casino_net-p.calculus_forgiven_points-f.raw_study_points) THEN
+  RAISE EXCEPTION 'Shared wallet study carry violates retained/lifetime evidence'; END IF;
+ expected_carry_digest:=nullif(current_setting('target.challenge_legacy_study_carry_sha256',true),'');
+ IF expected_carry_digest IS NOT NULL OR EXISTS(
+  SELECT 1 FROM target_private.profiles p JOIN target_private.wallet_finance_projection(NULL) f USING(member_id)
+  WHERE p.total_points>f.total_points) THEN
+  SELECT encode(sha256(convert_to(coalesce(jsonb_agg(jsonb_build_array(p.member_id,p.total_points-f.total_points) ORDER BY p.member_id),'[]'::jsonb)::text,'UTF8')),'hex')
+   INTO carry_digest FROM target_private.profiles p JOIN target_private.wallet_finance_projection(NULL) f USING(member_id)
+   WHERE p.total_points>f.total_points;
+  IF expected_carry_digest IS NULL OR expected_carry_digest!~'^[a-f0-9]{64}$' OR carry_digest IS DISTINCT FROM expected_carry_digest THEN
+   RAISE EXCEPTION 'Shared wallet legacy study carry differs from the reviewed pre-release baseline'; END IF;
+ END IF;
  IF EXISTS(SELECT 1 FROM target_private.challenge_reward_events e LEFT JOIN target_private.challenge_runs r ON r.id=e.run_id
   WHERE r.id IS NULL OR r.member_id<>e.member_id OR r.level<>e.level OR r.status<>'won' OR r.reward<>e.amount OR e.amount<>e.level*100000) OR
   EXISTS(SELECT 1 FROM target_private.challenge_runs r LEFT JOIN target_private.challenge_reward_events e ON e.run_id=r.id
