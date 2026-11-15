@@ -104,3 +104,80 @@ body[data-view=challenge].challenge-is-game{background-color:#263d45;background-
 @media(max-width:420px){body[data-view=challenge] .app-shell{padding:12px 16px max(20px,env(safe-area-inset-bottom))}.challenge-map{gap:11px}.challenge-tile-art{height:130px}.challenge-tile-copy{padding:9px 10px;min-height:76px}.challenge-tile-copy>strong{font-size:12px}.challenge-tile-reward{font-size:10px}.challenge-clear-check{font-size:7px;right:9px;bottom:9px}.challenge-tile-badge{width:53px;height:58px;right:3px}.challenge-arena{min-height:192px}.challenge-mob{height:158px;width:190px;bottom:-3px}.challenge-enemy-health{padding:12px 13px}.challenge-game-header{margin-bottom:10px}.challenge-game-header h1{font-size:16px}.challenge-choices{grid-template-columns:1fr;gap:8px}.challenge-choice{min-height:62px;padding:13px 16px;font-size:15px}.challenge-prompt{font-size:24px;min-height:35px;margin:0 0 13px}.challenge-question-region{min-height:295px;padding:16px 14px}.challenge-player-health{padding:10px 3px 12px}.challenge-pause-panel{min-height:293px}.challenge-result-scene{height:215px}.challenge-result-art{height:185px;width:165px}.challenge-result-copy{padding:23px 19px}.challenge-result-copy h1{font-size:31px}}
 @media(max-width:340px){body[data-view=challenge] .app-shell{padding-left:12px;padding-right:12px}.challenge-tile-art{height:115px}.challenge-tile-copy>strong{font-size:11px}.challenge-tile-level{font-size:10px;left:8px;top:8px}.challenge-tile-reward{font-size:9px}.challenge-clear-check{font-size:6px}.challenge-arena{min-height:172px}.challenge-mob{height:141px;width:172px}.challenge-map-header{margin-bottom:15px}}
 @media(prefers-reduced-motion:reduce){.challenge-tile,.challenge-health-track>span{transition:none}.challenge-mob.is-hit,.challenge-arena.is-damaged{animation:none}}
+
+.challenge-map-clearers{margin-top:28px;padding-top:22px;border-top:1px solid #deded3}
+.challenge-map-clearers>h2{font-size:18px;margin-bottom:12px}
+.challenge-map-clearer-list{list-style:none;margin:0;padding:0}
+.challenge-map-clearer-row{display:grid;grid-template-columns:48px minmax(0,1fr);gap:12px;padding:13px 0;border-bottom:1px solid #e8e7de}
+.challenge-map-clearer-row>h3{margin:2px 0 0;color:#687b83;font-size:12px;font-weight:650}
+.challenge-map-clearer-names>p,.challenge-clearer-content>p{font-size:12px;color:#92998f}
+.challenge-map-clearer-names>ul,.challenge-clearer-content>ul{display:flex;flex-wrap:wrap;gap:7px;list-style:none;margin:0;padding:0}
+.challenge-map-clearer-names li{padding:4px 9px;background:#eeeee5;border:1px solid #e4e1d3;border-radius:6px;color:#617366;font-size:12px;max-width:100%;overflow-wrap:anywhere}
+
+/* The illustration yields space before any question or answer needs to scroll. */
+body[data-view=challenge].challenge-is-game .app-shell{--game-pad-top:max(6px,env(safe-area-inset-top));--game-pad-bottom:max(6px,env(safe-area-inset-bottom));padding:var(--game-pad-top) max(12px,env(safe-area-inset-right)) var(--game-pad-bottom) max(12px,env(safe-area-inset-left));min-height:var(--challenge-viewport-height,100dvh)}
+.challenge-is-game #challengeApp{display:flex;flex-direction:column;gap:6px;height:calc(var(--challenge-viewport-height,100dvh) - var(--game-pad-top) - var(--game-pad-bottom))}
+.challenge-is-game .challenge-game-header{flex:0 0 auto;min-height:44px;margin:0;box-shadow:none;padding:0 8px;border-radius:8px}
+.challenge-is-game .challenge-game-header h1{font-size:16px;line-height:1.25}
+.challenge-is-game .challenge-eyebrow{font-size:9px;line-height:1.4}
+.challenge-is-game .challenge-game-header .challenge-nav{min-height:40px;padding:5px 10px}
+.challenge-is-game .challenge-status{flex:0 0 auto;margin:0;padding:6px 10px;font-size:11px}
+.challenge-is-game .challenge-arena{flex:1 1 244px;min-height:150px;max-height:430px}
+.challenge-is-game .challenge-enemy-health{padding:9px 12px}
+.challenge-is-game .challenge-mob{height:min(calc(100% - 28px),240px);width:260px;bottom:0}
+.challenge-is-game .challenge-player-health{flex:0 0 auto;margin:0;padding:6px 10px}
+.challenge-is-game .challenge-health-label{margin-bottom:4px;font-size:11px;line-height:1.3}
+.challenge-is-game .challenge-health-track{height:8px}
+.challenge-is-game .challenge-question-region{flex:0 0 auto;min-height:0;padding:10px 12px}
+.challenge-is-game .challenge-prompt{font-size:24px;line-height:1.25;min-height:0;margin:0 0 10px}
+.challenge-is-game .challenge-choices{gap:6px}
+.challenge-is-game .challenge-choice{min-height:62px;font-size:15px;padding:10px 12px;line-height:1.35}
+.challenge-is-game .challenge-feedback,.challenge-is-game .challenge-feedback:not(:empty){flex:0 0 18px;height:18px;margin:0;font-size:10px;align-items:center}
+.challenge-is-game .challenge-question-region.is-paused{padding:0}
+.challenge-is-game .challenge-pause-panel{min-height:220px;padding:16px;gap:10px}
+.challenge-is-game .challenge-question-loading{min-height:180px}
+.challenge-is-game .challenge-answer-retry{margin-top:6px;min-height:38px;padding:6px 12px}
+@media(max-width:600px){.challenge-is-game .challenge-choices{grid-template-columns:1fr}}
+.challenge-is-game #challengeApp.is-compact{gap:4px}
+.challenge-is-game .is-compact .challenge-arena{min-height:150px;max-height:430px}
+.challenge-is-game .is-compact .challenge-game-header{min-height:38px}
+.challenge-is-game .is-compact .challenge-game-header .challenge-nav{min-height:36px}
+.challenge-is-game .is-compact .challenge-prompt{font-size:20px;line-height:1.2;margin-bottom:7px}
+.challenge-is-game .is-compact .challenge-question-region{padding:8px}
+.challenge-is-game .is-compact .challenge-choice{padding:6px 8px;font-size:14px;line-height:1.3;gap:6px}
+.challenge-is-game .is-compact .challenge-choice-letter{flex-basis:16px;width:16px;height:18px;font-size:9px}
+.challenge-is-game #challengeApp.is-dense{gap:2px}
+.challenge-is-game .is-dense .challenge-arena{flex:1 1 150px;min-height:150px;max-height:430px;border-radius:7px}
+.challenge-is-game .is-dense .challenge-strike{display:none}
+.challenge-is-game .is-dense .challenge-enemy-health{padding:3px 8px}
+.challenge-is-game .is-dense .challenge-player-health{padding:3px 8px}
+.challenge-is-game .is-dense .challenge-health-label{font-size:10px;line-height:1.2;margin-bottom:3px}
+.challenge-is-game .is-dense .challenge-health-track{height:6px}
+.challenge-is-game .is-dense .challenge-game-header{min-height:32px}
+.challenge-is-game .is-dense .challenge-game-header .challenge-nav{min-height:32px;padding-block:3px}
+.challenge-is-game .is-dense .challenge-feedback,.challenge-is-game .is-dense .challenge-feedback:not(:empty){flex-basis:14px;height:14px}
+.challenge-is-game .is-dense .challenge-game-header h1{font-size:14px}
+.challenge-is-game .is-dense .challenge-eyebrow{display:none}
+.challenge-is-game .is-dense .challenge-prompt{font-size:18px;line-height:1.2;margin-bottom:6px}
+.challenge-is-game .is-dense .challenge-question-region{padding:6px}
+.challenge-is-game .is-dense .challenge-choices{gap:4px}
+.challenge-is-game .is-dense .challenge-choice{padding:4px 8px;font-size:14px;line-height:1.2}
+.challenge-is-game .is-dense .challenge-choice-letter{display:none}
+@media(min-width:540px) and (max-height:500px){
+ .challenge-is-game #challengeApp{display:grid;grid-template-columns:clamp(112px,22vw,180px) minmax(0,1fr);grid-template-rows:auto minmax(40px,1fr) auto 18px;grid-template-areas:'header question' 'arena question' 'player question' 'feedback question';gap:5px}
+ .challenge-is-game .challenge-game-header{grid-area:header}.challenge-is-game .challenge-arena{grid-area:arena;max-height:none;height:100%}.challenge-is-game .challenge-player-health{grid-area:player}.challenge-is-game .challenge-question-region{grid-area:question;align-self:start}.challenge-is-game .challenge-feedback{grid-area:feedback}
+ .challenge-is-game .challenge-choices{grid-template-columns:1fr 1fr}
+ .challenge-is-game .challenge-game-header{gap:4px;padding:3px 5px}.challenge-is-game .challenge-game-header h1{font-size:12px}.challenge-is-game .challenge-game-header .challenge-nav{min-width:36px;padding:4px;font-size:11px}
+ .challenge-is-game .challenge-mob{width:150px;max-height:170px}.challenge-is-game .challenge-health-label{gap:3px;font-size:10px}.challenge-is-game .challenge-health-label>span{font-size:9px}.challenge-is-game .challenge-enemy-health{padding:6px}
+ .challenge-is-game .is-dense .challenge-arena{height:100%;max-height:none;min-height:100px}.challenge-is-game .is-dense .challenge-game-header h1{font-size:12px}
+ .challenge-is-game .challenge-status{grid-column:1/-1;grid-row:5}
+}
+.challenge-is-game #challengeApp.has-overflow{height:auto;min-height:calc(var(--challenge-viewport-height,100dvh) - var(--game-pad-top) - var(--game-pad-bottom))}
+.challenge-is-game .has-overflow .challenge-arena{flex:0 0 150px}
+
+.challenge-is-game .challenge-choice{--choice-line-height:1.35}
+.challenge-is-game .is-compact .challenge-choice{--choice-line-height:1.35}
+.challenge-is-game .is-dense .challenge-choice{--choice-line-height:1.35}
+.challenge-choice-text{display:block;flex:1;min-width:0;overflow-x:auto;overflow-y:hidden;touch-action:pan-x pinch-zoom;scrollbar-width:none;-webkit-overflow-scrolling:touch;user-select:none}
+.challenge-choice-text::-webkit-scrollbar{display:none}
+.challenge-choice-track{display:block;width:100%;max-height:calc(2em * var(--choice-line-height,1.35));line-height:var(--choice-line-height,1.35);column-count:1;column-fill:auto;column-gap:12px;widows:1;orphans:1;overflow-wrap:anywhere;text-align:left}

@@ -11,12 +11,32 @@
   let inFlight=false,readInFlight=false,queuedAnswer=null,pending=null,pauseOperation=null,pauseIntent=false,homeIntent=false;
   let pollTimer=null,pollFailures=0,mapNeeded=false,message='',feedback='',feedbackTimer=null;
   let drawnQuestion=null,drawnMode='',lastHp=null;
+  let layoutFrame=null,layoutSignature='';
 
   function art(kind,level){return window.ChallengeArt?.[kind]?.(level)||'';}
   function svgNode(kind,level,cls){const node=make('span',cls);node.innerHTML=art(kind,level);node.setAttribute('aria-hidden','true');return node;}
   function scene(node,level){const url=art('sceneURL',level);if(url)node.style.backgroundImage='url("'+url.replace(/"/g,'%22')+'")';}
   function button(label,cls,action){const node=make('button',cls,label);node.type='button';node.addEventListener('click',action);return node;}
-  function clearTimers(){clearTimeout(pollTimer);pollTimer=null;clearTimeout(feedbackTimer);feedbackTimer=null;}
+  function clearTimers(){clearTimeout(pollTimer);pollTimer=null;clearTimeout(feedbackTimer);feedbackTimer=null;cancelAnimationFrame(layoutFrame);layoutFrame=null;}
+  function updateViewport(){
+    if(!active||!document.body.classList.contains('challenge-is-game'))return;
+    const height=Math.floor(Math.min(window.innerHeight,window.visualViewport?.height||window.innerHeight));
+    document.body.style.setProperty('--challenge-viewport-height',height+'px');layoutSignature='';queueLayout();
+  }
+  function queueLayout(){
+    if(layoutFrame!==null)return;
+    layoutFrame=requestAnimationFrame(()=>{
+      layoutFrame=null;if(!active||!document.body.classList.contains('challenge-is-game'))return;
+      const root=$('challengeApp'),signature=[run?.question?.id,run?.status,pauseIntent,homeIntent,message,root.clientWidth,window.visualViewport?.height||innerHeight].join('|');
+      if(signature===layoutSignature)return;
+      root.classList.remove('is-compact','is-dense','has-overflow');
+      if(root.scrollHeight>root.clientHeight+2)root.classList.add('is-compact');
+      if(root.scrollHeight>root.clientHeight+2)root.classList.add('is-dense');
+      // Future oversized content and accessibility zoom remain fully readable.
+      if(root.scrollHeight>root.clientHeight+2)root.classList.add('has-overflow');
+      layoutSignature=signature;
+    });
+  }
   function schedule(delay){
     clearTimeout(pollTimer);
     if(!active)return;
@@ -197,25 +217,49 @@
     return root;
   }
   function renderMap(){
-    const root=shell(),header=make('div','challenge-map-header'),copy=make('div');
-    copy.append(make('h1','','挑戦'));
-    header.append(copy,button('ホーム','challenge-nav',()=>leaveHome()));root.prepend(header);
-    const grid=make('div','challenge-map');grid.id='challengeMap';grid.setAttribute('aria-label','挑戦ステージ');
-    for(const entry of levels){
-      const level=entry.level,tile=button('','challenge-tile'+(entry.cleared?' is-cleared':'')+(!entry.unlocked?' is-locked':''),()=>start(level));
-      tile.dataset.level=String(level);tile.disabled=!entry.unlocked||inFlight||!!pending;
-      tile.setAttribute('aria-label','Lv.'+level+' '+titles[level-1]+(!entry.unlocked?' ロック中':entry.cleared?' クリア済み':''));
-      const image=make('span','challenge-tile-art');scene(image,level);
-      image.append(make('span','challenge-tile-level','Lv. '+level));
-      if(entry.cleared)image.append(svgNode('badgeSVG',level,'challenge-tile-badge'));
-      if(!entry.unlocked)image.append(make('span','challenge-lock','♜'));
-      const copy=make('span','challenge-tile-copy');copy.append(make('strong','',titles[level-1]),make('span','challenge-tile-reward',(level*100000).toLocaleString('ja-JP')+'轟'));
-      if(entry.cleared)copy.append(make('span','challenge-clear-check','✓ CLEAR'));
-      tile.append(image,copy);grid.append(tile);
+    const existing=drawnMode==='map'&&$('challengeMap');
+    const anchor=existing?[...document.querySelectorAll('.challenge-tile,.challenge-map-clearer-row')].find(node=>{const rect=node.getBoundingClientRect();return rect.bottom>0&&rect.top<innerHeight;}):null;
+    const anchorTop=anchor?.getBoundingClientRect().top;
+    const root=existing?$('challengeApp'):shell();
+    if(!existing){
+      const header=make('div','challenge-map-header'),copy=make('div');copy.append(make('h1','','挑戦'));
+      header.append(copy,button('ホーム','challenge-nav',()=>leaveHome()));root.prepend(header);
+      const grid=make('div','challenge-map');grid.id='challengeMap';grid.setAttribute('aria-label','挑戦ステージ');root.append(grid);
+      const loading=make('div','challenge-loading','ステージを読み込み中…');loading.id='challengeMapLoading';root.append(loading);
+      const clearers=make('section','challenge-map-clearers');clearers.id='challengeMapClearers';
+      const title=make('h2','','攻略者');title.id='challengeMapClearersTitle';clearers.setAttribute('aria-labelledby',title.id);clearers.append(title);
+      const list=make('ol','challenge-map-clearer-list');
+      for(let level=1;level<=10;level++){
+        const row=make('li','challenge-map-clearer-row');row.dataset.level=String(level);
+        const names=make('div','challenge-map-clearer-names');names.id='challengeMapClearers'+level;
+        row.append(make('h3','','Lv.'+level),names);list.append(row);
+      }
+      clearers.append(list);root.append(clearers);
+      const retryButton=button('再接続','secondary-button challenge-retry',retry);retryButton.id='challengeMapRetry';root.append(retryButton);
     }
-    root.append(grid);
-    if(!levels.length)root.append(make('div','challenge-loading','ステージを読み込み中…'));
-    if(pending||message)root.append(button(pending?'もう一度確認':'再接続','secondary-button challenge-retry',retry));
+    const grid=$('challengeMap');
+    for(const entry of levels){
+      const level=entry.level;
+      let tile=grid.querySelector('[data-level="'+level+'"]');
+      if(!tile){tile=button('','challenge-tile',()=>start(level));tile.dataset.level=String(level);grid.append(tile);}
+      tile.disabled=!entry.unlocked||inFlight||!!pending;
+      tile.setAttribute('aria-label','Lv.'+level+' '+titles[level-1]+(!entry.unlocked?' ロック中':entry.cleared?' クリア済み':''));
+      const state=entry.unlocked+':'+entry.cleared;
+      if(tile.dataset.state!==state){
+        tile.dataset.state=state;tile.classList.toggle('is-cleared',entry.cleared);tile.classList.toggle('is-locked',!entry.unlocked);
+        const image=make('span','challenge-tile-art');scene(image,level);image.append(make('span','challenge-tile-level','Lv. '+level));
+        if(entry.cleared)image.append(svgNode('badgeSVG',level,'challenge-tile-badge'));
+        if(!entry.unlocked)image.append(make('span','challenge-lock','♜'));
+        const copy=make('span','challenge-tile-copy');copy.append(make('strong','',titles[level-1]),make('span','challenge-tile-reward',(level*100000).toLocaleString('ja-JP')+'轟'));
+        if(entry.cleared)copy.append(make('span','challenge-clear-check','✓ CLEAR'));
+        tile.replaceChildren(image,copy);
+      }
+      const names=$('challengeMapClearers'+level),clearerNames=namesForLevel(level),key=JSON.stringify(clearerNames);
+      if(names.dataset.names!==key){names.dataset.names=key;renderNames(names,clearerNames);}
+    }
+    $('challengeMapLoading').hidden=levels.length>0;$('challengeMapClearers').hidden=!levels.length;
+    $('challengeMapRetry').hidden=!pending&&!message;$('challengeMapRetry').textContent=pending?'もう一度確認':'再接続';
+    if(anchor?.isConnected){const drift=anchor.getBoundingClientRect().top-anchorTop;if(Math.abs(drift)>1)window.scrollBy({top:drift,behavior:'instant'});}
   }
   function hp(role,label,value,max){
     const box=make('div','challenge-health challenge-health-'+role),heading=make('div','challenge-health-label');
@@ -238,6 +282,33 @@
     const feedbackNode=make('p','challenge-feedback');feedbackNode.id='challengeFeedback';feedbackNode.setAttribute('role','status');feedbackNode.setAttribute('aria-live','polite');root.append(feedbackNode);
     drawnQuestion=null;
   }
+  function wireChoice(option,viewport,questionId,choiceId){
+    let gesture=null,dragged=false;
+    const moved=event=>gesture&&(Math.abs(event.clientX-gesture.x)>7||Math.abs(event.clientY-gesture.y)>7||Math.abs(viewport.scrollLeft-gesture.scroll)>2);
+    option.addEventListener('pointerdown',event=>{
+      if(event.isPrimary===false||event.button!==0)return;
+      dragged=false;gesture={id:event.pointerId,x:event.clientX,y:event.clientY,scroll:viewport.scrollLeft,mouse:event.pointerType==='mouse',pan:viewport.contains(event.target)&&viewport.scrollWidth>viewport.clientWidth+1};
+      if(gesture.mouse&&gesture.pan)try{option.setPointerCapture(event.pointerId);}catch{}
+    });
+    option.addEventListener('pointermove',event=>{
+      if(!gesture||gesture.id!==event.pointerId)return;
+      if(moved(event))dragged=true;
+      if(dragged&&gesture.mouse&&gesture.pan){viewport.scrollLeft=gesture.scroll-(event.clientX-gesture.x);event.preventDefault();}
+    });
+    option.addEventListener('pointerup',event=>{if(gesture?.id===event.pointerId){if(moved(event))dragged=true;gesture=null;}});
+    option.addEventListener('pointercancel',()=>{dragged=true;gesture=null;});
+    viewport.addEventListener('scroll',()=>{if(gesture&&Math.abs(viewport.scrollLeft-gesture.scroll)>2)dragged=true;});
+    option.addEventListener('click',event=>{
+      if(event.detail!==0&&dragged){event.preventDefault();event.stopPropagation();return;}
+      answer(questionId,choiceId);
+    });
+    option.addEventListener('keydown',event=>{
+      if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)||viewport.scrollWidth<=viewport.clientWidth+1)return;
+      event.preventDefault();
+      if(event.key==='Home'||event.key==='End')viewport.scrollLeft=event.key==='Home'?0:viewport.scrollWidth;
+      else viewport.scrollLeft+=(event.key==='ArrowRight'?1:-1)*(viewport.clientWidth+12);
+    });
+  }
   function renderQuestion(){
     const region=$('challengeQuestionRegion'),paused=pauseIntent||run.status==='paused';
     if(paused){
@@ -259,8 +330,9 @@
       const prompt=make('h2','challenge-prompt',question.prompt);prompt.id='challengePrompt';
       const choices=make('div','challenge-choices');
       for(const [index,choice]of question.choices.entries()){
-        const option=button('','challenge-choice',()=>answer(question.id,choice.id));option.dataset.choice=choice.id;
-        option.append(make('span','challenge-choice-letter','ABCD'[index]),make('span','',choice.text));choices.append(option);
+        const option=make('button','challenge-choice');option.type='button';option.dataset.choice=choice.id;option.setAttribute('aria-label',choice.text);
+        const text=make('span','challenge-choice-text'),track=make('span','challenge-choice-track',choice.text);text.append(track);
+        option.append(make('span','challenge-choice-letter','ABCD'[index]),text);wireChoice(option,text,question.id,choice.id);choices.append(option);
       }
       region.append(prompt,choices);
     }
@@ -269,7 +341,7 @@
     if(pending&&!inFlight){const retryButton=button('同じ回答を確認','secondary-button challenge-answer-retry',retry);region.append(retryButton);}
   }
   function renderGame(){
-    if(drawnMode!=='game')buildGame();
+    if(drawnMode!=='game'){buildGame();updateViewport();}
     const background=art('sceneURL',run.level);
     if(background)document.body.style.setProperty('--challenge-scene','url("'+background.replace(/"/g,'%22')+'")');
     $('challengeEnemyHealth').replaceChildren(hp('enemy',mobs[run.level-1],run.enemyHp,run.enemyMaxHp));
@@ -281,16 +353,21 @@
     $('challengePause').disabled=pauseIntent||run.status==='paused';
     renderQuestion();$('challengeFeedback').textContent=pauseIntent?'':feedback;
     $('challengeStrike').style.setProperty('--attack-progress',String(Math.max(0,Math.min(1,(run.nextAttackInMs||0)/(run.attackIntervalMs||2000)))));
+    queueLayout();
+  }
+  function namesForLevel(level){
+    const names=levels.find(entry=>entry.level===level)?.clearers;
+    return [...new Set((Array.isArray(names)?names:[]).map(value=>typeof value==='string'?value:typeof value?.name==='string'?value.name:'').map(value=>value.trim()).filter(Boolean))];
+  }
+  function renderNames(root,names,empty='まだいません'){
+    root.replaceChildren();
+    if(!names.length){root.append(make('p','',empty));return;}
+    const list=make('ul');for(const name of names)list.append(make('li','',name));root.append(list);
   }
   function renderClearers(root){
-    const entry=levels.find(level=>level.level===run.level),names=Array.isArray(entry?.clearers)?entry.clearers:[];
+    const names=namesForLevel(run.level);
     const section=make('section','challenge-clearers');section.append(make('h2','','このレベルのクリア達成者'));
-    if(!names.length)section.append(make('p','',mapNeeded?'確認中…':'まだいません'));
-    else{
-      const list=make('ul');
-      for(const name of names){const text=typeof name==='string'?name:typeof name?.name==='string'?name.name:null;if(text)list.append(make('li','',text));}
-      section.append(list);
-    }
+    const content=make('div','challenge-clearer-content');renderNames(content,names,mapNeeded?'確認中…':'まだいません');section.append(content);
     root.append(section);
   }
   function renderResult(){
@@ -315,14 +392,14 @@
     if(terminal(run))mode='result';
     const next=mode==='game'&&run?'game':mode==='result'&&run?'result':'map';
     document.body.classList.toggle('challenge-is-game',next==='game');
-    if(next!=='game')document.body.style.removeProperty('--challenge-scene');
+    if(next!=='game'){document.body.style.removeProperty('--challenge-scene');document.body.style.removeProperty('--challenge-viewport-height');$('challengeApp').classList.remove('is-compact','is-dense','has-overflow');layoutSignature='';}
     if(next==='game')renderGame();else if(next==='result')renderResult();else renderMap();
     drawnMode=next;showMessage(message);
   }
   function close(){
     active=false;epoch++;clearTimers();callbacks={};identity=null;levels=[];run=null;queuedAnswer=null;pending=null;pauseOperation=null;pauseIntent=false;homeIntent=false;
-    inFlight=false;readInFlight=false;mode='map';mapNeeded=false;pollFailures=0;message='';feedback='';drawnMode='';drawnQuestion=null;lastHp=null;
-    document.body.classList.remove('challenge-is-game');document.body.style.removeProperty('--challenge-scene');$('challengeApp')?.replaceChildren();
+    inFlight=false;readInFlight=false;mode='map';mapNeeded=false;pollFailures=0;message='';feedback='';drawnMode='';drawnQuestion=null;lastHp=null;layoutSignature='';
+    document.body.classList.remove('challenge-is-game');document.body.style.removeProperty('--challenge-scene');document.body.style.removeProperty('--challenge-viewport-height');$('challengeApp')?.classList.remove('is-compact','is-dense','has-overflow');$('challengeApp')?.replaceChildren();
   }
   function open(member,options={}){
     close();if(!validId(member?.id)||typeof member.name!=='string')return;
@@ -334,5 +411,6 @@
     else if(pauseOperation)void retry();else if(pauseIntent&&run?.status==='playing')void confirmPause();else void refresh();
   });
   window.addEventListener('pagehide',()=>{if(active&&run?.status==='playing')requestPause();});
+  window.addEventListener('resize',updateViewport);window.visualViewport?.addEventListener('resize',updateViewport);
   window.TargetChallengeUI={open,close,leaveHome,refresh};
 })();
