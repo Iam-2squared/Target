@@ -1,4 +1,4 @@
--- Strict read-only postflight through 20261115124418_target_challenge_growing_specials_three_second_attacks,
+-- Strict read-only postflight through 20261115131403_target_challenge_special_animation_pause,
 -- preserving the latest Epic/Legendary financial projection.
 -- No fixture identities, secrets, rewards, cleanup, or wallet writes are performed.
 -- Quiz cleanup intentionally deletes answers after their retention period while
@@ -15,7 +15,7 @@ DECLARE item record; actual text; helper regprocedure; role_name text; charged b
  carry_digest text; expected_carry_digest text;
 BEGIN
  FOR item IN SELECT * FROM (VALUES
-  ('public.target_challenge_rpc(text,text,jsonb)','5dbf345b4430b6e8a5023cb94586e844',true),
+  ('public.target_challenge_rpc(text,text,jsonb)','b74f38f7d92fc6839eeaf854292f4f12',true),
   ('target_private.challenge_dto(uuid,uuid)','f4f5f936f9d5b046b6d9baee36512532',false),
   ('target_private.challenge_tick(uuid,timestamptz)','88458e872af0fd28593b35511ec9099a',false),
   ('target_private.challenge_storage_charge()','69be621da1580b84ed1d793cc7f95737',false),
@@ -152,6 +152,18 @@ BEGIN
     (q.response#>>'{answer,specialPower}')::integer<>0 OR
     ((q.response->'answer') ? 'specialPercent' AND (q.response#>>'{answer,specialPercent}')::integer IS DISTINCT FROM 0) END)) THEN
   RAISE EXCEPTION 'Challenge special-attack receipt damage is inconsistent'; END IF;
+ -- Older immutable receipts lack pause metadata. New receipts attest the pause
+ -- created by that answer; later current run state may legitimately differ.
+ IF EXISTS(SELECT 1 FROM target_private.challenge_requests q WHERE q.action='answer'
+  AND (q.response->'answer') ?| ARRAY['specialPaused','specialPausedAt'] AND (
+   NOT ((q.response->'answer') ?& ARRAY['specialPaused','specialPausedAt']) OR
+   jsonb_typeof(q.response#>'{answer,specialPaused}') IS DISTINCT FROM 'boolean' OR
+   CASE WHEN q.response#>>'{answer,specialPaused}'='true' THEN
+    q.response#>>'{answer,specialAttack}' IS DISTINCT FROM 'true' OR
+    jsonb_typeof(q.response#>'{answer,specialPausedAt}') IS DISTINCT FROM 'string' OR
+    q.response ? 'reward'
+   ELSE jsonb_typeof(q.response#>'{answer,specialPausedAt}') IS DISTINCT FROM 'null' END)) THEN
+  RAISE EXCEPTION 'Challenge special pause receipt metadata is inconsistent'; END IF;
  IF EXISTS(SELECT 1 FROM target_private.challenge_badges b LEFT JOIN target_private.challenge_runs r ON r.id=b.run_id
   WHERE r.id IS NULL OR r.status<>'won' OR r.member_id<>b.member_id OR r.level<>b.level OR NOT r.badge_awarded) OR
   EXISTS(SELECT 1 FROM target_private.challenge_badges b WHERE b.level>1 AND NOT EXISTS(

@@ -21,6 +21,7 @@ async function rpc(action,params={},actor=member,client=db,key=secret){
 }
 async function start(level=1,actor=member){const value=await rpc('start',{level},actor);ok(value.ok,JSON.stringify(value));return value.run;}
 async function supply(run,actor=member){
+ if(run.status==='paused')run=(await rpc('resume',{runId:run.id},actor)).run;
  if(run.status==='playing'&&!run.question){const value=await rpc('next',{runId:run.id,questions:questionBlock(run.level)},actor);ok(value.ok,JSON.stringify(value));return value.run;}
  return run;
 }
@@ -38,7 +39,7 @@ async function clear(level,actor=member){
   classical.number=100*(level-6)+1;
   eq((await rpc('next',{runId:r.id,questions:invalid},actor)).error.code,'CHALLENGE_INVALID_QUESTION','database rejects classical questions beyond this level\'s section');
  }
- for(let n=0;n<20*level&&r.status==='playing';n++){
+ for(let n=0;n<20*level&&['playing','paused'].includes(r.status);n++){
   r=await supply(r,actor);
   // Remove wall-clock test-machine speed from this deterministic combat check.
   await db.query("UPDATE target_private.challenge_runs SET next_attack_at=clock_timestamp()+interval '3 seconds' WHERE id=$1",[r.id]);
@@ -241,7 +242,8 @@ async function httpChecks(databaseUrl){
   value=await request('/api/challenge/state?runId='+run.id);eq(value.data.run.question,null);
   value=await request('/api/challenge/resume',{body:{requestId:uid(),runId:run.id}});eq(value.data.run.question.id,run.question.id);run=value.data.run;
   let submitted;
-  for(let n=0;n<20&&run.status==='playing';n++){
+  for(let n=0;n<20&&['playing','paused'].includes(run.status);n++){
+   if(run.status==='paused')run=(await request('/api/challenge/resume',{body:{requestId:uid(),runId:run.id,specialRequestId:submitted.requestId}})).data.run;
    const privateQ=(await db.query('SELECT questions->0 q FROM target_private.challenge_runs WHERE id=$1',[run.id])).rows[0].q;
    submitted={requestId:uid(),runId:run.id,questionId:privateQ.id,choiceId:privateQ.correctChoiceId};
    value=await request('/api/challenge/answer',{body:submitted});eq(value.status,200);eq(value.data.answer.correct,true);run=value.data.run;

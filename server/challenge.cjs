@@ -10,9 +10,11 @@ const invalid=()=>new HttpError(400,'送信内容を確認してください。'
 const uuid=x=>typeof x==='string'&&identity.UUID.test(x);
 function input(action,body){
  const keys=action==='start'?['requestId','level']:action==='answer'?['requestId','runId','questionId','choiceId']:['requestId','runId'];
+ if(action==='resume'&&body&&typeof body==='object'&&!Array.isArray(body)&&Object.hasOwn(body,'specialRequestId'))keys.push('specialRequestId');
  if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).length!==keys.length||keys.some(k=>!Object.hasOwn(body,k))||
    !uuid(body.requestId)||(action==='start'?(!Number.isInteger(body.level)||body.level<1||body.level>10):!uuid(body.runId))||
-   (action==='answer'&&(!uuid(body.questionId)||!uuid(body.choiceId))))throw invalid();
+   (action==='answer'&&(!uuid(body.questionId)||!uuid(body.choiceId)))||
+   (keys.includes('specialRequestId')&&!uuid(body.specialRequestId)))throw invalid();
  return body;
 }
 function query(url,action){

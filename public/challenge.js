@@ -14,6 +14,10 @@
   let drawnQuestion=null,drawnMode='',lastHp=null;
   let layoutFrame=null,layoutSignature='';
   let specialTimer=null,specialKey=null,specialFinishRunId=null;
+  let specialBeat=null,specialResume=null,manualPauseNeeded=false,canonicalNeeded=false;
+  let specialUnderlay=[];
+  let specialCancel=null;
+  let sessionChange=null;
   const shownSpecials=new Set();
 
   function art(kind,level){return window.ChallengeArt?.[kind]?.(level)||'';}
@@ -23,19 +27,96 @@
   function clearTimers(){clearTimeout(pollTimer);pollTimer=null;clearTimeout(feedbackTimer);feedbackTimer=null;cancelAnimationFrame(layoutFrame);layoutFrame=null;clearSpecial();}
   function clearSpecial(){
     clearTimeout(specialTimer);specialTimer=null;specialKey=null;
-    const effect=$('challengeSpecialHit');if(effect){effect.hidden=true;effect.replaceChildren();}
+    specialBeat=null;$('challengeSpecialHit')?.remove();document.body.classList.remove('challenge-special-open');
+    for(const item of specialUnderlay){if(!item.node.isConnected)continue;item.node.inert=item.inert;if(item.hidden===null)item.node.removeAttribute('aria-hidden');else item.node.setAttribute('aria-hidden',item.hidden);}
+    specialUnderlay=[];
   }
-  function specialHit(requestId,answer){
+  function specialHit(operation,data){
+    const requestId=operation.body.requestId,answer=data.answer;
     if(answer.specialAttack!==true||!validId(requestId)||shownSpecials.has(requestId)||
       !Number.isSafeInteger(answer.specialDamage)||answer.specialDamage<0)return false;
     shownSpecials.add(requestId);if(shownSpecials.size>128)shownSpecials.delete(shownSpecials.values().next().value);
-    if(!active||document.hidden||pauseIntent||homeIntent||retryLevel!==null||run?.status!=='playing')return false;
-    const effect=$('challengeSpecialHit');if(!effect)return false;
-    clearSpecial();void effect.offsetWidth;specialKey=requestId;
-    const label=make('span','challenge-special-label');label.append(make('strong','','必殺'),make('span','','−'+answer.specialDamage));effect.append(label);
-    effect.hidden=false;
-    specialTimer=setTimeout(()=>{if(specialKey===requestId)clearSpecial();},760);
+    const matching=run?.id===operation.body.runId;
+    const won=matching&&run.status==='won'&&Number.isSafeInteger(data.reward)&&data.reward>0;
+    const owned=matching&&run.status==='paused'&&answer.specialPaused===true&&typeof answer.specialPausedAt==='string'&&answer.specialPausedAt===run.updatedAt;
+    if(!active||document.hidden||pauseIntent||homeIntent||retryLevel!==null)return false;
+    if(!owned&&!won)return matching&&run.status==='playing'&&data.replayed!==true&&answer.specialPaused!==true;
+    clearSpecial();clearTimeout(pollTimer);pollTimer=null;queuedAnswer=null;specialKey=requestId;mode='game';
+    const tier=answer.specialDamage<50?1:answer.specialDamage<150?2:answer.specialDamage<300?3:4;
+    const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches,duration=reduced?900:[900,1200,1500,1800][tier-1];
+    specialBeat={requestId,runId:run.id,epoch,pausedAt:answer.specialPausedAt,won,tier,duration};
+    const effect=make('section','challenge-special-screen tier-'+tier);effect.id='challengeSpecialHit';effect.dataset.tier=String(tier);
+    effect.setAttribute('role','dialog');effect.setAttribute('aria-modal','true');effect.setAttribute('aria-label','必殺 −'+answer.specialDamage);effect.style.setProperty('--special-duration',duration+'ms');scene(effect,run.level);
+    const stop=button('中止','challenge-special-stop',requestPause);effect.append(stop);
+    const stage=make('div','challenge-special-stage');stage.setAttribute('aria-hidden','true');stage.append(svgNode('mobSVG',run.level,'challenge-special-enemy'));
+    const rings=make('div','challenge-special-rings');for(let i=0;i<tier;i++){const ring=make('i');ring.style.setProperty('--i',String(i));rings.append(ring);}stage.append(rings);
+    for(let i=0;i<(tier>2?2:1);i++){const slash=make('i','challenge-special-slash');slash.style.setProperty('--i',String(i));stage.append(slash);}
+    for(let i=0;i<(tier-1)*2;i++){const shard=make('i','challenge-special-shard');shard.style.setProperty('--i',String(i));stage.append(shard);}
+    const label=make('div','challenge-special-label');label.append(make('strong','','必殺'),make('span','','−'+answer.specialDamage));stage.append(label);effect.append(stage);
+    specialUnderlay=[...document.body.children].filter(node=>node instanceof HTMLElement&&node.tagName!=='SCRIPT').map(node=>({node,inert:node.inert,hidden:node.getAttribute('aria-hidden')}));
+    for(const item of specialUnderlay){item.node.inert=true;item.node.setAttribute('aria-hidden','true');}
+    document.body.append(effect);document.body.classList.add('challenge-special-open');
+    effect.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();requestPause();}else if(event.key==='Tab'){event.preventDefault();stop.focus();}});
+    stop.focus({preventScroll:true});
+    specialTimer=setTimeout(()=>finishSpecial(requestId),duration);
     return true;
+  }
+  function finishSpecial(requestId){
+    const beat=specialBeat;if(!beat||beat.requestId!==requestId||beat.epoch!==epoch||!active)return;
+    if(document.hidden||pauseIntent||homeIntent||retryLevel!==null){requestPause();return;}
+    const owned=run?.id===beat.runId&&run.status==='paused'&&run.updatedAt===beat.pausedAt;
+    clearSpecial();render();
+    if(beat.won){afterRequest();return;}
+    if(!owned){canonicalNeeded=true;afterRequest();return;}
+    specialResume={action:'resume',autoSpecial:true,body:{requestId:uuid(),runId:beat.runId,specialRequestId:beat.requestId}};
+    void perform(specialResume);
+  }
+  function invalidateSpecial({force=false}={}){
+    const runId=specialResume?.body.runId||specialBeat?.runId||specialCancel?.runId;
+    if(!active||!validId(runId))return;
+    if(run?.id===runId&&terminal(run)&&!specialResume&&!pending?.autoSpecial)return;
+    if(specialResume)specialResume.cancelled=true;
+    if(pending?.autoSpecial)pending.cancelled=true;
+    if(!specialCancel||specialCancel.runId!==runId)specialCancel={runId,body:{requestId:uuid(),runId},promise:null,confirmed:false,retryAt:0,timer:null,data:null};
+    const cancellation=specialCancel,lease=epoch;
+    if(specialResume?.cancelled)specialResume.controller?.abort();
+    if(cancellation.confirmed||cancellation.promise)return;
+    clearTimeout(cancellation.timer);
+    if(!force&&cancellation.retryAt>Date.now()){cancellation.timer=setTimeout(()=>invalidateSpecial(),cancellation.retryAt-Date.now());return;}
+    cancellation.promise=(async()=>{
+      try{
+        const data=await api('pause',cancellation.body,{keepalive:true}),next=checkRun(data.run);
+        if(!next||next.id!==runId||!['paused','won','lost','aborted'].includes(next.status))throw new Error('一時停止を確認できませんでした。');
+        cancellation.confirmed=true;cancellation.data=data;
+        if(!active||lease!==epoch||specialCancel!==cancellation)return;
+        accept(data);manualPauseNeeded=false;pollFailures=0;showMessage('');
+        settleSessionChange();render();
+      }catch(error){
+        if(!active||lease!==epoch||specialCancel!==cancellation)return;
+        handleError(error);if(!active||lease!==epoch||specialCancel!==cancellation)return;
+        cancellation.retryAt=Date.now()+Math.max(backoff(),error.status===429?error.retryAfterMs:0);
+        cancellation.timer=setTimeout(()=>invalidateSpecial(),Math.max(0,cancellation.retryAt-Date.now()));render();
+      }finally{
+        cancellation.promise=null;
+        if(active&&lease===epoch&&specialCancel===cancellation)afterRequest();
+      }
+    })();
+  }
+  function settleSessionChange(){
+    if(!sessionChange)return;
+    const guarded=pending?.autoSpecial&&pending.cancelled&&specialCancel?.confirmed;
+    if(inFlight&&!guarded||pending&&!guarded||pauseOperation||manualPauseNeeded||specialBeat)return;
+    if(run&&!terminal(run)&&run.status!=='paused')return;
+    const change=sessionChange;sessionChange=null;clearTimeout(change.timer);change.resolve();
+  }
+  function prepareSessionChange(){
+    clearSpecial();queuedAnswer=null;homeIntent=false;retryLevel=null;exitDestination='app';
+    if(pending!==retryStart)retryStart=null;
+    if(!active||(!run&&!pending)||(terminal(run)&&!pending))return Promise.resolve();
+    if(sessionChange)return sessionChange.promise;
+    let resolve,reject;const promise=new Promise((yes,no)=>{resolve=yes;reject=no;});
+    const timer=setTimeout(()=>{if(sessionChange?.promise!==promise)return;sessionChange=null;reject(new Error('一時停止を確認できませんでした。もう一度お試しください。'));},20000);
+    sessionChange={promise,resolve,reject,timer};requestPause();settleSessionChange();return promise;
   }
   function backoff(){return Math.min(15000,1200*2**Math.min(4,pollFailures));}
   function updateViewport(){
@@ -59,7 +140,7 @@
   }
   function schedule(delay){
     clearTimeout(pollTimer);
-    if(!active)return;
+    if(!active||specialBeat)return;
     const wait=delay??(pollFailures?backoff():run?.status==='playing'?650:run?.status==='paused'?8000:20000);
     pollTimer=setTimeout(()=>void refresh(),wait);
   }
@@ -89,8 +170,8 @@
     }
     return error;
   }
-  async function api(action,body,{keepalive=false}={}){
-    const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),12000);
+  async function api(action,body,{keepalive=false,controller=new AbortController()}={}){
+    const timeout=setTimeout(()=>controller.abort(),12000);
     try{
       const response=await fetch('/api/challenge/'+action,{method:body===undefined?'GET':'POST',credentials:'same-origin',cache:'no-store',redirect:'error',keepalive,
         headers:body===undefined?{Accept:'application/json'}:{Accept:'application/json','Content-Type':'application/json'},
@@ -122,6 +203,7 @@
     if(terminal(run)){
       if(!homeIntent&&retryLevel===null)mode='result';
       pauseIntent=false;pauseOperation=null;pending=null;
+      manualPauseNeeded=false;specialResume=null;
       if(!map&&run.status!=='aborted')mapNeeded=true;
     }
   }
@@ -131,12 +213,14 @@
     showMessage(error.message+(homeIntent?' 終了の確認待ちです。':pauseIntent?' 停止の確認待ちです。':''));
   }
   async function refresh(){
-    if(!active||inFlight)return;
-    if(pauseIntent&&['start','resume'].includes(pending?.action)){replayPending();return;}
+    if(!active||inFlight||specialBeat)return;
+    if(specialCancel){afterRequest();return;}
+    if(pauseIntent&&['start','resume'].includes(pending?.action)&&!pending.autoSpecial){replayPending();return;}
     if(homeIntent&&pending?.action==='abort'){void perform(pending);return;}
-    if(pauseIntent&&run?.status==='playing'){void confirmPause();return;}
+    if(pauseIntent&&run&&(run.status==='playing'||manualPauseNeeded)){void confirmPause();return;}
     if(homeIntent&&(!run||terminal(run))&&!pending&&!pauseOperation){afterRequest();return;}
     if(pending===retryStart&&retryStart?.retryAt&&!document.hidden){replayPending();return;}
+    if(pending===specialResume&&specialResume?.retryAt&&!document.hidden&&!pauseIntent&&!homeIntent){const delay=specialResume.retryAt-Date.now();if(delay>0)schedule(delay);else void perform(specialResume);return;}
     if(pending?.action==='answer'&&pending.retryAt&&!document.hidden&&!pauseIntent&&!homeIntent&&run?.status==='playing'&&
       run.id===pending.body.runId&&run.question?.id===pending.body.questionId){
       const delay=pending.retryAt-Date.now();if(delay>0){schedule(delay);return;}
@@ -151,20 +235,27 @@
       const data=await api(useMap?'map':'state?runId='+encodeURIComponent(run.id));
       if(!active||lease!==epoch)return;
       if(useMap)mapNeeded=false;
+      canonicalNeeded=false;
       accept(data,{map:useMap});pollFailures=0;showMessage('');
     }catch(error){if(active&&lease===epoch)handleError(error);}
     finally{if(active&&lease===epoch){inFlight=false;readInFlight=false;render();afterRequest();}}
   }
   function afterRequest(){
-    if(!active||inFlight)return;
+    if(!active||inFlight||specialBeat)return;
+    if(specialCancel){
+      if(!specialCancel.confirmed){if(!specialCancel.promise)invalidateSpecial();return;}
+      clearTimeout(specialCancel.timer);if(pending?.autoSpecial)pending=null;specialResume=null;specialCancel=null;manualPauseNeeded=false;render();
+    }
+    settleSessionChange();
     // Resolve an uncertain start/resume receipt before pausing. A delayed
     // original must not arrive after our pause and restart the clock offscreen.
-    if(pauseIntent&&['start','resume'].includes(pending?.action)){if(pollFailures)schedule(Math.max(backoff(),(pending.retryAt||0)-Date.now()));else replayPending();return;}
+    if(pauseIntent&&['start','resume'].includes(pending?.action)&&!pending.autoSpecial){if(pollFailures)schedule(Math.max(backoff(),(pending.retryAt||0)-Date.now()));else replayPending();return;}
     if(homeIntent&&pending?.action==='abort'){if(pollFailures)schedule();else void perform(pending);return;}
-    if(pauseIntent&&run?.status==='playing'){if(pauseOperation&&pollFailures)schedule();else void confirmPause();return;}
+    if(pauseIntent&&run&&(run.status==='playing'||manualPauseNeeded)){if(pauseOperation&&pollFailures)schedule();else void confirmPause();return;}
     if(homeIntent&&run?.status==='paused'&&!pending&&!pauseOperation){void perform({action:'abort',body:{requestId:uuid(),runId:run.id}});return;}
     if(homeIntent&&(!run||terminal(run))&&!pending&&!pauseOperation){finishExit();return;}
     if(pending===retryStart&&retryStart?.retryAt){schedule(Math.max(0,retryStart.retryAt-Date.now()));return;}
+    if(pending===specialResume&&specialResume?.retryAt){schedule(Math.max(0,specialResume.retryAt-Date.now()));return;}
     if(pending?.action==='answer'&&pending.retryAt){schedule(Math.max(0,pending.retryAt-Date.now()));return;}
     if(queuedAnswer){
       const queued=queuedAnswer,fields=queued.operation.body;queuedAnswer=null;
@@ -174,6 +265,7 @@
       }
       render();
     }
+    if(canonicalNeeded&&!pending&&!pauseOperation){schedule(pollFailures?backoff():0);return;}
     if(mapNeeded&&!pending&&!pauseOperation){schedule(0);return;}
     schedule();
   }
@@ -200,37 +292,43 @@
     if(!active||inFlight)return;
     inFlight=true;readInFlight=false;clearTimeout(pollTimer);const lease=epoch;
     if(operation.action==='start')specialFinishRunId=null;
-    if(operation.action==='answer'||operation===retryStart){delete operation.retryAt;delete operation.rateLimitedUntil;}
+    if(operation.action==='answer'||operation===retryStart||operation.autoSpecial){delete operation.retryAt;delete operation.rateLimitedUntil;}
+    if(operation.autoSpecial)operation.controller=new AbortController();
     if(operation.action!=='pause')pending=operation;
     render();
     try{
-      const data=await api(operation.action,operation.body,{keepalive:['pause','abort'].includes(operation.action)});
+      const data=await api(operation.action,operation.body,{keepalive:['pause','abort'].includes(operation.action),...(operation.autoSpecial?{controller:operation.controller}:{})});
       if(!active||lease!==epoch)return;
+      if(operation.autoSpecial&&operation.cancelled){if(pending===operation)pending=null;specialResume=null;canonicalNeeded=true;return;}
       if(operation.action==='abort'&&!terminal(checkRun(data.run)))throw new Error('終了状態を確認できませんでした。');
       if(operation===retryStart){const next=checkRun(data.run);if(!next||next.level!==operation.body.level||next.id===run?.id)throw new Error('リトライを確認できませんでした。');}
-      if(operation.action==='pause'){pauseOperation=null;pending=null;}
+      if(operation.action==='pause'){pauseOperation=null;pending=null;manualPauseNeeded=false;specialResume=null;}
       else pending=null;
       if(operation.action==='resume')drawnQuestion=null;
+      if(operation.autoSpecial)specialResume=null;
       if(operation.action==='start'){clearSpecial();specialFinishRunId=null;mode='game';feedback='';drawnMode='';}
       if(operation===retryStart){retryStart=null;retryLevel=null;lastHp=null;if(!homeIntent)exitDestination='app';}
       accept(data);pollFailures=0;showMessage('');
       if(operation.action==='answer'&&data.answer){
-        const a=data.answer,freshSpecial=specialHit(operation.body.requestId,a);
+        const a=data.answer,freshSpecial=specialHit(operation,data);
         if(a.specialAttack===true&&run?.status==='won'&&run.id===operation.body.runId&&Number.isSafeInteger(data.reward)&&data.reward>0)specialFinishRunId=run.id;
         feedback=a.specialAttack===true?(freshSpecial?'必殺 · −'+a.specialDamage:''):a.correct?(a.streakBonus?'5 COMBO · HP +'+(a.healedHp||0):'GOOD · −5'):'MISS · HP −10';
         clearTimeout(feedbackTimer);feedbackTimer=setTimeout(()=>{feedback='';const node=$('challengeFeedback');if(node)node.textContent='';},1000);
       }
     }catch(error){
       if(active&&lease===epoch){
+        if(operation.autoSpecial&&operation.cancelled){if(pending===operation)pending=null;specialResume=null;canonicalNeeded=true;return;}
         if(operation.action!=='abort'&&[400,404,409].includes(error.status)){
           if(operation.action==='pause')pauseOperation=null;else pending=null;
           // Read the authoritative question after an already accepted answer.
           if(operation.action==='answer'){drawnQuestion=null;if(run?.status==='playing')run={...run,question:null};}
           if(operation.action==='start'){run=null;mapNeeded=true;}
           if(operation===retryStart){retryStart=null;retryLevel=null;homeIntent=true;exitDestination='map';}
+          if(operation.autoSpecial){specialResume=null;canonicalNeeded=true;}
         }
         handleError(error);
-        if(active&&lease===epoch&&pending===operation&&(operation.action==='answer'||operation===retryStart)&&
+        if(operation.autoSpecial&&error.status===409)pollFailures=0;
+        if(active&&lease===epoch&&pending===operation&&(operation.action==='answer'||operation===retryStart||operation.autoSpecial)&&
           (error.status===503||error.status===429||error.transient===true)){
           operation.retryAt=Date.now()+Math.max(backoff(),error.status===429?error.retryAfterMs:0);
           if(error.status===429)operation.rateLimitedUntil=operation.retryAt;
@@ -239,31 +337,35 @@
     }finally{if(active&&lease===epoch){inFlight=false;render();afterRequest();}}
   }
   function start(level){
-    if(!active||inFlight||pending||homeIntent||!levels.some(l=>l.level===level&&l.unlocked))return;
+    if(!active||specialBeat||inFlight||pending||homeIntent||!levels.some(l=>l.level===level&&l.unlocked))return;
     pauseIntent=false;homeIntent=false;void perform({action:'start',body:{requestId:uuid(),level}});
   }
   function answer(questionId,choiceId){
-    if(!active||pending||queuedAnswer||pauseIntent||homeIntent||retryLevel!==null||run?.status!=='playing'||run.question?.id!==questionId||
+    if(!active||specialBeat||pending||queuedAnswer||pauseIntent||homeIntent||retryLevel!==null||run?.status!=='playing'||run.question?.id!==questionId||
       !run.question.choices.some(choice=>choice.id===choiceId)||inFlight&&!readInFlight)return;
     const operation={action:'answer',body:{requestId:uuid(),runId:run.id,questionId,choiceId}};
     if(readInFlight){queuedAnswer={operation,epoch};render();return;}
     void perform(operation);
   }
   function requestPause(){
+    if(specialBeat||specialResume||specialCancel)invalidateSpecial({force:true});
     clearSpecial();
     queuedAnswer=null;
-    if(!active||terminal(run)&&pending?.action!=='start'&&retryLevel===null)return;
-    pauseIntent=true;feedback='';drawnQuestion=null;
+    if(!active)return;
+    if(terminal(run)&&pending?.action!=='start'&&retryLevel===null){render();afterRequest();return;}
+    pauseIntent=true;manualPauseNeeded=!specialCancel?.confirmed;feedback='';drawnQuestion=null;
     if(run)run={...run,question:null};
     render();
-    if(!inFlight){if(['start','resume'].includes(pending?.action))replayPending();else void confirmPause();}
+    if(!inFlight){if(specialCancel)afterRequest();else if(['start','resume'].includes(pending?.action)&&!pending.autoSpecial)replayPending();else void confirmPause();}
   }
   function confirmPause(){
-    if(!active||inFlight||!run||run.status!=='playing'||pending?.action==='resume')return;
+    if(!active||inFlight||!run||run.status!=='playing'&&!manualPauseNeeded||pending?.action==='resume'&&!pending.autoSpecial)return;
     if(!pauseOperation)pauseOperation={action:'pause',body:{requestId:uuid(),runId:run.id}};
     return perform(pauseOperation);
   }
   function resume(){
+    if(specialBeat){requestPause();return;}
+    if(specialCancel){invalidateSpecial();return;}
     if(inFlight||!active)return;
     if(homeIntent||retryLevel!==null){retry();return;}
     if(pauseOperation){void perform(pauseOperation);return;}
@@ -276,7 +378,9 @@
   function restart(){if(!active||homeIntent||retryLevel!==null||!run)return;beginExit('retry',run.level);}
   function beginExit(destination,level=null){
     if(!active)return;
+    if(specialBeat||specialResume||specialCancel)invalidateSpecial({force:true});
     clearSpecial();specialFinishRunId=null;
+    if(pending?.autoSpecial){pauseIntent=true;manualPauseNeeded=true;}
     exitDestination=destination;retryLevel=destination==='retry'?level:null;
     homeIntent=true;queuedAnswer=null;
     if(pending?.action==='abort'){if(!inFlight)void perform(pending);return;}
@@ -293,7 +397,7 @@
     run=null;mode='map';pauseIntent=false;pauseOperation=null;feedback='';drawnMode='';mapNeeded=true;
     render();void refresh();
   }
-  function retry(){if(inFlight)return;if(pauseOperation)void perform(pauseOperation);else if(pending){if(pending.rateLimitedUntil>Date.now()){schedule(pending.rateLimitedUntil-Date.now());return;}void perform(pending);}else if(homeIntent)afterRequest();else if(pauseIntent)void confirmPause();else void refresh();}
+  function retry(){if(specialCancel){invalidateSpecial();return;}if(inFlight)return;if(pauseOperation)void perform(pauseOperation);else if(pending){if(pending.rateLimitedUntil>Date.now()){schedule(pending.rateLimitedUntil-Date.now());return;}void perform(pending);}else if(homeIntent)afterRequest();else if(pauseIntent)void confirmPause();else void refresh();}
 
   function shell(){
     const root=$('challengeApp');root.replaceChildren();
@@ -362,8 +466,7 @@
     const enemy=make('div','challenge-enemy-health');enemy.id='challengeEnemyHealth';
     const mob=svgNode('mobSVG',level,'challenge-mob');mob.id='challengeMob';
     const strike=make('div','challenge-strike');strike.id='challengeStrike';strike.setAttribute('aria-hidden','true');
-    const special=make('div','challenge-special-hit');special.id='challengeSpecialHit';special.hidden=true;special.setAttribute('aria-hidden','true');
-    arena.append(enemy,mob,strike,special);root.append(arena);
+    arena.append(enemy,mob,strike);root.append(arena);
     const player=make('div','challenge-player-health');player.id='challengePlayerHealth';root.append(player);
     const region=make('section','challenge-question-region');region.id='challengeQuestionRegion';region.setAttribute('aria-label','問題と選択肢');root.append(region);
     const feedbackNode=make('p','challenge-feedback');feedbackNode.id='challengeFeedback';feedbackNode.setAttribute('role','status');feedbackNode.setAttribute('aria-live','polite');root.append(feedbackNode);
@@ -397,16 +500,16 @@
     });
   }
   function renderQuestion(){
-    const region=$('challengeQuestionRegion'),paused=pauseIntent||run.status==='paused'||homeIntent||retryLevel!==null;
+    const region=$('challengeQuestionRegion'),paused=pauseIntent||run.status==='paused'||homeIntent||retryLevel!==null||!!specialBeat;
     if(paused){
       // Remove the question and choices at once. The opaque panel never relies on blur.
       region.replaceChildren();drawnQuestion=null;region.classList.add('is-paused');
       const panel=make('div','challenge-pause-panel');panel.setAttribute('role','group');panel.setAttribute('aria-label','一時停止');
-      const confirmed=run.status==='paused'&&!pauseOperation;
+      const confirmed=run.status==='paused'&&!pauseOperation&&!manualPauseNeeded&&!specialCancel;
       const transitioning=homeIntent||retryLevel!==null;
       panel.append(make('h2','',retryLevel!==null?'リトライを確認中…':homeIntent?'終了を確認中…':confirmed?'PAUSED':'停止を確認中…'));
-      const next=button(transitioning?'再接続':confirmed?'続ける':pauseOperation&&!inFlight?'再接続':'続ける','primary-button',transitioning?retry:resume);
-      next.id='challengeResume';next.disabled=inFlight||!transitioning&&!confirmed&&!pauseOperation;
+      const next=button(transitioning||specialCancel?'再接続':confirmed?'続ける':pauseOperation&&!inFlight?'再接続':'続ける','primary-button',transitioning||specialCancel?retry:resume);
+      next.id='challengeResume';next.disabled=inFlight||!!specialCancel?.promise||!transitioning&&!confirmed&&!pauseOperation&&!specialCancel;
       const again=button('リトライ','secondary-button',restart);again.id='challengeRestart';again.disabled=inFlight||transitioning;
       const homeButton=button('ホーム','secondary-button',leaveMap);homeButton.id='challengeHome';homeButton.disabled=inFlight;
       panel.append(next,again,homeButton);region.append(panel);return;
@@ -431,7 +534,6 @@
   }
   function renderGame(){
     if(drawnMode!=='game'){buildGame();updateViewport();}
-    if(pauseIntent||homeIntent||retryLevel!==null||run.status!=='playing')clearSpecial();
     const background=art('sceneURL',run.level);
     if(background)document.body.style.setProperty('--challenge-scene','url("'+background.replace(/"/g,'%22')+'")');
     $('challengeEnemyHealth').replaceChildren(hp('enemy',mobs[run.level-1],run.enemyHp,run.enemyMaxHp));
@@ -479,7 +581,7 @@
   }
   function render(){
     if(!active)return;
-    if(terminal(run)&&!homeIntent&&retryLevel===null)mode='result';
+    if(terminal(run)&&!specialBeat&&!homeIntent&&retryLevel===null)mode='result';
     const next=mode==='game'&&run?'game':mode==='result'&&run?'result':'map';
     document.body.classList.toggle('challenge-is-game',next==='game');
     if(next!=='game'){clearSpecial();document.body.style.removeProperty('--challenge-scene');document.body.style.removeProperty('--challenge-viewport-height');$('challengeApp').classList.remove('is-compact','is-dense','has-overflow');layoutSignature='';}
@@ -487,7 +589,10 @@
     drawnMode=next;showMessage(message);
   }
   function close(){
-    active=false;epoch++;clearTimers();shownSpecials.clear();specialFinishRunId=null;callbacks={};identity=null;levels=[];run=null;queuedAnswer=null;pending=null;pauseOperation=null;pauseIntent=false;homeIntent=false;exitDestination='app';retryLevel=null;retryStart=null;
+    if(active&&(specialBeat||specialResume||specialCancel))invalidateSpecial({force:true});
+    if(sessionChange){const change=sessionChange;sessionChange=null;clearTimeout(change.timer);if(!inFlight&&!pending&&!manualPauseNeeded&&(!run||terminal(run)||run.status==='paused'))change.resolve();else change.reject(new Error('一時停止を確認できませんでした。もう一度お試しください。'));}
+    if(specialCancel)clearTimeout(specialCancel.timer);
+    active=false;epoch++;clearTimers();shownSpecials.clear();specialFinishRunId=null;specialResume=null;specialCancel=null;manualPauseNeeded=false;canonicalNeeded=false;callbacks={};identity=null;levels=[];run=null;queuedAnswer=null;pending=null;pauseOperation=null;pauseIntent=false;homeIntent=false;exitDestination='app';retryLevel=null;retryStart=null;
     inFlight=false;readInFlight=false;mode='map';mapNeeded=false;pollFailures=0;message='';feedback='';drawnMode='';drawnQuestion=null;lastHp=null;layoutSignature='';
     document.body.classList.remove('challenge-is-game');document.body.style.removeProperty('--challenge-scene');document.body.style.removeProperty('--challenge-viewport-height');$('challengeApp')?.classList.remove('is-compact','is-dense','has-overflow');$('challengeApp')?.replaceChildren();
   }
@@ -497,10 +602,10 @@
   }
   document.addEventListener('visibilitychange',()=>{
     if(!active)return;
-    if(document.hidden){if(run?.status==='playing'||inFlight&&mode==='map'||['start','resume'].includes(pending?.action))requestPause();}
+    if(document.hidden){if(specialBeat||specialResume||run?.status==='playing'||inFlight&&mode==='map'||['start','resume'].includes(pending?.action))requestPause();}
     else if(pauseOperation)void retry();else if(pauseIntent&&run?.status==='playing')void confirmPause();else void refresh();
   });
-  window.addEventListener('pagehide',()=>{if(active&&run?.status==='playing')requestPause();});
+  window.addEventListener('pagehide',()=>{if(active&&(specialBeat||specialResume||run?.status==='playing'))requestPause();});
   window.addEventListener('resize',updateViewport);window.visualViewport?.addEventListener('resize',updateViewport);
-  window.TargetChallengeUI={open,close,leaveHome,refresh};
+  window.TargetChallengeUI={open,close,leaveHome,refresh,prepareSessionChange};
 })();

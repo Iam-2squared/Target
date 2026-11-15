@@ -702,6 +702,7 @@
     if(!/^[0-9]{1,2}$/.test($('attendanceNumber').value)||!((attendanceNumber>=1&&attendanceNumber<=40)||attendanceNumber===99)||!/^[0-9]{4}$/.test(accountPin)){setError('settingsError','出席番号と4桁のPINを確認してください。');return;}
     loginPending=true;for(const id of ['attendanceNumber','accountPin','pinVisibility','loginButton'])$(id).disabled=true;$('loginButton').textContent='ログイン中…';
     try {
+      await window.TargetChallengeUI?.prepareSessionChange?.();
       const identity=parseIdentity(await api('/login',{attendanceNumber,accountPin}));if(!identity.member)throw appError('ログイン情報を確認できませんでした。');
       clearRewardCelebration();bonus.reset();clearMastery();sessionEpoch++;sessionTicket++;resetWallet();member=identity.member;lifetimeCorrect=identity.correctCount;applyWallet(identity);sessionKnown=true;bonus.update(identity.bonus,identity.timing);$('accountPin').value='';$('attendanceNumber').value='';setPinVisible(false);$('connectionNotice').hidden=true;renderIdentity();$('settingsStatus').textContent='ログインしました。';
       window.TargetChallengeUI?.close();if(activeView==='challenge')home();
@@ -713,6 +714,7 @@
   async function logout() {
     if(loginPending||logoutPending)return;logoutPending=true;$('logoutButton').disabled=true;setError('settingsError');$('settingsStatus').textContent='';
     try {
+      await window.TargetChallengeUI?.prepareSessionChange?.();
       await api('/logout',{});clearRewardCelebration();bonus.reset();clearMastery();sessionEpoch++;sessionTicket++;member=null;lifetimeCorrect=0;resetWallet();sessionKnown=true;$('accountPin').value='';$('attendanceNumber').value='';setPinVisible(false);renderIdentity();$('settingsStatus').textContent='ログアウトしました。';
       if(activeView==='mastery')void loadMastery();
       if(activeView==='quiz'&&quiz?.recorded){quiz=null;home();}
