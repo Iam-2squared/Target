@@ -1,4 +1,4 @@
--- Strict read-only postflight through 20261115150438_target_challenge_progress_reset_and_late_level_pace,
+-- Strict read-only postflight through 20261115232731_target_challenge_three_lifetime_rewarded_clears,
 -- preserving the latest Epic/Legendary financial projection.
 -- No fixture identities, secrets, rewards, cleanup, or wallet writes are performed.
 -- Quiz cleanup intentionally deletes answers after their retention period while
@@ -15,8 +15,8 @@ DECLARE item record; actual text; helper regprocedure; role_name text; charged b
  carry_digest text; expected_carry_digest text;
 BEGIN
  FOR item IN SELECT * FROM (VALUES
-  ('public.target_challenge_rpc(text,text,jsonb)','6bcffc66c8f4cf01aab57219ff140aae',true),
-  ('target_private.challenge_dto(uuid,uuid)','d0fdbe59478a7ebc3b479dc854090e29',false),
+  ('public.target_challenge_rpc(text,text,jsonb)','389b08b44def976556235f3efaff5c52',true),
+  ('target_private.challenge_dto(uuid,uuid)','331e412e43afba33ef27123bcded9bce',false),
   ('target_private.challenge_tick(uuid,timestamptz)','a81f2b827c4146ada04e2240a49cfc52',false),
   ('target_private.challenge_storage_charge()','71d4ba2553f5ef56ca0ebc65063f42d9',false),
   ('target_private.wallet_finance_projection(timestamptz)','bd93399757a066fdfb8f35e7e29af2dc',false)
@@ -32,6 +32,10 @@ BEGIN
    END LOOP;
   END IF;
  END LOOP;
+ IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='target_private.challenge_runs'::regclass
+  AND conname='challenge_runs_check3' AND pg_get_constraintdef(oid)=
+   'CHECK (((status <> ''won''::text) OR ((enemy_hp = 0) AND ((reward = 0) OR (reward = (level * 100000))))))') THEN
+  RAISE EXCEPTION 'Challenge zero-reward won-run constraint changed'; END IF;
  IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='target_private.challenge_requests'::regclass
   AND conname='challenge_requests_response_check'
   AND pg_get_constraintdef(oid)='CHECK (((jsonb_typeof(response) = ''object''::text) AND (pg_column_size(response) <= 16384)))') THEN
@@ -128,8 +132,33 @@ BEGIN
  IF EXISTS(SELECT 1 FROM target_private.challenge_reward_events e LEFT JOIN target_private.challenge_runs r ON r.id=e.run_id
   WHERE r.id IS NULL OR r.member_id<>e.member_id OR r.level<>e.level OR r.status<>'won' OR r.reward<>e.amount OR e.amount<>e.level*100000) OR
   EXISTS(SELECT 1 FROM target_private.challenge_runs r LEFT JOIN target_private.challenge_reward_events e ON e.run_id=r.id
-   WHERE (r.status='won' AND e.run_id IS NULL) OR (r.status<>'won' AND e.run_id IS NOT NULL)) THEN
-  RAISE EXCEPTION 'Challenge win/reward receipts do not match one per cleared run'; END IF;
+   WHERE (r.status='won' AND r.reward>0 AND e.run_id IS NULL) OR
+    (r.reward=0 AND e.run_id IS NOT NULL) OR (r.status<>'won' AND e.run_id IS NOT NULL)) THEN
+  RAISE EXCEPTION 'Challenge paid wins need one positive receipt and zero-reward wins need none'; END IF;
+ -- Existing historical groups with more than three payouts are grandfathered.
+ -- New zero-reward wins require an already exhausted lifetime paid-clear count.
+ IF EXISTS(SELECT 1 FROM target_private.challenge_runs r WHERE r.status='won' AND r.reward=0 AND
+  (SELECT count(*) FROM target_private.challenge_reward_events e WHERE e.member_id=r.member_id AND e.level=r.level AND e.amount>0)<3) THEN
+  RAISE EXCEPTION 'Challenge zero-reward win has unexhausted lifetime eligibility'; END IF;
+ IF EXISTS(SELECT 1 FROM target_private.challenge_requests q JOIN target_private.challenge_runs r ON r.id=q.run_id
+  WHERE q.response ? 'cleared' AND (
+   q.member_id<>r.member_id OR q.action<>'answer' OR q.response->'cleared' IS DISTINCT FROM 'true'::jsonb OR r.status<>'won' OR
+   q.response#>'{answer,correct}' IS DISTINCT FROM 'true'::jsonb OR
+   q.response->'reward' IS DISTINCT FROM to_jsonb(r.reward) OR
+   q.response->'badgeAwarded' IS DISTINCT FROM to_jsonb(r.badge_awarded))) THEN
+  RAISE EXCEPTION 'Challenge winning receipt marker is inconsistent'; END IF;
+ -- Only this cap migration introduces cleared=true, so prior unmarked payouts
+ -- can exceed three while every newly marked paid clear must be within the cap.
+ IF EXISTS(WITH paid AS (
+   SELECT run_id,row_number() OVER(PARTITION BY member_id,level ORDER BY created_at,run_id) AS ordinal
+   FROM target_private.challenge_reward_events WHERE amount>0)
+  SELECT 1 FROM paid p JOIN target_private.challenge_requests q ON q.run_id=p.run_id
+   WHERE p.ordinal>3 AND q.response->'cleared'='true'::jsonb) THEN
+  RAISE EXCEPTION 'Challenge newly paid clear exceeds its lifetime reward limit'; END IF;
+ IF EXISTS(SELECT 1 FROM target_private.challenge_runs r WHERE r.status='won' AND r.reward=0 AND
+  (SELECT count(*) FROM target_private.challenge_requests q WHERE q.run_id=r.id AND q.member_id=r.member_id
+    AND q.action='answer' AND q.response->'cleared'='true'::jsonb)<>1) THEN
+  RAISE EXCEPTION 'Challenge zero-reward win needs one authoritative winning answer receipt'; END IF;
  -- Historical answers remain unchanged. Fixed-ten-percent receipts have three
  -- special fields; growing-special receipts add their actual milestone percent.
  IF EXISTS(SELECT 1 FROM target_private.challenge_requests q WHERE q.action='answer'
@@ -216,11 +245,12 @@ BEGIN
  IF budget IS NULL OR budget<coalesce(charged,0) OR budget>104857600 THEN
   RAISE EXCEPTION 'Challenge shared logical storage budget does not cover retained evidence'; END IF;
 END; $verify$;
--- Public contract cost proof: no stake, every win pays, first-win badge is separate from gacha frames.
+-- Public contract: no stake, first three lifetime clears per member/level pay;
+-- later clears still count as wins and may award badges/unlock progression.
 SELECT level,100*level AS enemy_max_hp,100+50*(level-1) AS player_max_hp,
  CASE WHEN level>=6 THEN 3000-200*(level-5) ELSE 3000 END AS enemy_attack_interval_ms,
  CASE WHEN level=10 THEN 15 ELSE 5+(level-1) END AS enemy_attack_damage,
- level*100000 AS reward_every_clear,0 AS attempt_cost,
+ level*100000 AS reward_per_paid_clear,3 AS lifetime_paid_clear_limit,0 AS reward_after_limit,0 AS attempt_cost,
  5 AS normal_correct_damage,10 AS special_every_consecutive_correct,
  10*level AS special_at_ten,20*level AS special_at_twenty,30*level AS special_at_thirty,40*level AS special_at_forty,
  1+(19-1)*(level-1)/9 AS target1900_max_section,

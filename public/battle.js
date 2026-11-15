@@ -9,6 +9,7 @@
   const freshId=()=>crypto.randomUUID();
   let active=false,identity=null,epoch=0,syncRevision=0,timer=null,fetching=false,busy=false,matchId=null,match=null,clockOffset=0,lastLobbyPoll=0;
   let online=[],ranking=[],incoming=[],outgoing=[],selected=null,offerVersion=null,questionId=null,pendingAnswer=null,feedback='',shownStampKey=null;
+  let wallet=null,walletAvailable=false;
   function status(message,error=false){const el=$('battleStatus');if(el){el.textContent=message;el.classList.toggle('is-error',error);}}
   async function api(action,body){
     const sentAt=Date.now();
@@ -66,6 +67,29 @@
     $('battlePotPreview').textContent=Number.isSafeInteger(value)&&value>0&&value<=5000000000000?
       '合計 '+money(value*2)+'（1人 '+money(value)+'）':'賭け金は100轟単位';
   }
+  function renderWallet(){
+    if($('battleWalletBalance'))$('battleWalletBalance').textContent=walletAvailable?money(wallet.balance):'—';
+  }
+  function readWallet(snapshot){
+    const m=snapshot?.match,w=snapshot?.wallet;
+    // Wallets are authenticated server snapshots. Bind them to this opened
+    // account through the participant selected by the server's own role.
+    if(!['host','guest'].includes(m?.myRole)||m[m.myRole]?.id!==identity?.id){
+      walletAvailable=false;renderWallet();return;
+    }
+    const valid=n=>Number.isSafeInteger(n)&&n>=0&&n<=10000000000000;
+    if(!w||!valid(w.balance)||w.balance%10!==0||!valid(w.totalIncome)||w.totalIncome%10!==0||
+      !valid(w.spent)||w.spent%100!==0||w.balance+w.spent!==w.totalIncome||!valid(w.walletRevision)){
+      walletAvailable=false;renderWallet();return;
+    }
+    if(wallet&&w.walletRevision<wallet.walletRevision)return;
+    if(wallet&&w.walletRevision===wallet.walletRevision&&
+      (w.balance!==wallet.balance||w.totalIncome!==wallet.totalIncome||w.spent!==wallet.spent)){
+      walletAvailable=false;renderWallet();return;
+    }
+    wallet={balance:w.balance,totalIncome:w.totalIncome,spent:w.spent,walletRevision:w.walletRevision};
+    walletAvailable=true;renderWallet();
+  }
   function build(){
     $('battleApp').innerHTML=[
       "<p class='battle-intro'>自分のペースで連続回答 · 正解で相手−5 / 誤答で自分−10 / 5連続でHP回復</p>",
@@ -87,6 +111,7 @@
       "<label>出題教材<select id='battleBook'></select></label>",
       "<div class='battle-range'><label>開始Section<select id='battleFrom'></select></label><label>終了Section<select id='battleTo'></select></label></div>",
       "<label>1人あたりの賭け金（轟）<input id='battleStake' type='number' inputmode='numeric' min='100' max='5000000000000' step='100' value='100' required></label>",
+      "<p class='battle-wallet' role='status'>保有金額 <strong id='battleWalletBalance'>—</strong></p>",
       "<label>初期HP<select id='battleHp'></select></label>",
       "<p id='battlePotPreview' class='battle-pot-preview'></p>",
       "<button id='battleSendOffer' class='primary-button wide' type='submit'>対戦を申し込む</button></form>",
@@ -95,12 +120,13 @@
       "<p class='battle-caution'>両者が承認するまで賭け金は確保されません。条件を変更すると双方の承認が解除されます。</p></div>",
       "<button id='battleOfferBack' class='text-button' type='button'>戻る</button></section>",
       "<section id='battleGame' hidden>",
-      "<div class='battle-board'><div id='battleHitStamp' class='battle-hit-stamp' role='status' aria-live='polite' hidden></div><div class='battle-names'><strong id='battleHostName'></strong>",
+      "<div class='battle-board'><div class='battle-names'><strong id='battleHostName'></strong>",
       "<span class='battle-pot'><small>合計賭け金</small><strong id='battleTotalStake'></strong></span>",
       "<strong id='battleGuestName'></strong></div>",
       "<div class='battle-bars'><div class='battle-half battle-left'><span id='battleHostFill'></span></div>",
       "<span class='battle-mid' aria-hidden='true'></span>",
       "<div class='battle-half battle-right'><span id='battleGuestFill'></span></div></div>",
+      "<div class='battle-hit-lanes'><div id='battleHostHitLane'></div><div id='battleGuestHitLane'><div id='battleHitStamp' class='battle-hit-stamp' role='status' aria-live='polite' hidden></div></div></div>",
       "<div class='battle-avatars'><div><span class='battle-avatar' id='battleHostAvatar'></span><b id='battleHostHP'></b><small id='battleHostStreak' class='battle-streak'></small></div>",
       "<div><span class='battle-avatar' id='battleGuestAvatar'></span><b id='battleGuestHP'></b><small id='battleGuestStreak' class='battle-streak'></small></div></div></div>",
       "<div id='battleQuestionBlock' class='battle-question'><small id='battleQuestionMeta'></small><h2 id='battlePrompt'></h2>",
@@ -266,7 +292,10 @@
     stamp.hidden=false;
   }
   function renderGame(m){
+    const opponentLane=$(m.myRole==='host'?'battleGuestHitLane':'battleHostHitLane');
+    if($('battleHitStamp').parentElement!==opponentLane)opponentLane.append($('battleHitStamp'));
     $('battleHostName').textContent=m.host.name;$('battleGuestName').textContent=m.guest.name;
+    $('battleHostName').title=m.host.name;$('battleGuestName').title=m.guest.name;
     $('battleTotalStake').textContent=money(m.pot);
     $('battleHostAvatar').textContent=first(m.host.name);
     $('battleGuestAvatar').textContent=first(m.guest.name);
@@ -323,6 +352,7 @@
       if(inGame){
         const result=await api('state?matchId='+encodeURIComponent(matchId));
         if(!active||epoch!==lease||revision!==syncRevision)return;
+        readWallet(result);
         match=result.match||null;
       }else{
         const snapshot=await api('lobby');
@@ -335,11 +365,12 @@
         if(matchId){
           const detail=await api('state?matchId='+encodeURIComponent(matchId));
           if(!active||epoch!==lease||revision!==syncRevision)return;
+          readWallet(detail);
           match=detail.match||null;
-        }else match=null;
+        }else {match=null;walletAvailable=false;renderWallet();}
       }
       render();status('');
-    }catch(e){if(active&&epoch===lease)status(e.message,true);}
+    }catch(e){if(active&&epoch===lease){walletAvailable=false;renderWallet();status(e.message,true);}}
     finally{fetching=false;}
   }
   async function mutate(action,fields){
@@ -348,6 +379,7 @@
     try{
       const result=await api(action,{requestId:freshId(),...fields});
       if(!active||epoch!==lease)return;
+      readWallet(result);
       if(validId(result.match?.id))matchId=result.match.id;
       if(result.match)match=result.match;
       selected=null;render();status('');
@@ -385,6 +417,7 @@
     try{
       const response=await api('answer',pendingAnswer);
       if(!active||lease!==epoch)return;
+      readWallet(response);
       const correct=response.answer?.correct;
       feedback=correct===false?'ミス −10 HP':correct===true?
         (response.answer?.streakBonus?'5連続！ HP +'+response.answer.healedHp:'正解 −5 HP'):'';
@@ -404,6 +437,7 @@
     document.body.classList.remove('battle-playing','battle-setup');
     if(timer)clearInterval(timer);timer=null;
     identity=null;matchId=null;match=null;online=[];ranking=[];incoming=[];outgoing=[];
+    wallet=null;walletAvailable=false;
     selected=null;offerVersion=null;questionId=null;pendingAnswer=null;feedback='';shownStampKey=null;busy=false;fetching=false;lastLobbyPoll=0;clockOffset=0;
     if($('battleApp'))$('battleApp').replaceChildren();
   }

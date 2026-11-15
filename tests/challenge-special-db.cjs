@@ -11,6 +11,7 @@ const migrationName='20261115131403_target_challenge_special_animation_pause.sql
 const feedbackMigration='20261115142451_target_challenge_graded_choice_feedback.sql';
 const reviewMigration='20261115144738_target_challenge_defeat_mistake_review.sql';
 const resetMigration='20261115150438_target_challenge_progress_reset_and_late_level_pace.sql';
+const capMigration='20261115232731_target_challenge_three_lifetime_rewarded_clears.sql';
 const uid=()=>crypto.randomUUID(),secret=crypto.randomBytes(40).toString('hex');
 const dbName='target_special_'+process.pid+'_'+crypto.randomBytes(4).toString('hex')+'_test';
 const actor=name=>({memberId:uid(),name,sessionHash:crypto.randomBytes(32).toString('hex')});
@@ -93,7 +94,7 @@ async function run(){
  const newMigrationSql=await fs.readFile(path.join(migrations,migrationName),'utf8');
  // Install the complete existing financial release before this new patch, as on
  // Production. The new migration also supports chronological fresh installs.
- for(const file of(await fs.readdir(migrations)).filter(x=>/^\d+_.*\.sql$/.test(x)&&![migrationName,feedbackMigration,reviewMigration,resetMigration].includes(x)).sort())await db.query(await fs.readFile(path.join(migrations,file),'utf8'));
+ for(const file of(await fs.readdir(migrations)).filter(x=>/^\d+_.*\.sql$/.test(x)&&![migrationName,feedbackMigration,reviewMigration,resetMigration,capMigration].includes(x)).sort())await db.query(await fs.readFile(path.join(migrations,file),'utf8'));
  await db.query("INSERT INTO target_private.server_credentials(singleton,key_hash) VALUES(true,encode(sha256(convert_to($1,'UTF8')),'hex'))",[secret]);
  for(const who of[main,old,nextTen,nextTwenty,finisher])await db.query('INSERT INTO target_private.profiles(member_id,name) VALUES($1,$2)',[who.memberId,who.name]);
  // Preserve an actual fixed-ten-percent answer receipt at streak twenty. No retroactive
@@ -350,6 +351,8 @@ async function run(){
  await db.query(await fs.readFile(path.join(migrations,reviewMigration),'utf8'));
  eq(await snapshot(),beforeFeedback,'defeat review migration does not rewrite old answer evidence or any other row');
  await db.query(await fs.readFile(path.join(migrations,resetMigration),'utf8'));
+ // Apply the later cap only after these historical pre-cap transition assertions.
+ await db.query(await fs.readFile(path.join(root,'supabase/migrations',capMigration),'utf8'));
  await db.query(await fs.readFile(path.join(root,'supabase/tests/challenge_levels_verify.sql'),'utf8'));checks++;
  console.log('Challenge ten-combo PostgreSQL checks passed:',checks);
 }

@@ -114,10 +114,10 @@ test('Independent sprint renders high-contrast shortened choices and HP-board at
   assert(css.includes('body.battle-playing .battle-choice>span:last-child'),'Japanese contrast is forced');
   assert(css.includes('color:#233649'),'text is dark, not washed out');
   assert(css.includes('height:clamp(280px,45dvh,425px)'),'choice cards are shorter');
-  assert(css.includes('.battle-board .battle-hit-stamp'),'stamps overlay the HP board, not the choices');
+  assert(css.includes('.battle-hit-lanes'),'feedback has its own lane above the avatars');
   assert(css.includes('height:100dvh'),'all four choices fit dynamic phone viewport');
   assert(html.includes('id="battleTitle"'),'battle page remains accessible');
-  assert(html.includes('independent-sprint-streak-20261114'),'mobile assets invalidate old cache');
+  assert(html.includes('feedback-wallet-20261115'),'mobile assets invalidate old cache');
 });
 
 test('Buzzer database migration keeps correctness and money server-owned',()=>{

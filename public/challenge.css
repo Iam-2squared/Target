@@ -233,3 +233,9 @@ body.challenge-special-open>:not(#challengeSpecialHit){visibility:hidden!importa
 .challenge-mistake-prompt{color:#314a61;font-weight:650}
 .challenge-mistake-meaning{color:#596d76}
 .challenge-mistakes-empty{font-size:12px;color:#92998f}
+
+.challenge-tile-earnings{display:flex;align-items:baseline;flex-wrap:wrap;gap:1px 6px;max-width:100%}
+.challenge-tile-limit{font-size:9px;line-height:1.4;color:#6d8779;white-space:nowrap}
+.challenge-tile-limit.is-exhausted{color:#858b86}
+.challenge-result-limit{margin:3px 0 0;color:#758879;font-size:11px;line-height:1.5}
+.challenge-result-limit.is-exhausted{color:#8b8474}

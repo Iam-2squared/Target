@@ -9,6 +9,7 @@ const {questionBlock}=require('../server/challenge.cjs');
 const root=path.resolve(__dirname,'..'),migrationName='20261115142451_target_challenge_graded_choice_feedback.sql';
 const reviewMigration='20261115144738_target_challenge_defeat_mistake_review.sql';
 const resetMigration='20261115150438_target_challenge_progress_reset_and_late_level_pace.sql';
+const capMigration='20261115232731_target_challenge_three_lifetime_rewarded_clears.sql';
 const uid=()=>crypto.randomUUID(),secret=crypto.randomBytes(40).toString('hex');
 const name='target_feedback_'+process.pid+'_'+crypto.randomBytes(4).toString('hex')+'_test';
 const actor=label=>({memberId:uid(),name:label,sessionHash:crypto.randomBytes(32).toString('hex')});
@@ -45,7 +46,7 @@ async function main(){
  await admin.query('CREATE DATABASE "'+name+'"');created=true;url.pathname='/'+name;
  db=new Client({connectionString:url.href});other=new Client({connectionString:url.href});await db.connect();await other.connect();
  await db.query("DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='anon') THEN CREATE ROLE anon NOLOGIN; END IF; IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='authenticated') THEN CREATE ROLE authenticated NOLOGIN; END IF; IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='service_role') THEN CREATE ROLE service_role NOLOGIN; END IF; END $$");
- const dir=path.join(root,'supabase/migrations');for(const file of(await fs.readdir(dir)).filter(f=>/^\d+_.*\.sql$/.test(f)&&![migrationName,reviewMigration,resetMigration].includes(f)).sort())await db.query(await fs.readFile(path.join(dir,file),'utf8'));
+ const dir=path.join(root,'supabase/migrations');for(const file of(await fs.readdir(dir)).filter(f=>/^\d+_.*\.sql$/.test(f)&&![migrationName,reviewMigration,resetMigration,capMigration].includes(f)).sort())await db.query(await fs.readFile(path.join(dir,file),'utf8'));
  await db.query("INSERT INTO target_private.server_credentials(singleton,key_hash) VALUES(true,encode(sha256(convert_to($1,'UTF8')),'hex'))",[secret]);
  for(const who of[member,stranger])await db.query('INSERT INTO target_private.profiles(member_id,name) VALUES($1,$2)',[who.memberId,who.name]);
  let started=await rpc('start',{level:1});hidden(started);const id=started.run.id;
@@ -104,6 +105,8 @@ async function main(){
  const beforeReview=await snapshot();await db.query(await fs.readFile(path.join(dir,reviewMigration),'utf8'));
  eq(await snapshot(),beforeReview,'defeat review installation preserves old correction receipts without reconstructing history');
  await db.query(await fs.readFile(path.join(dir,resetMigration),'utf8'));
+ // Apply the later cap only after these historical pre-cap transition assertions.
+ await db.query(await fs.readFile(path.join(root,'supabase/migrations',capMigration),'utf8'));
  await db.query(await fs.readFile(path.join(root,'supabase/tests/challenge_levels_verify.sql'),'utf8'));checks++;
  console.log('Challenge graded-choice PostgreSQL checks passed:',checks);
 }

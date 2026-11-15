@@ -5,6 +5,7 @@ const {Client}=require('pg');
 const {questionBlock}=require('../server/challenge.cjs');
 const root=path.resolve(__dirname,'..'),migrationName='20261115144738_target_challenge_defeat_mistake_review.sql';
 const resetMigration='20261115150438_target_challenge_progress_reset_and_late_level_pace.sql';
+const capMigration='20261115232731_target_challenge_three_lifetime_rewarded_clears.sql';
 const uid=()=>crypto.randomUUID(),secret=crypto.randomBytes(40).toString('hex');
 const dbName='target_review_'+process.pid+'_'+crypto.randomBytes(4).toString('hex')+'_test';
 const actor=name=>({memberId:uid(),name,sessionHash:crypto.randomBytes(32).toString('hex')});
@@ -38,7 +39,7 @@ async function main(){
  const adminUrl=new URL(url);adminUrl.pathname='/postgres';admin=new Client({connectionString:adminUrl.href});await admin.connect();await admin.query('CREATE DATABASE "'+dbName+'"');created=true;
  url.pathname='/'+dbName;db=new Client({connectionString:url.href});reload=new Client({connectionString:url.href});await db.connect();await reload.connect();
  await db.query("DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='anon') THEN CREATE ROLE anon NOLOGIN; END IF; IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='authenticated') THEN CREATE ROLE authenticated NOLOGIN; END IF; IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='service_role') THEN CREATE ROLE service_role NOLOGIN; END IF; END $$");
- const dir=path.join(root,'supabase/migrations');for(const f of(await fs.readdir(dir)).filter(f=>/^\d+_.*\.sql$/.test(f)&&![migrationName,resetMigration].includes(f)).sort())await db.query(await fs.readFile(path.join(dir,f),'utf8'));
+ const dir=path.join(root,'supabase/migrations');for(const f of(await fs.readdir(dir)).filter(f=>/^\d+_.*\.sql$/.test(f)&&![migrationName,resetMigration,capMigration].includes(f)).sort())await db.query(await fs.readFile(path.join(dir,f),'utf8'));
  await db.query("INSERT INTO target_private.server_credentials(singleton,key_hash) VALUES(true,encode(sha256(convert_to($1,'UTF8')),'hex'))",[secret]);
  for(const who of[owner,legacy,otherMember,winner,aborted,long,quota,fatal])await db.query('INSERT INTO target_private.profiles(member_id,name) VALUES($1,$2)',[who.memberId,who.name]);
  const oldRun=await seed(legacy,1,10,[question('target1900',9,'legacy word','昔の意味')]);const oldAnswer=await hit(legacy,oldRun.id);eq(oldAnswer.result.run.status,'lost');
@@ -97,6 +98,8 @@ async function main(){
  await db.query('SET enable_seqscan=off');const plan=await db.query("EXPLAIN (FORMAT JSON) SELECT response FROM target_private.challenge_requests WHERE run_id=$1 AND member_id=$2 AND action='answer' AND response#>>'{answer,correct}'='false' AND jsonb_typeof(response#>'{answer,mistake}')='object' ORDER BY created_at,request_id",[run.id,owner.memberId]);ok(JSON.stringify(plan.rows).includes('challenge_mistake_run'),'the selective lost-review query uses its partial run index');await db.query('RESET enable_seqscan');
  eq((await db.query('SELECT count(*)::int n FROM target_private.profiles p JOIN target_private.wallet_finance_projection(NULL) f USING(member_id) WHERE (p.total_points,p.spent_points,p.casino_net) IS DISTINCT FROM (f.total_points,f.spent_points,f.casino_net)')).rows[0].n,0);
  await db.query(await fs.readFile(path.join(dir,resetMigration),'utf8'));
+ // Apply the later cap only after these historical pre-cap transition assertions.
+ await db.query(await fs.readFile(path.join(root,'supabase/migrations',capMigration),'utf8'));
  await db.query(await fs.readFile(path.join(root,'supabase/tests/challenge_levels_verify.sql'),'utf8'));checks++;
  console.log('Challenge defeat-review PostgreSQL checks passed:',checks,'candidateBytes='+bestBytes,'receiptBytes='+receiptBytes);
 }
