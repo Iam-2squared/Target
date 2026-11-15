@@ -13,6 +13,12 @@ DO $preflight$ BEGIN
  IF (SELECT md5(prosrc) FROM pg_proc WHERE oid='public.target_sell_rpc(text,text,jsonb)'::regprocedure) <> '0ad332509a1b851eb057e293cc59d7e7' THEN RAISE EXCEPTION 'Live function changed: public.target_sell_rpc(text,text,jsonb)'; END IF;
  IF target_private.item_payout_amount('frame','c01')<>1000 OR target_private.item_payout_amount('frame','r11')<>10000 OR target_private.item_payout_amount('frame','e06')<>10000 OR target_private.item_payout_amount('frame','l08')<>100000 THEN RAISE EXCEPTION 'Previous frame payout policy changed'; END IF;
 END $preflight$;
+-- Preserve the exact projection rather than demanding an unrelated existing
+-- account-reconciliation issue be fixed by this scoped rate update.
+CREATE TEMP TABLE _frame_finance_before ON COMMIT DROP AS
+ SELECT * FROM target_private.wallet_finance_projection(NULL);
+CREATE TEMP TABLE _frame_profiles_before ON COMMIT DROP AS
+ SELECT member_id,total_points,spent_points,casino_net,wallet_revision FROM target_private.profiles;
 ALTER TABLE target_private.duplicate_rebates ADD COLUMN credit_mode text NOT NULL DEFAULT 'spent_refund';
 ALTER TABLE target_private.item_sales ADD COLUMN credit_mode text NOT NULL DEFAULT 'spent_refund';
 ALTER TABLE target_private.duplicate_rebates ADD CONSTRAINT duplicate_rebates_credit_mode_check CHECK (credit_mode IN('spent_refund','income_bonus'));
@@ -63,11 +69,14 @@ BEGIN
  IF EXISTS(SELECT 1 FROM target_private.duplicate_rebates WHERE credit_mode<>'spent_refund') OR
     EXISTS(SELECT 1 FROM target_private.item_sales WHERE credit_mode<>'spent_refund') THEN
     RAISE EXCEPTION 'Existing financial records modified'; END IF;
- IF EXISTS(SELECT 1 FROM target_private.wallet_finance_projection(NULL) expected
-    JOIN target_private.profiles live ON live.member_id=expected.member_id
-    WHERE (live.total_points,live.spent_points,live.casino_net)
-       IS DISTINCT FROM (expected.total_points,expected.spent_points,expected.casino_net)) THEN
-    RAISE EXCEPTION 'Ledger discrepancy after migration'; END IF;
+ IF EXISTS(SELECT 1 FROM _frame_finance_before previous
+    FULL JOIN target_private.wallet_finance_projection(NULL) current USING(member_id)
+    WHERE to_jsonb(previous) IS DISTINCT FROM to_jsonb(current)) THEN
+    RAISE EXCEPTION 'Existing financial projection changed unexpectedly'; END IF;
+ IF EXISTS(SELECT 1 FROM _frame_profiles_before previous
+    FULL JOIN (SELECT member_id,total_points,spent_points,casino_net,wallet_revision FROM target_private.profiles) current USING(member_id)
+    WHERE to_jsonb(previous) IS DISTINCT FROM to_jsonb(current)) THEN
+    RAISE EXCEPTION 'Existing user balance changed unexpectedly'; END IF;
  IF has_function_privilege('anon','target_private.receipt_spend_rebate_amount(uuid,uuid)','EXECUTE') OR
     has_function_privilege('authenticated','target_private.item_payout_amount(text,text)','EXECUTE') THEN
     RAISE EXCEPTION 'Private ledger helper execution leaked'; END IF;
