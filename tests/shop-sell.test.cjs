@@ -30,8 +30,8 @@ test('sale SQL preserves gross income and excludes precisely sold receipt with a
  assert(!sql.includes('DELETE FROM target_private.item_draws'));
 });
 
-test('Target determines sale amounts from trusted item IDs, not caller-supplied amounts',()=>{
- for(const [id,amount] of Object.entries({c01:1000,r01:10000,e08:10000,l08:100000})){
+test('Target determines updated sale amounts from trusted item IDs, not caller-supplied amounts',()=>{
+ for(const [id,amount] of Object.entries({c01:1000,r01:10000,e08:100000,l08:1000000})){
    assert.equal(shop.payoutFor('frame',id),amount,id);
    assert(shop.validPayout(amount,'frame',id));
    assert(shop.validPayout(10000,'frame',id),'historic sale receipt allowed');
