@@ -13,12 +13,30 @@
   let pollTimer=null,pollFailures=0,mapNeeded=false,message='',feedback='',feedbackTimer=null;
   let drawnQuestion=null,drawnMode='',lastHp=null;
   let layoutFrame=null,layoutSignature='';
+  let specialTimer=null,specialKey=null,specialFinishRunId=null;
+  const shownSpecials=new Set();
 
   function art(kind,level){return window.ChallengeArt?.[kind]?.(level)||'';}
   function svgNode(kind,level,cls){const node=make('span',cls);node.innerHTML=art(kind,level);node.setAttribute('aria-hidden','true');return node;}
   function scene(node,level){const url=art('sceneURL',level);if(url)node.style.backgroundImage='url("'+url.replace(/"/g,'%22')+'")';}
   function button(label,cls,action){const node=make('button',cls,label);node.type='button';node.addEventListener('click',action);return node;}
-  function clearTimers(){clearTimeout(pollTimer);pollTimer=null;clearTimeout(feedbackTimer);feedbackTimer=null;cancelAnimationFrame(layoutFrame);layoutFrame=null;}
+  function clearTimers(){clearTimeout(pollTimer);pollTimer=null;clearTimeout(feedbackTimer);feedbackTimer=null;cancelAnimationFrame(layoutFrame);layoutFrame=null;clearSpecial();}
+  function clearSpecial(){
+    clearTimeout(specialTimer);specialTimer=null;specialKey=null;
+    const effect=$('challengeSpecialHit');if(effect){effect.hidden=true;effect.replaceChildren();}
+  }
+  function specialHit(requestId,answer){
+    if(answer.specialAttack!==true||!validId(requestId)||shownSpecials.has(requestId)||
+      !Number.isSafeInteger(answer.specialDamage)||answer.specialDamage<0)return false;
+    shownSpecials.add(requestId);if(shownSpecials.size>128)shownSpecials.delete(shownSpecials.values().next().value);
+    if(!active||document.hidden||pauseIntent||homeIntent||retryLevel!==null||run?.status!=='playing')return false;
+    const effect=$('challengeSpecialHit');if(!effect)return false;
+    clearSpecial();void effect.offsetWidth;specialKey=requestId;
+    const label=make('span','challenge-special-label');label.append(make('strong','','必殺'),make('span','','−'+answer.specialDamage));effect.append(label);
+    effect.hidden=false;
+    specialTimer=setTimeout(()=>{if(specialKey===requestId)clearSpecial();},760);
+    return true;
+  }
   function backoff(){return Math.min(15000,1200*2**Math.min(4,pollFailures));}
   function updateViewport(){
     if(!active||!document.body.classList.contains('challenge-is-game'))return;
@@ -181,6 +199,7 @@
   async function perform(operation){
     if(!active||inFlight)return;
     inFlight=true;readInFlight=false;clearTimeout(pollTimer);const lease=epoch;
+    if(operation.action==='start')specialFinishRunId=null;
     if(operation.action==='answer'||operation===retryStart){delete operation.retryAt;delete operation.rateLimitedUntil;}
     if(operation.action!=='pause')pending=operation;
     render();
@@ -192,11 +211,13 @@
       if(operation.action==='pause'){pauseOperation=null;pending=null;}
       else pending=null;
       if(operation.action==='resume')drawnQuestion=null;
-      if(operation.action==='start'){mode='game';feedback='';drawnMode='';}
+      if(operation.action==='start'){clearSpecial();specialFinishRunId=null;mode='game';feedback='';drawnMode='';}
       if(operation===retryStart){retryStart=null;retryLevel=null;lastHp=null;if(!homeIntent)exitDestination='app';}
       accept(data);pollFailures=0;showMessage('');
       if(operation.action==='answer'&&data.answer){
-        const a=data.answer;feedback=a.correct?(a.streakBonus?'5 COMBO · HP +'+(a.healedHp||0):'GOOD · −5'):'MISS · HP −10';
+        const a=data.answer,freshSpecial=specialHit(operation.body.requestId,a);
+        if(a.specialAttack===true&&run?.status==='won'&&run.id===operation.body.runId&&Number.isSafeInteger(data.reward)&&data.reward>0)specialFinishRunId=run.id;
+        feedback=a.specialAttack===true?(freshSpecial?'必殺 · −'+a.specialDamage:''):a.correct?(a.streakBonus?'5 COMBO · HP +'+(a.healedHp||0):'GOOD · −5'):'MISS · HP −10';
         clearTimeout(feedbackTimer);feedbackTimer=setTimeout(()=>{feedback='';const node=$('challengeFeedback');if(node)node.textContent='';},1000);
       }
     }catch(error){
@@ -229,6 +250,7 @@
     void perform(operation);
   }
   function requestPause(){
+    clearSpecial();
     queuedAnswer=null;
     if(!active||terminal(run)&&pending?.action!=='start'&&retryLevel===null)return;
     pauseIntent=true;feedback='';drawnQuestion=null;
@@ -254,6 +276,7 @@
   function restart(){if(!active||homeIntent||retryLevel!==null||!run)return;beginExit('retry',run.level);}
   function beginExit(destination,level=null){
     if(!active)return;
+    clearSpecial();specialFinishRunId=null;
     exitDestination=destination;retryLevel=destination==='retry'?level:null;
     homeIntent=true;queuedAnswer=null;
     if(pending?.action==='abort'){if(!inFlight)void perform(pending);return;}
@@ -266,6 +289,7 @@
   }
   function backToMap(){
     if(inFlight||pending)return;
+    specialFinishRunId=null;
     run=null;mode='map';pauseIntent=false;pauseOperation=null;feedback='';drawnMode='';mapNeeded=true;
     render();void refresh();
   }
@@ -330,6 +354,7 @@
     box.append(heading,track);return box;
   }
   function buildGame(){
+    clearSpecial();
     const root=shell(),level=run.level,header=make('div','challenge-game-header'),copy=make('div');
     copy.append(make('span','challenge-eyebrow','LEVEL '+String(level).padStart(2,'0')),make('h1','',titles[level-1]));
     const pause=button('中止','challenge-nav',requestPause);pause.id='challengePause';header.append(copy,pause);root.prepend(header);
@@ -337,7 +362,8 @@
     const enemy=make('div','challenge-enemy-health');enemy.id='challengeEnemyHealth';
     const mob=svgNode('mobSVG',level,'challenge-mob');mob.id='challengeMob';
     const strike=make('div','challenge-strike');strike.id='challengeStrike';strike.setAttribute('aria-hidden','true');
-    arena.append(enemy,mob,strike);root.append(arena);
+    const special=make('div','challenge-special-hit');special.id='challengeSpecialHit';special.hidden=true;special.setAttribute('aria-hidden','true');
+    arena.append(enemy,mob,strike,special);root.append(arena);
     const player=make('div','challenge-player-health');player.id='challengePlayerHealth';root.append(player);
     const region=make('section','challenge-question-region');region.id='challengeQuestionRegion';region.setAttribute('aria-label','問題と選択肢');root.append(region);
     const feedbackNode=make('p','challenge-feedback');feedbackNode.id='challengeFeedback';feedbackNode.setAttribute('role','status');feedbackNode.setAttribute('aria-live','polite');root.append(feedbackNode);
@@ -405,6 +431,7 @@
   }
   function renderGame(){
     if(drawnMode!=='game'){buildGame();updateViewport();}
+    if(pauseIntent||homeIntent||retryLevel!==null||run.status!=='playing')clearSpecial();
     const background=art('sceneURL',run.level);
     if(background)document.body.style.setProperty('--challenge-scene','url("'+background.replace(/"/g,'%22')+'")');
     $('challengeEnemyHealth').replaceChildren(hp('enemy',mobs[run.level-1],run.enemyHp,run.enemyMaxHp));
@@ -438,7 +465,7 @@
     const panel=make('div','challenge-result '+(won?'is-victory':'is-defeat'));
     const artNode=make('div','challenge-result-scene');scene(artNode,level);artNode.append(svgNode(won?'badgeSVG':'mobSVG',level,'challenge-result-art'));panel.append(artNode);
     const copy=make('div','challenge-result-copy');copy.append(make('span','challenge-eyebrow','LEVEL '+String(level).padStart(2,'0')),make('h1','',won?'VICTORY!':'DEFEAT'));
-    if(won)copy.append(make('p','challenge-result-note','お見事！'));
+    if(won){const note=make('p','challenge-result-note','お見事！');if(specialFinishRunId===run.id)note.append(make('span','challenge-special-finish','必殺'));copy.append(note);}
     if(won){
       const reward=Number.isSafeInteger(run.reward)&&run.reward>=0?run.reward:0;
       copy.append(make('strong','challenge-reward','+'+reward.toLocaleString('ja-JP')+'轟'));
@@ -455,12 +482,12 @@
     if(terminal(run)&&!homeIntent&&retryLevel===null)mode='result';
     const next=mode==='game'&&run?'game':mode==='result'&&run?'result':'map';
     document.body.classList.toggle('challenge-is-game',next==='game');
-    if(next!=='game'){document.body.style.removeProperty('--challenge-scene');document.body.style.removeProperty('--challenge-viewport-height');$('challengeApp').classList.remove('is-compact','is-dense','has-overflow');layoutSignature='';}
+    if(next!=='game'){clearSpecial();document.body.style.removeProperty('--challenge-scene');document.body.style.removeProperty('--challenge-viewport-height');$('challengeApp').classList.remove('is-compact','is-dense','has-overflow');layoutSignature='';}
     if(next==='game')renderGame();else if(next==='result')renderResult();else renderMap();
     drawnMode=next;showMessage(message);
   }
   function close(){
-    active=false;epoch++;clearTimers();callbacks={};identity=null;levels=[];run=null;queuedAnswer=null;pending=null;pauseOperation=null;pauseIntent=false;homeIntent=false;exitDestination='app';retryLevel=null;retryStart=null;
+    active=false;epoch++;clearTimers();shownSpecials.clear();specialFinishRunId=null;callbacks={};identity=null;levels=[];run=null;queuedAnswer=null;pending=null;pauseOperation=null;pauseIntent=false;homeIntent=false;exitDestination='app';retryLevel=null;retryStart=null;
     inFlight=false;readInFlight=false;mode='map';mapNeeded=false;pollFailures=0;message='';feedback='';drawnMode='';drawnQuestion=null;lastHp=null;layoutSignature='';
     document.body.classList.remove('challenge-is-game');document.body.style.removeProperty('--challenge-scene');document.body.style.removeProperty('--challenge-viewport-height');$('challengeApp')?.classList.remove('is-compact','is-dense','has-overflow');$('challengeApp')?.replaceChildren();
   }

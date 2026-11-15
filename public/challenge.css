@@ -183,3 +183,15 @@ body[data-view=challenge].challenge-is-game .app-shell{--game-pad-top:max(6px,en
 .challenge-choice-text{display:block;flex:1;min-width:0;overflow-x:auto;overflow-y:hidden;touch-action:pan-x pinch-zoom;scrollbar-width:none;-webkit-overflow-scrolling:touch;user-select:none}
 .challenge-choice-text::-webkit-scrollbar{display:none}
 .challenge-choice-track{display:block;width:100%;max-height:calc(2em * var(--choice-line-height,1.35));line-height:var(--choice-line-height,1.35);column-count:1;column-fill:auto;column-gap:12px;widows:1;orphans:1;overflow-wrap:anywhere;text-align:left}
+
+.challenge-special-hit{position:absolute;inset:29px 0 0;z-index:3;pointer-events:none;isolation:isolate}
+.challenge-special-hit:before{content:'';position:absolute;left:12%;top:15%;width:76%;height:65%;border-top:5px solid #fff5c4;border-right:2px solid #b9e4d8;border-radius:50%;box-shadow:0 -4px 12px #d4f5de9c;transform:rotate(-28deg);animation:challenge-special-arc .65s ease-out both}
+.challenge-special-hit:after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 58%,#efffdc8c 0,#b8e8d545 24%,transparent 65%);z-index:-1;animation:challenge-special-glow .65s ease-out both}
+.challenge-special-label{position:absolute;left:50%;top:57%;transform:translate(-50%,-50%);display:grid;gap:0;justify-items:center;min-width:76px;padding:5px 13px;border:1px solid #e7d498;border-radius:9px;background:#fff9e9ed;color:#405c58;box-shadow:0 4px 16px #122c384d;animation:challenge-special-label .76s ease-out both}
+.challenge-special-label>strong{font-size:13px;letter-spacing:.24em;color:#8d7544;line-height:1.5;padding-left:.24em}
+.challenge-special-label>span{font-size:23px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
+.challenge-special-finish{display:inline-block;margin-left:8px;padding:1px 7px;border:1px solid #e7d498;border-radius:5px;background:#fff7df;color:#8d7544;font-size:10px;line-height:1.4;vertical-align:1px}
+@keyframes challenge-special-arc{0%{opacity:0;transform:rotate(-48deg) scale(.55)}24%{opacity:1}75%{opacity:1}100%{opacity:0;transform:rotate(-16deg) scale(1.1)}}
+@keyframes challenge-special-glow{0%,100%{opacity:0}35%{opacity:1}}
+@keyframes challenge-special-label{0%{opacity:0;transform:translate(-50%,-43%) scale(.88)}18%,76%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-58%) scale(1)}}
+@media(prefers-reduced-motion:reduce){.challenge-special-hit:before,.challenge-special-hit:after,.challenge-special-label{animation:none}.challenge-special-hit:before,.challenge-special-hit:after{display:none}}

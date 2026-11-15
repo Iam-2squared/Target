@@ -38,7 +38,7 @@ async function clear(level,actor=member){
   classical.number=100*(level-6)+1;
   eq((await rpc('next',{runId:r.id,questions:invalid},actor)).error.code,'CHALLENGE_INVALID_QUESTION','database rejects classical questions beyond this level\'s section');
  }
- for(let n=0;n<20*level;n++){
+ for(let n=0;n<20*level&&r.status==='playing';n++){
   r=await supply(r,actor);
   // Remove wall-clock test-machine speed from this deterministic combat check.
   await db.query("UPDATE target_private.challenge_runs SET next_attack_at=clock_timestamp()+((CASE WHEN level=10 THEN 2000 ELSE 3000-100*(level-1) END)*interval '1 millisecond') WHERE id=$1",[r.id]);
@@ -46,7 +46,7 @@ async function clear(level,actor=member){
   if(n%100===0)await db.query('UPDATE target_private.challenge_rates SET calls=1 WHERE member_id=$1',[actor.memberId]);
   last=await answer(r,true,uid(),actor);ok(last.ok,JSON.stringify(last));r=last.run;
  }
- eq(r.status,'won','twenty correct hits per level defeats the enemy');
+ eq(r.status,'won','normal hits and ten-combo specials defeat the enemy within the old hit limit');
  eq(r.reward,level*100000);return last;
 }
 async function reconcile(){
@@ -241,7 +241,7 @@ async function httpChecks(databaseUrl){
   value=await request('/api/challenge/state?runId='+run.id);eq(value.data.run.question,null);
   value=await request('/api/challenge/resume',{body:{requestId:uid(),runId:run.id}});eq(value.data.run.question.id,run.question.id);run=value.data.run;
   let submitted;
-  for(let n=0;n<20;n++){
+  for(let n=0;n<20&&run.status==='playing';n++){
    const privateQ=(await db.query('SELECT questions->0 q FROM target_private.challenge_runs WHERE id=$1',[run.id])).rows[0].q;
    submitted={requestId:uid(),runId:run.id,questionId:privateQ.id,choiceId:privateQ.correctChoiceId};
    value=await request('/api/challenge/answer',{body:submitted});eq(value.status,200);eq(value.data.answer.correct,true);run=value.data.run;
