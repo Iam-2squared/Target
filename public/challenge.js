@@ -442,7 +442,7 @@
     lastHp={player:run.playerHp,enemy:run.enemyHp};
     $('challengePause').disabled=pauseIntent||run.status==='paused'||homeIntent||retryLevel!==null;
     renderQuestion();$('challengeFeedback').textContent=pauseIntent?'':feedback;
-    $('challengeStrike').style.setProperty('--attack-progress',String(Math.max(0,Math.min(1,(run.nextAttackInMs||0)/(run.attackIntervalMs||2000)))));
+    $('challengeStrike').style.setProperty('--attack-progress',String(Math.max(0,Math.min(1,(run.nextAttackInMs||0)/(run.attackIntervalMs||3000)))));
     queueLayout();
   }
   function namesForLevel(level){

@@ -41,7 +41,7 @@ async function clear(level,actor=member){
  for(let n=0;n<20*level&&r.status==='playing';n++){
   r=await supply(r,actor);
   // Remove wall-clock test-machine speed from this deterministic combat check.
-  await db.query("UPDATE target_private.challenge_runs SET next_attack_at=clock_timestamp()+((CASE WHEN level=10 THEN 2000 ELSE 3000-100*(level-1) END)*interval '1 millisecond') WHERE id=$1",[r.id]);
+  await db.query("UPDATE target_private.challenge_runs SET next_attack_at=clock_timestamp()+interval '3 seconds' WHERE id=$1",[r.id]);
   // Reset the minute quota in this fixture; production has no automated answer loop.
   if(n%100===0)await db.query('UPDATE target_private.challenge_rates SET calls=1 WHERE member_id=$1',[actor.memberId]);
   last=await answer(r,true,uid(),actor);ok(last.ok,JSON.stringify(last));r=last.run;
@@ -275,7 +275,7 @@ async function main(){
  eq((await rpc('map',{},member,db,'wrong')).error.code,'RPC_FORBIDDEN');
  eq((await rpc('start',{level:2})).error.code,'CHALLENGE_LOCKED');
  let map=await rpc('map');eq(map.levels.filter(x=>x.unlocked).map(x=>x.level),[1]);eq(map.activeRun,null);
- eq(map.levels.map(row=>row.attackIntervalMs),[3000,2900,2800,2700,2600,2500,2400,2300,2200,2000]);
+ eq(map.levels.map(row=>row.attackIntervalMs),Array(10).fill(3000));
  for(let n=0;n<20;n++)await rpc('map');await accounting();
  for(let level=1;level<=10;level++){
   const block=questionBlock(level);
@@ -326,7 +326,7 @@ async function main(){
   map=await rpc('map');eq(map.levels[level-1].cleared,true);
   if(level<10)eq(map.levels[level].unlocked,true);
  }
- eq(result.run.playerMaxHp,550);eq(result.run.enemyMaxHp,1000);eq(result.run.attackIntervalMs,2000);eq(result.run.attackDamage,15);
+ eq(result.run.playerMaxHp,550);eq(result.run.enemyMaxHp,1000);eq(result.run.attackIntervalMs,3000);eq(result.run.attackDamage,15);
  const earnedBefore=result.wallet.totalIncome,revisionBefore=result.wallet.walletRevision;
  result=await clear(1);eq(result.badgeAwarded,false);eq(result.wallet.totalIncome,earnedBefore+100000);eq(result.wallet.balance,result.wallet.totalIncome);
  eq(result.wallet.walletRevision,revisionBefore+1,'reward advances shared wallet revision exactly once');

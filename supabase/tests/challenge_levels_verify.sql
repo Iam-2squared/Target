@@ -1,4 +1,4 @@
--- Strict read-only postflight through 20261115114526_target_challenge_ten_combo_special,
+-- Strict read-only postflight through 20261115124418_target_challenge_growing_specials_three_second_attacks,
 -- preserving the latest Epic/Legendary financial projection.
 -- No fixture identities, secrets, rewards, cleanup, or wallet writes are performed.
 -- Quiz cleanup intentionally deletes answers after their retention period while
@@ -15,9 +15,9 @@ DECLARE item record; actual text; helper regprocedure; role_name text; charged b
  carry_digest text; expected_carry_digest text;
 BEGIN
  FOR item IN SELECT * FROM (VALUES
-  ('public.target_challenge_rpc(text,text,jsonb)','55c8efdd3b70cd967de68842f4b55871',true),
-  ('target_private.challenge_dto(uuid,uuid)','09df7117fccb6b94451c193a607d549d',false),
-  ('target_private.challenge_tick(uuid,timestamptz)','dcc07c2a0175268b2daa49618a7eaaa8',false),
+  ('public.target_challenge_rpc(text,text,jsonb)','5dbf345b4430b6e8a5023cb94586e844',true),
+  ('target_private.challenge_dto(uuid,uuid)','f4f5f936f9d5b046b6d9baee36512532',false),
+  ('target_private.challenge_tick(uuid,timestamptz)','88458e872af0fd28593b35511ec9099a',false),
   ('target_private.challenge_storage_charge()','69be621da1580b84ed1d793cc7f95737',false),
   ('target_private.wallet_finance_projection(timestamptz)','bd93399757a066fdfb8f35e7e29af2dc',false)
  ) expected(signature,digest,definer) LOOP
@@ -125,14 +125,15 @@ BEGIN
   EXISTS(SELECT 1 FROM target_private.challenge_runs r LEFT JOIN target_private.challenge_reward_events e ON e.run_id=r.id
    WHERE (r.status='won' AND e.run_id IS NULL) OR (r.status<>'won' AND e.run_id IS NOT NULL)) THEN
   RAISE EXCEPTION 'Challenge win/reward receipts do not match one per cleared run'; END IF;
- -- Historical answers remain unchanged. New answers include all three special
- -- fields together, and report actual bonus damage separately from nominal power.
+ -- Historical answers remain unchanged. Fixed-ten-percent receipts have three
+ -- special fields; growing-special receipts add their actual milestone percent.
  IF EXISTS(SELECT 1 FROM target_private.challenge_requests q WHERE q.action='answer'
-  AND (q.response->'answer') ?| ARRAY['specialAttack','specialDamage','specialPower'] AND (
+  AND (q.response->'answer') ?| ARRAY['specialAttack','specialDamage','specialPower','specialPercent'] AND (
    NOT ((q.response->'answer') ?& ARRAY['specialAttack','specialDamage','specialPower']) OR
    jsonb_typeof(q.response#>'{answer,specialAttack}') IS DISTINCT FROM 'boolean' OR
    jsonb_typeof(q.response#>'{answer,specialDamage}') IS DISTINCT FROM 'number' OR
-   jsonb_typeof(q.response#>'{answer,specialPower}') IS DISTINCT FROM 'number')) THEN
+   jsonb_typeof(q.response#>'{answer,specialPower}') IS DISTINCT FROM 'number' OR
+   ((q.response->'answer') ? 'specialPercent' AND jsonb_typeof(q.response#>'{answer,specialPercent}') IS DISTINCT FROM 'number'))) THEN
   RAISE EXCEPTION 'Challenge special-attack receipt fields are incomplete'; END IF;
  IF EXISTS(SELECT 1 FROM target_private.challenge_requests q JOIN target_private.challenge_runs r ON r.id=q.run_id
   WHERE q.action='answer' AND (q.response->'answer') ? 'specialAttack' AND (
@@ -142,9 +143,14 @@ BEGIN
     (q.response#>>'{answer,correct}')::boolean IS DISTINCT FROM true OR
     (q.response#>>'{answer,streakBonus}')::boolean IS DISTINCT FROM true OR
     (q.response#>>'{answer,damage}')::integer IS DISTINCT FROM 5 OR
-    (q.response#>>'{answer,specialPower}')::integer<>10*r.level
+    CASE WHEN (q.response->'answer') ? 'specialPercent' THEN
+     (q.response#>>'{answer,specialPercent}')::integer<10 OR
+     (q.response#>>'{answer,specialPercent}')::integer%10<>0 OR
+     (q.response#>>'{answer,specialPower}')::integer IS DISTINCT FROM (q.response#>>'{answer,specialPercent}')::integer*r.level
+    ELSE (q.response#>>'{answer,specialPower}')::integer IS DISTINCT FROM 10*r.level END
    ELSE (q.response#>>'{answer,specialDamage}')::integer<>0 OR
-    (q.response#>>'{answer,specialPower}')::integer<>0 END)) THEN
+    (q.response#>>'{answer,specialPower}')::integer<>0 OR
+    ((q.response->'answer') ? 'specialPercent' AND (q.response#>>'{answer,specialPercent}')::integer IS DISTINCT FROM 0) END)) THEN
   RAISE EXCEPTION 'Challenge special-attack receipt damage is inconsistent'; END IF;
  IF EXISTS(SELECT 1 FROM target_private.challenge_badges b LEFT JOIN target_private.challenge_runs r ON r.id=b.run_id
   WHERE r.id IS NULL OR r.status<>'won' OR r.member_id<>b.member_id OR r.level<>b.level OR NOT r.badge_awarded) OR
@@ -164,10 +170,11 @@ BEGIN
 END; $verify$;
 -- Public contract cost proof: no stake, every win pays, first-win badge is separate from gacha frames.
 SELECT level,100*level AS enemy_max_hp,100+50*(level-1) AS player_max_hp,
- CASE WHEN level=10 THEN 2000 ELSE 3000-100*(level-1) END AS enemy_attack_interval_ms,
+ 3000 AS enemy_attack_interval_ms,
  CASE WHEN level=10 THEN 15 ELSE 5+(level-1) END AS enemy_attack_damage,
  level*100000 AS reward_every_clear,0 AS attempt_cost,
- 5 AS normal_correct_damage,10 AS consecutive_correct_for_special,10*level AS special_extra_damage,
+ 5 AS normal_correct_damage,10 AS special_every_consecutive_correct,
+ 10*level AS special_at_ten,20*level AS special_at_twenty,30*level AS special_at_thirty,40*level AS special_at_forty,
  1+(19-1)*(level-1)/9 AS target1900_max_section,
  1+(10-1)*(level-1)/9 AS target1000_max_section,
  CASE WHEN level<7 THEN 0 ELSE level-6 END AS kobun400_max_section,
