@@ -2,9 +2,10 @@
 // Real public assets, synthetic browser API responses only. No hosted writes.
 const fs=require('node:fs/promises'),path=require('node:path'),assert=require('node:assert/strict'),crypto=require('node:crypto');
 const {chromium,webkit}=require('playwright');
-const root=path.resolve(__dirname,'..'),artifactDir=process.env.CHALLENGE_UI_ARTIFACT_DIR||'/workspace/artifacts/challenge-ui';
+const easierOnly=process.env.CHALLENGE_UI_EASIER_ONLY==='1',baselineCSS=process.env.CHALLENGE_UI_BASELINE_CSS,baselineJS=process.env.CHALLENGE_UI_BASELINE_JS;
+const root=path.resolve(__dirname,'..'),artifactDir=process.env.CHALLENGE_UI_ARTIFACT_DIR||(easierOnly?'/workspace/artifacts/challenge-easier':'/workspace/artifacts/challenge-ui');
 const visualOnly=process.env.CHALLENGE_UI_VISUAL_ONLY==='1',exitOnly=process.env.CHALLENGE_UI_EXIT_ONLY==='1';
-const reportPath=process.env.CHALLENGE_UI_REPORT||path.join(artifactDir,exitOnly?'exit-report.json':visualOnly?'visual-report.json':'report.json');
+const reportPath=process.env.CHALLENGE_UI_REPORT||path.join(artifactDir,easierOnly?(baselineJS?'baseline-tap-report.json':baselineCSS?'baseline-report.json':'report.json'):exitOnly?'exit-report.json':visualOnly?'visual-report.json':'report.json');
 const liveOrigin=process.env.APP_ORIGIN,origin=liveOrigin||'https://challenge-ui.example/';
 const mime={'.html':'text/html; charset=utf-8','.js':'application/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.mp3':'audio/mpeg','.svg':'image/svg+xml','.png':'image/png','.webmanifest':'application/manifest+json'};
 const id=n=>'00000000-0000-4000-8000-'+n.toString(16).padStart(12,'0');
@@ -15,11 +16,11 @@ function fixture(){
  let sequence=100,run=null,signedIn=true,memberIndex=1,unlocked=1,dropAnswer=false,dropAction=null,delayNextResume=false,delayedResume=null,delayNextAbort=false,delayedAbort=null,hold=null,tickEnabled=false;
  const requests=[],cache=new Map(),badges=new Set(),wallet={balance:10000,totalIncome:10000,spent:0,walletRevision:1,gameNet:0};
  const makeQuestion=()=>({id:id(++sequence),number:sequence%100+1,prompt:'achieve',book:['target1900','target1000','kobun400'][sequence%3],choices:Array.from({length:4},(_,i)=>({id:id(++sequence),text:['達成する','避ける','受け取る','認める'][i]}))});
- const makeRun=level=>({id:id(++sequence),level,status:'playing',playerHp:100+50*(level-1),playerMaxHp:100+50*(level-1),enemyHp:100*level,enemyMaxHp:100*level,attackIntervalMs:level===10?1000:2000-100*(level-1),attackDamage:level===10?15:5+level-1,streak:0,correctCount:0,wrongCount:0,questionSequence:1,question:makeQuestion(),nextAttackInMs:level===10?1000:2000-100*(level-1),serverNow:new Date().toISOString(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),reward:0,badgeAwarded:false});
+ const makeRun=level=>({id:id(++sequence),level,status:'playing',playerHp:100+50*(level-1),playerMaxHp:100+50*(level-1),enemyHp:100*level,enemyMaxHp:100*level,attackIntervalMs:level===10?2000:3000-100*(level-1),attackDamage:level===10?15:5+level-1,streak:0,correctCount:0,wrongCount:0,questionSequence:1,question:makeQuestion(),nextAttackInMs:level===10?2000:3000-100*(level-1),serverNow:new Date().toISOString(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),reward:0,badgeAwarded:false});
  let attackAt=0;
  const tick=()=>{if(!tickEnabled||run?.status!=='playing')return;const now=Date.now();while(now>=attackAt&&run.status==='playing'){run.playerHp=Math.max(0,run.playerHp-run.attackDamage);attackAt+=run.attackIntervalMs;if(!run.playerHp){run.status='lost';run.question=null;}}run.nextAttackInMs=Math.max(0,attackAt-now);};
  const identity=()=>signedIn?{member:{id:id(memberIndex),name:'挑戦テスト'+memberIndex},correctCount:20,totalPoints:wallet.totalIncome,...wallet}:{member:null,correctCount:0,totalPoints:0,balance:0,totalIncome:0,spent:0,walletRevision:0};
- const map=()=>({ok:true,levels:Array.from({length:10},(_,i)=>{const level=i+1;return{level,unlocked:level<=unlocked,cleared:badges.has(level),enemyMaxHp:level*100,playerMaxHp:100+50*i,attackIntervalMs:level===10?1000:2000-100*i,attackDamage:level===10?15:5+i,reward:level*100000,badge:{id:'challenge-level-'+level,name:'挑戦 Lv.'+level,level},clearers:level===1?['最初の勇者','<img src=x>','🚀'.repeat(20)]:level===10?['魔王を倒した人']:[]};}),activeRun:run&&['playing','paused'].includes(run.status)?copy(run):null,wallet:copy(wallet)});
+ const map=()=>({ok:true,levels:Array.from({length:10},(_,i)=>{const level=i+1;return{level,unlocked:level<=unlocked,cleared:badges.has(level),enemyMaxHp:level*100,playerMaxHp:100+50*i,attackIntervalMs:level===10?2000:3000-100*i,attackDamage:level===10?15:5+i,reward:level*100000,badge:{id:'challenge-level-'+level,name:'挑戦 Lv.'+level,level},clearers:level===1?['最初の勇者','<img src=x>','🚀'.repeat(20)]:level===10?['魔王を倒した人']:[]};}),activeRun:run&&['playing','paused'].includes(run.status)?copy(run):null,wallet:copy(wallet)});
  const snapshot=extra=>({ok:true,run:copy(run),wallet:copy(wallet),...extra});
  async function api(route,u){
   const action=u.pathname.slice('/api/challenge/'.length),input=route.request().method()==='POST'?route.request().postDataJSON():null;
@@ -61,26 +62,27 @@ function fixture(){
    if(input&&status===200&&!cache.has(input.requestId))cache.set(input.requestId,copy(body));
    if(action===dropAction){dropAction=null;abort=true;}
   }else throw Error('Unexpected API '+u.pathname);
-  if(hold&&hold.action===action){const gate=hold;hold=null;gate.arrived();await gate.wait;}
+  if(hold&&hold.action===action){const gate=hold;hold=null;gate.arrived();await gate.wait;if(gate.transform)body=gate.transform(body);}
   if(abort)return route.abort('failed');
   return route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});
  }
- return{api,requests,identity,map,get run(){return run;},get wallet(){return wallet;},get badges(){return badges;},set unlocked(v){unlocked=v;},set tickEnabled(v){tickEnabled=v;attackAt=Date.now()+(run?.attackIntervalMs||1000);},set dropAnswer(v){dropAnswer=v;},set dropAction(v){dropAction=v;},set delayNextResume(v){delayNextResume=v;},set delayNextAbort(v){delayNextAbort=v;},get delayedAbort(){return delayedAbort;},settleDelayedAbort(){assert(cache.has(delayedAbort.requestId),'Original delayed abort must already have an idempotent receipt');return copy(cache.get(delayedAbort.requestId));},get delayedResume(){return delayedResume;},settleDelayedResume(){assert(cache.has(delayedResume.requestId),'Original delayed resume must already have an idempotent receipt');return snapshot({replayed:true});},set hold(v){hold=v;},set memberIndex(v){memberIndex=v;},set signedIn(v){signedIn=v;},newRun(level){run=makeRun(level);attackAt=Date.now()+run.attackIntervalMs;return run;},resetRun(){run=null;},forceRun(value){Object.assign(run,value);}};
+ return{api,requests,identity,map,get run(){return run;},get wallet(){return wallet;},get badges(){return badges;},set unlocked(v){unlocked=v;},set tickEnabled(v){tickEnabled=v;attackAt=Date.now()+(run?.attackIntervalMs||2000);},set dropAnswer(v){dropAnswer=v;},set dropAction(v){dropAction=v;},set delayNextResume(v){delayNextResume=v;},set delayNextAbort(v){delayNextAbort=v;},get delayedAbort(){return delayedAbort;},settleDelayedAbort(){assert(cache.has(delayedAbort.requestId),'Original delayed abort must already have an idempotent receipt');return copy(cache.get(delayedAbort.requestId));},get delayedResume(){return delayedResume;},settleDelayedResume(){assert(cache.has(delayedResume.requestId),'Original delayed resume must already have an idempotent receipt');return snapshot({replayed:true});},set hold(v){hold=v;},set memberIndex(v){memberIndex=v;},set signedIn(v){signedIn=v;},snapshot,advanceQuestion(){run.questionSequence++;run.question=makeQuestion();return snapshot();},newRun(level){run=makeRun(level);attackAt=Date.now()+run.attackIntervalMs;return run;},resetRun(){run=null;},forceRun(value){Object.assign(run,value);}};
 }
 async function verify(engine){
  const browser=await(engine==='chromium'?chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']}):webkit.launch({executablePath:'/workspace/scratch/webkit-runtime/pw-run.sh',headless:true}));
  const engineCheckStart=checks;
- const page=await browser.newPage({viewport:{width:390,height:844},reducedMotion:'reduce',hasTouch:true}),errors=[],networkErrors=[],data=fixture();
+ const page=await browser.newPage({viewport:{width:390,height:844},reducedMotion:'reduce',hasTouch:true,isMobile:easierOnly}),errors=[],networkErrors=[],data=fixture();
  try{
   page.on('pageerror',error=>errors.push(error.message));
   await page.addInitScript(()=>localStorage.setItem('target-sound-enabled','false'));
+  if(easierOnly)await page.addInitScript(()=>{const random=crypto.randomUUID.bind(crypto);window.__challengeTestUUIDs=[];crypto.randomUUID=()=>{const value=random();window.__challengeTestUUIDs.push(value);return value;};});
   await page.route('**/*',async route=>{
    const u=new URL(route.request().url());
    if(u.pathname.startsWith('/api/')){try{return await data.api(route,u);}catch(e){networkErrors.push(e.message);return route.fulfill({status:500,contentType:'application/json',body:JSON.stringify({error:{message:e.message}})});}}
    if(liveOrigin)return route.continue();
    const file=path.resolve(root,u.pathname.startsWith('/data/')?'.'+u.pathname:'public'+(u.pathname==='/'?'/index.html':u.pathname));
    if(!file.startsWith(root+path.sep))return route.abort();
-   try{return route.fulfill({status:200,contentType:mime[path.extname(file)]||'application/octet-stream',body:await fs.readFile(file)});}catch{return route.fulfill({status:404,body:'missing fixture'});}
+   try{return route.fulfill({status:200,contentType:mime[path.extname(file)]||'application/octet-stream',body:await fs.readFile(baselineCSS&&u.pathname==='/challenge.css'?baselineCSS:baselineJS&&u.pathname==='/challenge.js'?baselineJS:file)});}catch{return route.fulfill({status:404,body:'missing fixture'});}
   });
   await page.goto(origin);await page.waitForFunction(()=>document.querySelector('#accountBadge').textContent==='挑戦テスト1');
   const tile=level=>page.locator('.challenge-tile[data-level="'+level+'"]');
@@ -96,6 +98,52 @@ async function verify(engine){
   async function back(){await page.getByRole('button',{name:'戻る',exact:true}).click();await page.locator('.challenge-map').waitFor();}
   async function screenshot(name){await page.screenshot({path:path.join(artifactDir,engine+'-'+name+'.png'),fullPage:true});}
   async function fits(label){eq(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,label);}
+  if(easierOnly){
+   await map();await start(1);eq(data.run.attackIntervalMs,3000,'Level1 fixture uses new 3000ms interval');eq(data.map().levels.map(x=>x.attackIntervalMs),[3000,2900,2800,2700,2600,2500,2400,2300,2200,2000],'All fixture intervals add1000ms');
+   const choiceStyles=()=>page.locator('.challenge-choice').evaluateAll(nodes=>nodes.map(n=>{const c=getComputedStyle(n);return{background:c.backgroundColor,border:c.borderTopColor,outline:c.outlineStyle,outlineWidth:c.outlineWidth,focusVisible:n.matches(':focus-visible'),focused:n===document.activeElement,hovered:n.matches(':hover'),height:n.getBoundingClientRect().height,fontSize:c.fontSize};}));
+   async function neutral(label){const styles=await choiceStyles();eq(styles.length,4,label+' has four choices');eq(styles.map(x=>[x.background,x.border]),Array.from({length:4},()=>['rgb(255, 255, 255)','rgb(213, 222, 223)']),label+' backgrounds and borders stay neutral');return styles;}
+   async function tapAndWait(index){const old=data.run.question.id;await page.locator('.challenge-choice').nth(index).tap();await page.waitForFunction(()=>!document.querySelector('.challenge-choice:disabled'));assert.notEqual(data.run.question.id,old);}
+   if(baselineCSS){
+    await page.setViewportSize({width:390,height:844});const before=await choiceStyles();await tapAndWait(1);const afterB=await choiceStyles();await page.screenshot({path:path.join(artifactDir,engine+'-baseline-after-touch.png'),fullPage:true});
+    // iOS preserves a hover target at the last touch point across replacement choices.
+    const b=await page.locator('.challenge-choice').nth(1).boundingBox();await page.mouse.move(b.x+b.width/2,b.y+b.height/2);const hoverAtPreviousTouch=await choiceStyles();
+    return{engine,baselineOnly:true,checks:checks-engineCheckStart,before,afterB,hoverAtPreviousTouch,stickyHighlightObserved:afterB.some(x=>x.background!=='rgb(255, 255, 255)')||hoverAtPreviousTouch.some(x=>x.background!=='rgb(255, 255, 255)'),sub60pxObserved:before.some(x=>x.height<60)};
+   }
+   if(baselineJS){
+    const gate=deferred();data.hold={...gate,action:'state'};void page.evaluate(()=>window.TargetChallengeUI.refresh());await gate.ready;const before=data.requests.filter(r=>r.action==='answer').length;await page.locator('.challenge-choice').nth(1).tap();gate.release();await page.waitForTimeout(120);const sent=data.requests.filter(r=>r.action==='answer').length-before;
+    return{engine,baselineOnly:true,checks:checks-engineCheckStart,singleTapDuringGETAnswers:sent,droppedTapReproduced:sent===0};
+   }
+   const viewportEvidence=[];
+   for(const width of[320,390,1024]){
+    await page.setViewportSize({width,height:844});await fits('Choices fit'+width+'px');const before=await neutral('Before touch at'+width);eq(before.every(x=>x.height>=60),true,'All four choices are at least60px tall at'+width);
+    await tapAndWait(1);const afterB=await neutral('After previous B answer at'+width);eq(afterB.every(x=>x.outline==='none'||x.outlineWidth==='0px'),true,'Touch gives no focus outline at'+width);
+    // Place hover on the former touch location: even sticky hover must stay neutral.
+    const b=await page.locator('.challenge-choice').nth(1).boundingBox();await page.mouse.move(b.x+b.width/2,b.y+b.height/2);await neutral('Retained pointer over new B at'+width);
+    await tapAndWait(0);await neutral('Successive question1 at'+width);await tapAndWait(0);await neutral('Successive question2 at'+width);
+    await fits('New questions fit'+width+'px');await screenshot('neutral-choices-'+width);viewportEvidence.push({width,minChoiceHeight:Math.min(...before.map(x=>x.height)),fontSize:before[0].fontSize,touchNeutral:true});
+   }
+   // Tab selects a visible outline without changing any option's answer colors.
+   await page.locator('#challengePause').focus();await page.keyboard.press('Tab');const keyboard=await choiceStyles();eq(keyboard.some(x=>x.focused&&x.focusVisible&&x.outline!=='none'&&parseFloat(x.outlineWidth)>=2),true,'Keyboard focus has a visible outline');await neutral('Keyboard focus colors');await screenshot('keyboard-focus-1024');
+   await page.setViewportSize({width:390,height:844});const prompt=await page.locator('#challengePrompt').textContent();await pause();eq(await page.locator('#challengePrompt').count(),0,'Pause removes prompt');eq(await page.locator('.challenge-choice').count(),0,'Pause removes choices');eq((await page.locator('#challengeQuestionRegion').ariaSnapshot()).includes(prompt),false,'Pause hides prompt from accessibility');eq(await page.locator('.challenge-pause-panel').evaluate(n=>getComputedStyle(n).backgroundColor),'rgb(242, 239, 229)','Pause remains opaque');await fits('Paused view fits390px');await screenshot('paused-390');
+   await page.locator('#challengeResume').click();await page.locator('#challengePrompt').waitFor();await neutral('Resumed touch state');
+   // A touch during a read-only poll becomes exactly one durable answer intent.
+   const answerCount=()=>data.requests.filter(r=>r.action==='answer').length;
+   async function heldRead(options={}){const gate=deferred();data.hold={...gate,action:'state',...options};void page.evaluate(()=>window.TargetChallengeUI.refresh());await gate.ready;return gate;}
+   async function waitAnswers(n){await page.waitForFunction(()=>!document.querySelector('.challenge-choice:disabled'));eq(answerCount(),n,'Queued touch is sent exactly once');}
+   let gate=await heldRead(),answers=answerCount(),question=copy(data.run.question),uuidOffset=await page.evaluate(()=>window.__challengeTestUUIDs.length);
+   const b=await page.locator('.challenge-choice').nth(1).boundingBox();await page.locator('.challenge-choice').nth(1).tap();eq(answerCount(),answers,'Touch waits for held GET instead of concurrent write');await page.touchscreen.tap(b.x+b.width/2,b.y+b.height/2);gate.release();await waitAnswers(answers+1);const queuedAnswer=lastRequest('answer').input;
+   eq({runId:queuedAnswer.runId,questionId:queuedAnswer.questionId,choiceId:queuedAnswer.choiceId},{runId:data.run.id,questionId:question.id,choiceId:question.choices[1].id},'Queued answer keeps original run, question, and touched B');const createdIds=await page.evaluate(n=>window.__challengeTestUUIDs.slice(n),uuidOffset);eq(createdIds,[queuedAnswer.requestId],'First touch creates one UUID preserved through GET completion');await neutral('New question after queued single touch');
+   // Stop cancels queued input immediately, before the read response returns.
+   gate=await heldRead();answers=answerCount();await page.locator('.challenge-choice').nth(1).tap();await page.locator('#challengePause').click();eq(await page.locator('.challenge-choice').count(),0,'Pause hides a queued question immediately');gate.release();await page.getByRole('heading',{name:'PAUSED',exact:true}).waitFor();eq(answerCount(),answers,'Pause cancels queued answer');await page.locator('#challengeResume').click();await page.locator('#challengePrompt').waitFor();await page.waitForTimeout(30);eq(answerCount(),answers,'Old touch cannot answer the resumed question');await neutral('Resume after cancelled touch');
+   // A newer authoritative question invalidates an earlier queued touch.
+   gate=await heldRead({transform:()=>data.advanceQuestion()});answers=answerCount();question=copy(data.run.question);await page.locator('.challenge-choice').nth(1).tap();gate.release();await page.waitForFunction(()=>!document.querySelector('.challenge-choice:disabled'));eq(answerCount(),answers,'Changed question cancels queued answer');eq(data.run.question.id===question.id,false,'Held GET supplied a new question');await neutral('Changed authoritative question');
+   // A failed read can still submit the one touch against its unchanged question.
+   data.dropAction='state';gate=await heldRead();answers=answerCount();question=copy(data.run.question);await page.locator('.challenge-choice').nth(1).tap();gate.release();await waitAnswers(answers+1);eq(lastRequest('answer').input.questionId,question.id,'Read error retains exact queued question');await neutral('Question after read-error queue');
+   // Terminal and Home transitions cancel the intent instead of answering later.
+   gate=await heldRead({transform:()=>{data.forceRun({status:'lost',playerHp:0,question:null});return data.snapshot();}});answers=answerCount();await page.locator('.challenge-choice').nth(1).tap();gate.release();await page.getByRole('heading',{name:'DEFEAT',exact:true}).waitFor();eq(answerCount(),answers,'Terminal state discards queued touch');await page.getByRole('button',{name:'リトライ',exact:true}).click();await page.locator('#challengePrompt').waitFor();
+   gate=await heldRead();answers=answerCount();await page.locator('.challenge-choice').nth(1).tap();await page.evaluate(()=>window.TargetChallengeUI.leaveHome());gate.release();await page.locator('#homeView').waitFor({state:'visible'});eq(answerCount(),answers,'Home cancels queued touch');eq(data.run.status,'aborted','Home completes authoritative abort');await map();await start(1);eq(answerCount(),answers,'Old touch cannot answer the next attempt');await neutral('Next attempt after queued Home');
+   eq(errors,[],'No browser runtime errors');eq(networkErrors,[],'All fixture routes matched');return{engine,passed:true,checks:checks-engineCheckStart,easierOnly:true,viewportEvidence,queueCases:['one-touch-during-read','second-touch-ignored','pause-cancels','changed-question-cancels','read-error-submits-once','terminal-cancels','home-cancels-new-attempt-safe']};
+  }
   if(exitOnly){
    const startingWallet=copy(data.wallet);data.unlocked=10;await map();await sync();eq(await page.title(),'挑戦 | 暗記','Challenge title uses 暗記 suffix');
    await start(1);const firstRun=data.run.id;await pause();const firstExit=data.requests.length;await home();
@@ -208,7 +256,7 @@ async function verify(engine){
    await map();await start(level);const background=await page.locator('#challengeArena').evaluate(n=>n.style.backgroundImage);
    eq(background,sceneURLs[level-1],'Level'+level+' background matches map');eq(await enemyHp(),level*100);eq(await playerHp(),100+50*(level-1));
    allLevelArt.push({level,backgroundPresent:!!background,mobSVG:await page.locator('#challengeMob svg').count()});
-   if(level===10){await screenshot('level10-playing');eq(data.run.attackIntervalMs,1000);eq(data.run.attackDamage,15);}
+   if(level===10){await screenshot('level10-playing');eq(data.run.attackIntervalMs,2000);eq(data.run.attackDamage,15);}
    await pause();await home();data.resetRun();
   }
   // Final hit with a lost acknowledgement must award one wallet event and badge.
@@ -238,4 +286,4 @@ async function verify(engine){
   return{engine,passed:true,checks:checks-engineCheckStart,allLevelArt,apiRequests:data.requests.length};
  }finally{await browser.close();}
 }
-(async()=>{await fs.mkdir(artifactDir,{recursive:true});const results=[];for(const engine of(process.env.CHALLENGE_UI_ENGINES||'chromium,webkit').split(','))results.push(await verify(engine));const productHashes={};for(const file of['public/challenge.js','public/challenge.css','public/challenge-art.js','public/app.js','public/index.html'])productHashes[file]=crypto.createHash('sha256').update(await fs.readFile(path.join(root,file))).digest('hex');const report={passed:true,checks,visualOnly,exitOnly,results,hostedAuthenticatedRequests:0,hostedAPIRequests:0,artifactDir,productHashes};await fs.writeFile(reportPath,JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));})().catch(async error=>{await fs.mkdir(artifactDir,{recursive:true});await fs.writeFile(reportPath,JSON.stringify({passed:false,checks,error:error.stack},null,2)+'\n');console.error(error);process.exitCode=1;});
+(async()=>{await fs.mkdir(artifactDir,{recursive:true});const results=[];for(const engine of(process.env.CHALLENGE_UI_ENGINES||'chromium,webkit').split(','))results.push(await verify(engine));const productHashes={};for(const file of['public/challenge.js','public/challenge.css','public/challenge-art.js','public/app.js','public/index.html'])productHashes[file]=crypto.createHash('sha256').update(await fs.readFile(path.join(root,file))).digest('hex');const report={passed:true,checks,visualOnly,exitOnly,easierOnly,baselineCSS:!!baselineCSS,baselineJS:!!baselineJS,results,hostedAuthenticatedRequests:0,hostedAPIRequests:0,artifactDir,productHashes,...(baselineCSS||baselineJS?{servedOverrides:Object.fromEntries(await Promise.all([[baselineCSS,'public/challenge.css'],[baselineJS,'public/challenge.js']].filter(([file])=>file).map(async([file,asset])=>[asset,crypto.createHash('sha256').update(await fs.readFile(file)).digest('hex')])))}:{})};await fs.writeFile(reportPath,JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));})().catch(async error=>{await fs.mkdir(artifactDir,{recursive:true});await fs.writeFile(reportPath,JSON.stringify({passed:false,checks,error:error.stack},null,2)+'\n');console.error(error);process.exitCode=1;});

@@ -1,4 +1,4 @@
--- Strict read-only postflight for 20261115084425_target_pve_challenge_levels.
+-- Strict read-only postflight through 20261115092352_target_challenge_gentler_clock_and_late_kobun.
 -- No fixture identities, secrets, rewards, cleanup, or wallet writes are performed.
 -- Quiz cleanup intentionally deletes answers after their retention period while
 -- preserving lifetime study totals (20261109064636, lines 241-246). A release with
@@ -14,9 +14,9 @@ DECLARE item record; actual text; helper regprocedure; role_name text; charged b
  carry_digest text; expected_carry_digest text;
 BEGIN
  FOR item IN SELECT * FROM (VALUES
-  ('public.target_challenge_rpc(text,text,jsonb)','40f9c42130bff6ea176973f5ba7d9c0e',true),
-  ('target_private.challenge_dto(uuid,uuid)','87e4cd04309f220801990b5161e4f48a',false),
-  ('target_private.challenge_tick(uuid,timestamptz)','ab5dd92b8d57974dca63d8ca65901eb4',false),
+  ('public.target_challenge_rpc(text,text,jsonb)','a74ec6ae0fbe54fe6345daaee051b0ea',true),
+  ('target_private.challenge_dto(uuid,uuid)','09df7117fccb6b94451c193a607d549d',false),
+  ('target_private.challenge_tick(uuid,timestamptz)','dcc07c2a0175268b2daa49618a7eaaa8',false),
   ('target_private.challenge_storage_charge()','69be621da1580b84ed1d793cc7f95737',false),
   ('target_private.wallet_finance_projection(timestamptz)','eafe8da70cbd3912d5310c083bdc303f',false)
  ) expected(signature,digest,definer) LOOP
@@ -31,6 +31,17 @@ BEGIN
    END LOOP;
   END IF;
  END LOOP;
+ IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='target_private.challenge_runs'::regclass
+  AND conname='challenge_runs_attack_remaining_ms_check'
+  AND pg_get_constraintdef(oid)='CHECK (((attack_remaining_ms >= 0) AND (attack_remaining_ms <= 3000)))') OR
+  NOT EXISTS(SELECT 1 FROM pg_attrdef d JOIN pg_attribute a ON a.attrelid=d.adrelid AND a.attnum=d.adnum
+   WHERE d.adrelid='target_private.challenge_runs'::regclass AND a.attname='attack_remaining_ms'
+   AND pg_get_expr(d.adbin,d.adrelid)='3000') THEN
+  RAISE EXCEPTION 'Challenge gentler remaining-clock bounds/default changed'; END IF;
+ IF EXISTS(SELECT 1 FROM target_private.challenge_runs r,LATERAL jsonb_array_elements(r.questions) q
+  WHERE r.status IN ('playing','paused') AND q->>'book'='kobun400'
+   AND (r.level<7 OR (q->>'number')::integer>100*(r.level-6))) THEN
+  RAISE EXCEPTION 'Challenge active queue contains classical Japanese outside the new level range'; END IF;
  IF NOT has_function_privilege('anon','public.target_challenge_rpc(text,text,jsonb)','EXECUTE') OR
   NOT has_function_privilege('authenticated','public.target_challenge_rpc(text,text,jsonb)','EXECUTE') OR
   has_function_privilege('service_role','public.target_challenge_rpc(text,text,jsonb)','EXECUTE') OR
@@ -131,12 +142,15 @@ BEGIN
 END; $verify$;
 -- Public contract cost proof: no stake, every win pays, first-win badge is separate from gacha frames.
 SELECT level,100*level AS enemy_max_hp,100+50*(level-1) AS player_max_hp,
- CASE WHEN level=10 THEN 1000 ELSE 2000-100*(level-1) END AS enemy_attack_interval_ms,
+ CASE WHEN level=10 THEN 2000 ELSE 3000-100*(level-1) END AS enemy_attack_interval_ms,
  CASE WHEN level=10 THEN 15 ELSE 5+(level-1) END AS enemy_attack_damage,
  level*100000 AS reward_every_clear,0 AS attempt_cost,
  1+(19-1)*(level-1)/9 AS target1900_max_section,
  1+(10-1)*(level-1)/9 AS target1000_max_section,
- 1+(4-1)*(level-1)/9 AS kobun400_max_section
+ CASE WHEN level<7 THEN 0 ELSE level-6 END AS kobun400_max_section,
+ CASE WHEN level<7 THEN 8 ELSE 10 END AS questions_per_block,
+ 5 AS target1900_questions_per_block,3 AS target1000_questions_per_block,
+ CASE WHEN level<7 THEN 0 ELSE 2 END AS kobun400_questions_per_block
 FROM generate_series(1,10) level;
 SELECT method,path FROM (VALUES
  ('GET','/api/challenge/map'),('GET','/api/challenge/state?runId=<uuid>'),

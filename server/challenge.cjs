@@ -31,8 +31,11 @@ function query(url,action){
 function questionBlock(level){
  if(!Number.isInteger(level)||level<1||level>10)throw new HttpError(503,'出題範囲を確認できませんでした。','CHALLENGE_DATA_ERROR');
  const block=[];
- for(const [book,count] of [['target1900',5],['target1000',3],['kobun400',2]]){
-  const maxSection=1+Math.floor((BOOK_SECTIONS[book]-1)*(level-1)/9);
+ // Keep the English 5:3 ratio exact: eight questions before classical Japanese
+ // joins at level 7, then the existing ten-question 5:3:2 mix.
+ const mix=level<7?[['target1900',5],['target1000',3]]:[['target1900',5],['target1000',3],['kobun400',2]];
+ for(const [book,count] of mix){
+  const maxSection=book==='kobun400'?level-6:1+Math.floor((BOOK_SECTIONS[book]-1)*(level-1)/9);
   const questions=generateQuestions({book,direction:'japanese',count:10,from:1,to:maxSection*100,requestId:crypto.randomUUID()});
   block.push(...questions.slice(0,count).map(q=>({...q,book})));
  }

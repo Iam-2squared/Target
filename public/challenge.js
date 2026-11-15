@@ -8,7 +8,7 @@
   const mobs=['草原のスライム','森の番人','渓谷の翼獣','洞窟の守護者','砂漠の毒蠍','氷の狼','雷の騎士','炎の竜','闇の将軍','魔王'];
   const terminal=run=>run&&['won','lost','aborted'].includes(run.status);
   let active=false,epoch=0,callbacks={},identity=null,levels=[],run=null,mode='map';
-  let inFlight=false,pending=null,pauseOperation=null,pauseIntent=false,homeIntent=false;
+  let inFlight=false,readInFlight=false,queuedAnswer=null,pending=null,pauseOperation=null,pauseIntent=false,homeIntent=false;
   let pollTimer=null,pollFailures=0,mapNeeded=false,message='',feedback='',feedbackTimer=null;
   let drawnQuestion=null,drawnMode='',lastHp=null;
 
@@ -60,6 +60,7 @@
       if(!run&&data.activeRun){run=checkRun(data.activeRun);mode='game';pauseIntent=true;}
     }else if(Object.hasOwn(data,'run'))run=checkRun(data.run);
     if(pauseIntent&&run?.status==='playing')run={...run,question:null};
+    if(queuedAnswer&&(run?.status!=='playing'||run.id!==queuedAnswer.operation.body.runId||run.question?.id!==queuedAnswer.operation.body.questionId))queuedAnswer=null;
     if(data.wallet)callbacks.onWallet?.(data.wallet);
     if(terminal(run)){
       mode='result';pauseIntent=false;pauseOperation=null;pending=null;
@@ -80,17 +81,17 @@
     if(document.hidden){schedule();return;}
     if(terminal(run)&&!mapNeeded)return;
     const lease=epoch,useMap=mode==='map'||mapNeeded||!run;
-    inFlight=true;
+    inFlight=true;readInFlight=true;
     try{
       const data=await api(useMap?'map':'state?runId='+encodeURIComponent(run.id));
       if(!active||lease!==epoch)return;
       if(useMap)mapNeeded=false;
       accept(data,{map:useMap});pollFailures=0;showMessage('');
     }catch(error){if(active&&lease===epoch)handleError(error);}
-    finally{if(active&&lease===epoch){inFlight=false;render();afterRequest();}}
+    finally{if(active&&lease===epoch){inFlight=false;readInFlight=false;render();afterRequest();}}
   }
   function afterRequest(){
-    if(!active)return;
+    if(!active||inFlight)return;
     // Resolve an uncertain start/resume receipt before pausing. A delayed
     // original must not arrive after our pause and restart the clock offscreen.
     if(pauseIntent&&['start','resume'].includes(pending?.action)){if(pollFailures)schedule();else void perform(pending);return;}
@@ -98,12 +99,20 @@
     if(pauseIntent&&run?.status==='playing'){if(pauseOperation&&pollFailures)schedule();else void confirmPause();return;}
     if(homeIntent&&run?.status==='paused'&&!pending&&!pauseOperation){void perform({action:'abort',body:{requestId:uuid(),runId:run.id}});return;}
     if(homeIntent&&(!run||terminal(run))&&!pending&&!pauseOperation){const go=callbacks.onHome;close();go?.();return;}
+    if(queuedAnswer){
+      const queued=queuedAnswer,fields=queued.operation.body;queuedAnswer=null;
+      if(queued.epoch===epoch&&!pauseIntent&&!homeIntent&&!pending&&!pauseOperation&&run?.status==='playing'&&
+        run.id===fields.runId&&run.question?.id===fields.questionId&&run.question.choices.some(choice=>choice.id===fields.choiceId)){
+        void perform(queued.operation);return;
+      }
+      render();
+    }
     if(mapNeeded&&!pending&&!pauseOperation){schedule(0);return;}
     schedule();
   }
   async function perform(operation){
     if(!active||inFlight)return;
-    inFlight=true;clearTimeout(pollTimer);const lease=epoch;
+    inFlight=true;readInFlight=false;clearTimeout(pollTimer);const lease=epoch;
     if(operation.action!=='pause')pending=operation;
     render();
     try{
@@ -136,10 +145,14 @@
     pauseIntent=false;homeIntent=false;void perform({action:'start',body:{requestId:uuid(),level}});
   }
   function answer(questionId,choiceId){
-    if(!active||inFlight||pending||pauseIntent||run?.status!=='playing'||run.question?.id!==questionId)return;
-    void perform({action:'answer',body:{requestId:uuid(),runId:run.id,questionId,choiceId}});
+    if(!active||pending||queuedAnswer||pauseIntent||homeIntent||run?.status!=='playing'||run.question?.id!==questionId||
+      !run.question.choices.some(choice=>choice.id===choiceId)||inFlight&&!readInFlight)return;
+    const operation={action:'answer',body:{requestId:uuid(),runId:run.id,questionId,choiceId}};
+    if(readInFlight){queuedAnswer={operation,epoch};render();return;}
+    void perform(operation);
   }
   function requestPause(){
+    queuedAnswer=null;
     if(!active||terminal(run)&&pending?.action!=='start')return;
     pauseIntent=true;feedback='';drawnQuestion=null;
     if(run)run={...run,question:null};
@@ -161,7 +174,7 @@
   }
   function leaveHome(){
     if(!active)return;
-    homeIntent=true;
+    homeIntent=true;queuedAnswer=null;
     if(pending?.action==='abort'){if(!inFlight)void perform(pending);return;}
     if(!run&&!inFlight&&!pending){afterRequest();return;}
     if(!run&&pending){requestPause();if(!inFlight)void perform(pending);return;}
@@ -251,7 +264,7 @@
       }
       region.append(prompt,choices);
     }
-    for(const option of region.querySelectorAll('button'))option.disabled=inFlight||!!pending;
+    for(const option of region.querySelectorAll('button'))option.disabled=inFlight&&!readInFlight||!!pending||!!queuedAnswer;
     region.querySelector('.challenge-answer-retry')?.remove();
     if(pending&&!inFlight){const retryButton=button('同じ回答を確認','secondary-button challenge-answer-retry',retry);region.append(retryButton);}
   }
@@ -307,8 +320,8 @@
     drawnMode=next;showMessage(message);
   }
   function close(){
-    active=false;epoch++;clearTimers();callbacks={};identity=null;levels=[];run=null;pending=null;pauseOperation=null;pauseIntent=false;homeIntent=false;
-    inFlight=false;mode='map';mapNeeded=false;pollFailures=0;message='';feedback='';drawnMode='';drawnQuestion=null;lastHp=null;
+    active=false;epoch++;clearTimers();callbacks={};identity=null;levels=[];run=null;queuedAnswer=null;pending=null;pauseOperation=null;pauseIntent=false;homeIntent=false;
+    inFlight=false;readInFlight=false;mode='map';mapNeeded=false;pollFailures=0;message='';feedback='';drawnMode='';drawnQuestion=null;lastHp=null;
     document.body.classList.remove('challenge-is-game');document.body.style.removeProperty('--challenge-scene');$('challengeApp')?.replaceChildren();
   }
   function open(member,options={}){

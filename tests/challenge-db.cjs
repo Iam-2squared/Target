@@ -33,10 +33,15 @@ async function answer(run,correct=true,requestId=uid(),actor=member){
 }
 async function clear(level,actor=member){
  let r=await start(level,actor),last;
+ if(level>=7){
+  const invalid=questionBlock(level),classical=invalid.find(q=>q.book==='kobun400');
+  classical.number=100*(level-6)+1;
+  eq((await rpc('next',{runId:r.id,questions:invalid},actor)).error.code,'CHALLENGE_INVALID_QUESTION','database rejects classical questions beyond this level\'s section');
+ }
  for(let n=0;n<20*level;n++){
   r=await supply(r,actor);
   // Remove wall-clock test-machine speed from this deterministic combat check.
-  await db.query("UPDATE target_private.challenge_runs SET next_attack_at=clock_timestamp()+((CASE WHEN level=10 THEN 1000 ELSE 2000-100*(level-1) END)*interval '1 millisecond') WHERE id=$1",[r.id]);
+  await db.query("UPDATE target_private.challenge_runs SET next_attack_at=clock_timestamp()+((CASE WHEN level=10 THEN 2000 ELSE 3000-100*(level-1) END)*interval '1 millisecond') WHERE id=$1",[r.id]);
   // Reset the minute quota in this fixture; production has no automated answer loop.
   if(n%100===0)await db.query('UPDATE target_private.challenge_rates SET calls=1 WHERE member_id=$1',[actor.memberId]);
   last=await answer(r,true,uid(),actor);ok(last.ok,JSON.stringify(last));r=last.run;
@@ -53,6 +58,63 @@ async function accounting(){
  const query='SELECT coalesce(sum(bytes),0)::bigint expected FROM ('+tables.map(t=>'SELECT pg_column_size(to_jsonb(t))+128 bytes FROM target_private.'+t+' t').join(' UNION ALL ')+') rows';
  const expected=String(BigInt((await db.query(query)).rows[0].expected)+baselineBytes);
  eq((await db.query('SELECT logical_bytes FROM target_private.system_state WHERE singleton')).rows[0].logical_bytes,expected,'logical quota equals actual retained challenge rows without upsert leakage');
+}
+async function transitionChecks(migration){
+ const {generateQuestions}=require('../server/questions.cjs');
+ const originalBlock=level=>[['target1900',5,19],['target1000',3,10],['kobun400',2,4]].flatMap(([book,count,sections])=>
+  generateQuestions({book,direction:'japanese',count:10,from:1,to:100*(1+Math.floor((sections-1)*(level-1)/9)),requestId:uid()}).slice(0,count).map(q=>({...q,book})));
+ const cases=[
+  {level:1,status:'playing',offset:650,invalid:true},
+  {level:1,status:'paused',remaining:740,invalid:true},
+  {level:7,status:'playing',offset:800,invalid:true},
+  {level:8,status:'paused',remaining:600,invalid:true},
+  {level:9,status:'playing',offset:900},
+  {level:10,status:'paused',remaining:600},
+  {level:1,status:'playing',offset:-5000,english:true},
+  {level:1,status:'playing',offset:1000,english:true},
+  {level:7,status:'paused',remaining:300,empty:true},
+  {level:1,status:'aborted',remaining:2000,empty:true}
+ ];
+ await db.query("INSERT INTO target_private.server_credentials(singleton,key_hash) VALUES(true,encode(sha256(convert_to($1,'UTF8')),'hex'))",[secret]);
+ for(const item of cases){
+  item.actor={memberId:uid(),name:'Transition '+cases.indexOf(item),sessionHash:crypto.randomBytes(32).toString('hex')};
+  await db.query('INSERT INTO target_private.profiles(member_id,name) VALUES($1,$2)',[item.actor.memberId,item.actor.name]);
+  let questions=item.empty?[]:originalBlock(item.level);
+  if(item.english)questions=questions.filter(q=>q.book!=='kobun400');
+  if(item.invalid&&item.level>=7){
+   const q=generateQuestions({book:'kobun400',direction:'japanese',count:10,from:201,to:300,requestId:uid()})[0];
+   questions[questions.findIndex(q=>q.book==='kobun400')]={...q,book:'kobun400'};
+  }
+  item.before=(await db.query("INSERT INTO target_private.challenge_runs(member_id,level,status,player_hp,enemy_hp,streak,correct_count,wrong_count,sequence,questions,next_attack_at,attack_remaining_ms) VALUES($1,$2::integer,$3,75,$2::integer*100-5,3,3,1,4,$4,CASE WHEN $5::integer IS NULL THEN NULL ELSE clock_timestamp()+$5*interval '1 millisecond' END,$6) RETURNING to_jsonb(challenge_runs) x",
+   [item.actor.memberId,item.level,item.status,JSON.stringify(questions),item.offset??null,item.remaining??1000])).rows[0].x;
+ }
+ const immutable=(await db.query("SELECT jsonb_build_object('finance',(SELECT md5(prosrc) FROM pg_proc WHERE oid='target_private.wallet_finance_projection(timestamptz)'::regprocedure),'profiles',(SELECT jsonb_agg(to_jsonb(p) ORDER BY member_id) FROM target_private.profiles p),'rewards',(SELECT count(*) FROM target_private.challenge_reward_events),'badges',(SELECT count(*) FROM target_private.challenge_badges),'requests',(SELECT count(*) FROM target_private.challenge_requests)) x")).rows[0].x;
+ await db.query(migration);
+ eq((await db.query("SELECT jsonb_build_object('finance',(SELECT md5(prosrc) FROM pg_proc WHERE oid='target_private.wallet_finance_projection(timestamptz)'::regprocedure),'profiles',(SELECT jsonb_agg(to_jsonb(p) ORDER BY member_id) FROM target_private.profiles p),'rewards',(SELECT count(*) FROM target_private.challenge_reward_events),'badges',(SELECT count(*) FROM target_private.challenge_badges),'requests',(SELECT count(*) FROM target_private.challenge_requests)) x")).rows[0].x,immutable,'difficulty migration preserves every profile and permanent reward/badge/request receipt');
+ for(const item of cases){
+  const after=(await db.query('SELECT to_jsonb(r) x FROM target_private.challenge_runs r WHERE id=$1',[item.before.id])).rows[0].x;
+  if(item.status==='aborted'){eq(after,item.before,'terminal runs remain byte-for-byte unchanged');continue;}
+  const stable=row=>{const {questions,next_attack_at,attack_remaining_ms,updated_at,...rest}=row;return rest;};
+  eq(stable(after),stable(item.before),'active transition preserves HP, counters, status, sequence and financial outcomes');
+  eq(after.questions,item.invalid?[]:item.before.questions,'only blocks containing out-of-scope classical questions are discarded');
+  if(item.offset!==undefined){
+   eq((await db.query('SELECT attack_remaining_ms=greatest(0,ceil(extract(epoch FROM ($2::timestamptz-updated_at))*1000)::integer)+1000 same FROM target_private.challenge_runs WHERE id=$1',[after.id,item.before.next_attack_at])).rows[0].same,true,'active remaining time gains exactly one second without old overdue attacks');
+  }else eq(after.attack_remaining_ms,item.before.attack_remaining_ms+1000);
+  if(item.status==='playing'&&!item.invalid){
+   eq((await db.query("SELECT extract(epoch FROM (next_attack_at-greatest($2::timestamptz,updated_at)))*1000 delay FROM target_private.challenge_runs WHERE id=$1",[after.id,item.before.next_attack_at])).rows[0].delay,'1000.000000','valid playing deadline shifts by one second; overdue deadline starts at cutover');
+  }else eq(after.next_attack_at,null);
+  const resumed=(await rpc('resume',{runId:after.id},item.actor)).run;
+  if(item.invalid){
+   eq((await rpc('answer',{runId:after.id,questionId:item.before.questions[0].id,choiceId:item.before.questions[0].correctChoiceId},item.actor)).error.code,
+    'CHALLENGE_QUESTION_STALE','an unanswered question from a discarded old block cannot be scored');
+  }else if(item.before.questions.length){
+   eq(resumed.question.id,item.before.questions[0].id,'a retained current question keeps its stable ID');
+  }
+  const supplied=await supply(resumed,item.actor);
+  ok(supplied.question,'both retained and replaced active blocks can continue');
+  ok(supplied.question.book!=='kobun400'||(supplied.level>=7&&supplied.question.number<=100*(supplied.level-6)));
+  await rpc('abort',{runId:after.id},item.actor);
+ }
 }
 async function legacyCarryChecks(verifySql){
  const {generateQuestions}=require('../server/questions.cjs');
@@ -201,19 +263,27 @@ async function main(){
  await admin.query('CREATE DATABASE "'+dbName+'"');created=true;
  url.pathname='/'+dbName;db=new Client({connectionString:url.href});other=new Client({connectionString:url.href});await db.connect();await other.connect();
  await db.query("DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='anon') THEN CREATE ROLE anon NOLOGIN; END IF; IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='authenticated') THEN CREATE ROLE authenticated NOLOGIN; END IF; IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='service_role') THEN CREATE ROLE service_role NOLOGIN; END IF; END $$");
- for(const file of (await fs.readdir(path.join(root,'supabase/migrations'))).filter(x=>/^\d+_.*\.sql$/.test(x)).sort())await db.query(await fs.readFile(path.join(root,'supabase/migrations',file),'utf8'));
- baselineBytes=BigInt((await db.query('SELECT logical_bytes FROM target_private.system_state WHERE singleton')).rows[0].logical_bytes);
- await db.query("INSERT INTO target_private.server_credentials(singleton,key_hash) VALUES(true,encode(sha256(convert_to($1,'UTF8')),'hex'))",[secret]);
+ for(const file of (await fs.readdir(path.join(root,'supabase/migrations'))).filter(x=>/^\d+_.*\.sql$/.test(x)).sort()){
+  const migration=await fs.readFile(path.join(root,'supabase/migrations',file),'utf8');
+  if(file==='20261115092352_target_challenge_gentler_clock_and_late_kobun.sql')await transitionChecks(migration);
+  else await db.query(migration);
+ }
+ const existingBytes=(await db.query("SELECT coalesce(sum(bytes),0)::bigint bytes FROM (SELECT pg_column_size(to_jsonb(t))+128 bytes FROM target_private.challenge_runs t UNION ALL SELECT pg_column_size(to_jsonb(t))+128 FROM target_private.challenge_rates t UNION ALL SELECT pg_column_size(to_jsonb(t))+128 FROM target_private.challenge_requests t) retained")).rows[0].bytes;
+ baselineBytes=BigInt((await db.query('SELECT logical_bytes FROM target_private.system_state WHERE singleton')).rows[0].logical_bytes)-BigInt(existingBytes);
+ await db.query("INSERT INTO target_private.server_credentials(singleton,key_hash) VALUES(true,encode(sha256(convert_to($1,'UTF8')),'hex')) ON CONFLICT(singleton) DO NOTHING",[secret]);
  for(const actor of [member,stranger])await db.query('INSERT INTO target_private.profiles(member_id,name) VALUES($1,$2)',[actor.memberId,actor.name]);
  eq((await rpc('map',{},member,db,'wrong')).error.code,'RPC_FORBIDDEN');
  eq((await rpc('start',{level:2})).error.code,'CHALLENGE_LOCKED');
  let map=await rpc('map');eq(map.levels.filter(x=>x.unlocked).map(x=>x.level),[1]);eq(map.activeRun,null);
+ eq(map.levels.map(row=>row.attackIntervalMs),[3000,2900,2800,2700,2600,2500,2400,2300,2200,2000]);
  for(let n=0;n<20;n++)await rpc('map');await accounting();
  for(let level=1;level<=10;level++){
   const block=questionBlock(level);
+  eq(block.length,level<7?8:10);
   for(const [book,count,sections] of [['target1900',5,19],['target1000',3,10],['kobun400',2,4]]){
-   eq(block.filter(q=>q.book===book).length,count);
-   ok(block.filter(q=>q.book===book).every(q=>q.number>=1&&q.number<=(1+Math.floor((sections-1)*(level-1)/9))*100));
+   eq(block.filter(q=>q.book===book).length,book==='kobun400'&&level<7?0:count);
+   const maxSection=book==='kobun400'?level-6:1+Math.floor((sections-1)*(level-1)/9);
+   ok(block.filter(q=>q.book===book).every(q=>q.number>=1&&q.number<=maxSection*100));
   }
  }
  const requestId=uid();let result=await rpc('start',{level:1,requestId});let r=result.run;
@@ -221,7 +291,10 @@ async function main(){
  eq((await rpc('start',{level:2,requestId})).error.code,'CHALLENGE_REQUEST_CONFLICT');
  eq((await rpc('start',{level:1})).error.code,'CHALLENGE_ACTIVE_RUN');
  eq((await rpc('state',{runId:r.id},stranger)).error.code,'CHALLENGE_NOT_FOUND');
- eq(r.playerMaxHp,100);eq(r.enemyMaxHp,100);eq(r.attackIntervalMs,2000);eq(r.attackDamage,5);
+ eq(r.playerMaxHp,100);eq(r.enemyMaxHp,100);eq(r.attackIntervalMs,3000);eq(r.attackDamage,5);
+ eq((await rpc('next',{runId:r.id,questions:questionBlock(7)})).error.code,'CHALLENGE_INVALID_QUESTION','database rejects the old ten-question classical mix below level 7');
+ const earlyInvalid=questionBlock(1);earlyInvalid[0]=questionBlock(7).find(q=>q.book==='kobun400');
+ eq((await rpc('next',{runId:r.id,questions:earlyInvalid})).error.code,'CHALLENGE_INVALID_QUESTION','database rejects classical Japanese even inside an eight-question early block');
  r=await supply(r);ok(r.question);ok(!JSON.stringify(r).includes('correctChoiceId')&&!JSON.stringify(r).includes('correctText'));
  const initialQuestion=r.question.id;
  eq((await rpc('next',{runId:r.id,questions:questionBlock(1)})).run.question.id,initialQuestion,'polling cannot replace question');
@@ -233,8 +306,8 @@ async function main(){
  eq(r.playerHp,90);eq(r.enemyHp,85);eq(r.streak,0);eq(result.answer.enemyHealedHp,10);
  // The request hash binds the original submitted question and choice, not the next question.
  const saved=(await db.query('SELECT response FROM target_private.challenge_requests WHERE member_id=$1 AND request_id=$2',[member.memberId,missId])).rows[0];ok(saved.response.answer);
- await db.query("UPDATE target_private.challenge_runs SET next_attack_at=clock_timestamp()-interval '4100 milliseconds' WHERE id=$1",[r.id]);
- r=(await rpc('state',{runId:r.id})).run;eq(r.playerHp,75,'all three elapsed enemy attacks apply');ok(r.nextAttackInMs>1500&&r.nextAttackInMs<=2000);
+ await db.query("UPDATE target_private.challenge_runs SET next_attack_at=clock_timestamp()-interval '6100 milliseconds' WHERE id=$1",[r.id]);
+ r=(await rpc('state',{runId:r.id})).run;eq(r.playerHp,75,'all three elapsed enemy attacks apply at the slower interval');ok(r.nextAttackInMs>2500&&r.nextAttackInMs<=3000);
  const pauseId=uid();r=(await rpc('pause',{runId:r.id,requestId:pauseId})).run;
  eq(r.status,'paused');eq(r.question,null);const frozen=r.playerHp,remaining=r.nextAttackInMs;
  await db.query('SELECT pg_sleep(0.04)');r=(await rpc('state',{runId:r.id})).run;
@@ -253,7 +326,7 @@ async function main(){
   map=await rpc('map');eq(map.levels[level-1].cleared,true);
   if(level<10)eq(map.levels[level].unlocked,true);
  }
- eq(result.run.playerMaxHp,550);eq(result.run.enemyMaxHp,1000);eq(result.run.attackIntervalMs,1000);eq(result.run.attackDamage,15);
+ eq(result.run.playerMaxHp,550);eq(result.run.enemyMaxHp,1000);eq(result.run.attackIntervalMs,2000);eq(result.run.attackDamage,15);
  const earnedBefore=result.wallet.totalIncome,revisionBefore=result.wallet.walletRevision;
  result=await clear(1);eq(result.badgeAwarded,false);eq(result.wallet.totalIncome,earnedBefore+100000);eq(result.wallet.balance,result.wallet.totalIncome);
  eq(result.wallet.walletRevision,revisionBefore+1,'reward advances shared wallet revision exactly once');
