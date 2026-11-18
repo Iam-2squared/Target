@@ -169,6 +169,11 @@ async function handler(req, res) {
       }
     }
     const shopAction={'/api/integrations/kgs/wallet':'wallet','/api/integrations/kgs/gacha':'draw','/api/integrations/kgs/sell':'sell'}[pathname];
+    const weightAction={'/api/integrations/kgs/weight/status':'status','/api/integrations/kgs/weight/credit':'credit'}[pathname];
+    if(weightAction&&req.method==='POST'){
+      shop.authorize(req,config);
+      return send(res,200,await require('./weight.cjs').perform(weightAction,await readJson(req,2048)));
+    }
     if(shopAction&&req.method==='POST'){
       // Only the KGS service may assert an already authenticated class member.
       // Authorize before parsing body, rate allocation or the Origin bypass.
