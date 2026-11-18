@@ -10,6 +10,8 @@ const birthday = require('./birthday.cjs');
 const games = require('./games.cjs');
 const battle = require('./battle.cjs');
 const {validateQuizInput, generateQuestions} = require('./questions.cjs');
+const {books: studyBooks} = require('../public/materials.js');
+const isStudyBook = value => typeof value === 'string' && Object.hasOwn(studyBooks, value);
 const PROCESSING_STARTED=Symbol('target.processing.started');
 
 const HEADERS = {
@@ -61,12 +63,12 @@ function masteryBook(req, url, res) {
     const single = value => Array.isArray(value) && value.length === 1 ? value[0] : value;
     const fields = [
       'ub='+url.searchParams.getAll('book').length,
-      'uv='+Number(['target1900', 'target1000', 'kobun400'].includes(url.searchParams.get('book'))),
+      'uv='+Number(isStudyBook(url.searchParams.get('book'))),
       'ur='+url.searchParams.getAll('route').length,
       'rv='+Number(url.searchParams.get('route') === 'mastery'),
       'uo='+[...url.searchParams.keys()].filter(key => !['book', 'route', 'path'].includes(key)).length,
       'qb='+(typeof helperBook === 'string' ? 's' : Array.isArray(helperBook) ? 'a' : helperBook === undefined ? 'n' : 'o'),
-      'qv='+Number(['target1900', 'target1000', 'kobun400'].includes(single(helperBook))),
+      'qv='+Number(isStudyBook(single(helperBook))),
       'qr='+Number(single(helperRoute) === 'mastery'),
       'qo='+Object.keys(query).filter(key => !['book', 'route', 'path'].includes(key)).length
     ];
@@ -93,7 +95,7 @@ function masteryBook(req, url, res) {
     }
   }
   const book = parameters.get('book');
-  if (!['target1900', 'target1000', 'kobun400'].includes(book) ||
+  if (!isStudyBook(book) ||
       (parameters.has('route') && parameters.get('route') !== 'mastery') ||
       (parameters.has('path') && parameters.get('path') !== 'mastery')) invalid();
   return book;

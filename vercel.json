@@ -8,7 +8,7 @@
   "outputDirectory": "dist",
   "functions": {
     "api/index.js": {
-      "includeFiles": "{server/**,data/**}",
+      "includeFiles": "{server/**,data/**,public/materials.js}",
       "excludeFiles": "{tests/**,docs/**}",
       "maxDuration": 30
     }

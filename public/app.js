@@ -1,18 +1,22 @@
 'use strict';
 (() => {
   const $ = id => document.getElementById(id);
-  const books = {
-    target1900: {title:'Target 1900',kind:'英単語',total:1900,wordLabel:'英語',meaningLabel:'訳'},
-    target1000: {title:'英熟語Target 1000',kind:'英熟語',total:1000,wordLabel:'英語',meaningLabel:'訳'},
-    kobun400: {title:'古文単語',kind:'古文単語',total:400,wordLabel:'古語',meaningLabel:'現代語訳'}
-  };
+  const materials=window.TargetStudyMaterials,books=materials.books;
+  const sectionsFor=book=>materials.sectionsFor(book);
+  const unitLabel=book=>books[book].sectionLabel;
+  const sectionLabel=(book,number)=>unitLabel(book)+' '+number;
+  function sectionRangeLabel(book,range){
+    const sections=sectionsFor(book);
+    return range.from===sections[0].section&&range.to===sections[sections.length-1].section?'全'+unitLabel(book):
+      range.from===range.to?sectionLabel(book,range.from):sectionLabel(book,range.from)+'〜'+range.to;
+  }
   const views = ['home','memorySetup','memorize','setup','quiz','result','ranking','mastery','battle','challenge'];
   const datasets = new Map(), datasetPromises = new Map();
   let selectedBook='target1900', activeView='home', member=null, lifetimeCorrect=0, lifetimePoints=0;
   let sessionKnown=false, sessionEpoch=0, sessionTicket=0, walletBalance=0, walletKnown=false, walletRevision=null;
   const rankingTickets={homeRanking:0,ranking:0};
-  const sectionRanges={target1900:{from:1,to:1},target1000:{from:1,to:1},kobun400:{from:1,to:1}};
-  const reviewSectionRanges={target1900:{from:1,to:19},target1000:{from:1,to:10},kobun400:{from:1,to:4}};
+  const sectionRanges=Object.fromEntries(Object.keys(books).map(book=>{const first=sectionsFor(book)[0].section;return [book,{from:first,to:first}];}));
+  const reviewSectionRanges=Object.fromEntries(Object.keys(books).map(book=>{const sections=sectionsFor(book);return [book,{from:sections[0].section,to:sections[sections.length-1].section}];}));
   let masteryTicket=0,homeReviewTicket=0,setupMode='normal';
   let memoryPage=0, memoryBook='target1900', meaningsHidden=false, memoryTicket=0;
   let memoryPages=[], memoryColumns=[], memoryLayoutKey='', memoryLayoutFrame=0,memorySelectionKey='',memoryRange={from:1,to:100};
@@ -270,8 +274,7 @@
     $('testStart').textContent=starting?'準備中…':'開始';
     $('testStart').disabled=starting||(setupMode==='review'&&!member);
     $('reviewNotice').hidden=setupMode!=='review';$('reviewLogin').hidden=setupMode!=='review'||!!member;
-    const reviewRange=reviewSectionRanges[selectedBook],allSections=Math.ceil(books[selectedBook].total/100);
-    const reviewLabel=reviewRange.from===1&&reviewRange.to===allSections?'全Section':reviewRange.from===reviewRange.to?'Section '+reviewRange.from:'Section '+reviewRange.from+'〜'+reviewRange.to;
+    const reviewLabel=sectionRangeLabel(selectedBook,reviewSectionRanges[selectedBook]);
     $('reviewNotice').textContent=member?reviewLabel+'にある、まだ定着していないミスから出題します。2回連続正解でクリア。':'解き直しにはログインが必要です。';
     $('masteryLogin').hidden=!!member;
     if(!member){$('homeReviewCount').textContent='—';$('homeReviewStatus').textContent=sessionKnown?'ログインして確認':'接続を確認しています…';$('homeReviewRetry').hidden=true;}
@@ -327,16 +330,20 @@
 
   }
   function selectedWordRange(book=selectedBook,review=false){
-    const range=(review?reviewSectionRanges:sectionRanges)[book];return {from:(range.from-1)*100+1,to:Math.min(range.to*100,books[book].total)};
+    const range=(review?reviewSectionRanges:sectionRanges)[book];return materials.wordRange(book,range.from,range.to);
   }
   function renderSectionControls(){
-    const total=Math.ceil(books[selectedBook].total/100);
+    const sections=sectionsFor(selectedBook),unit=unitLabel(selectedBook);
     $('bookSelect').value=selectedBook;
     $('directionWordLabel').textContent=books[selectedBook].wordLabel;
     $('directionMeaningLabel').textContent=books[selectedBook].meaningLabel;
+    $('memoryRangeLegend').textContent='学ぶ'+unit+'を選択';$('memoryRangeHelp').textContent='選んだ'+unit+'の単語を順番に確認できます。次へ・前へでページを移動できます。';
+    $('testRangeLegend').textContent=unit;
     for(const [id,part] of [['memoryRangeFrom','from'],['memoryRangeTo','to'],['rangeFrom','from'],['rangeTo','to']]){
       const select=$(id);
-      if(select.options.length!==total){const fragment=document.createDocumentFragment();for(let number=1;number<=total;number++){const option=element('option','', 'Section '+number);option.value=String(number);fragment.append(option);}select.replaceChildren(fragment);}
+      if(select.dataset.book!==selectedBook){const fragment=document.createDocumentFragment();for(const row of sections){const option=element('option','',sectionLabel(selectedBook,row.section));option.value=String(row.section);fragment.append(option);}select.replaceChildren(fragment);select.dataset.book=selectedBook;}
+      const memory=id.startsWith('memory'),position=part==='from'?'最初の':'最後の';
+      select.setAttribute('aria-label',(memory?'暗記の':'')+position+unit);$(id+'Label').textContent=position+unit;
       const range=(id.startsWith('range')&&setupMode==='review'?reviewSectionRanges:sectionRanges)[selectedBook];
       select.value=String(range[part]);
     }
@@ -344,7 +351,7 @@
     $('rangeFrom').disabled=false;$('rangeTo').disabled=false;
   }
   function changeSection(part,value,{review=false}={}){
-    const section=Number(value),total=Math.ceil(books[selectedBook].total/100);if(!Number.isInteger(section)||section<1||section>total)return;
+    const section=Number(value);if(!Number.isInteger(section)||!sectionsFor(selectedBook).some(row=>row.section===section))return;
     const range=(review?reviewSectionRanges:sectionRanges)[selectedBook];range[part]=section;
     if(range.from>range.to)range[part==='from'?'to':'from']=section;
     startRetry=null;renderSectionControls();setError('setupError');
@@ -359,11 +366,11 @@
     clearMastery();$('masteryBook').textContent=books[selectedBook].title;show('mastery');void loadMastery();
   }
   function masteryRows(data,book){
-    const total=books[book].total,sectionCount=Math.ceil(total/100);
+    const total=books[book].total,sections=sectionsFor(book),sectionCount=sections.length;
     if(data.book!==book||!Array.isArray(data.sections)||data.sections.length!==sectionCount||!Array.isArray(data.reviewNumbers)||data.reviewNumbers.length>total||data.reviewNumbers.some((number,index)=>!Number.isSafeInteger(number)||number<1||number>total||(index>0&&number<=data.reviewNumbers[index-1])))throw appError('定着率の内容を確認できませんでした。もう一度お試しください。');
     for(let index=0;index<sectionCount;index++){
-      const row=data.sections[index],from=index*100+1,to=Math.min(from+99,total),size=to-from+1;
-      if(!row||row.section!==index+1||row.from!==from||row.to!==to||row.total!==size||!Number.isSafeInteger(row.mastered)||row.mastered<0||row.mastered>size||row.percent!==Math.floor(row.mastered*100/size)||!Number.isSafeInteger(row.reviewCount)||row.reviewCount<0||row.reviewCount>size-row.mastered||row.reviewCount!==data.reviewNumbers.filter(number=>number>=from&&number<=to).length)throw appError('定着率の内容を確認できませんでした。もう一度お試しください。');
+      const row=data.sections[index],expected=sections[index],{from,to}=expected,size=to-from+1;
+      if(!row||row.section!==expected.section||row.from!==from||row.to!==to||row.total!==size||!Number.isSafeInteger(row.mastered)||row.mastered<0||row.mastered>size||row.percent!==Math.floor(row.mastered*100/size)||!Number.isSafeInteger(row.reviewCount)||row.reviewCount<0||row.reviewCount>size-row.mastered||row.reviewCount!==data.reviewNumbers.filter(number=>number>=from&&number<=to).length)throw appError('定着率の内容を確認できませんでした。もう一度お試しください。');
       if(row.achievers!==undefined){
         const seen=new Set();
         if(!Array.isArray(row.achievers)||row.achievers.length>500||row.achievers.some(person=>{
@@ -401,14 +408,14 @@
       const fragment=document.createDocumentFragment();
       for(const row of masteryRows(data,book)){
         const item=element('li','mastery-row'),heading=element('div','mastery-row-heading'),progress=element('progress');
-        item.dataset.section=String(row.section);heading.append(element('strong','mastery-section','Section '+row.section),element('span','mastery-percent',row.percent+'%'));
-        progress.max=row.total;progress.value=row.mastered;progress.setAttribute('aria-label','Section '+row.section+'の定着率 '+row.percent+'%');
+        item.dataset.section=String(row.section);heading.append(element('strong','mastery-section',sectionLabel(book,row.section)),element('span','mastery-percent',row.percent+'%'));
+        progress.max=row.total;progress.value=row.mastered;progress.setAttribute('aria-label',sectionLabel(book,row.section)+'の定着率 '+row.percent+'%');
         item.append(heading,element('span','mastery-count',row.mastered+' / '+row.total),progress);
         if(row.achievers!==undefined){
           const achievers=element('div','mastery-achievers');
           achievers.append(element('p','mastery-achievers-heading','100%達成者'));
           if(row.achievers.length){
-            const names=element('ul','mastery-achiever-list');names.setAttribute('aria-label','Section '+row.section+'の100%達成者');
+            const names=element('ul','mastery-achiever-list');names.setAttribute('aria-label',sectionLabel(book,row.section)+'の100%達成者');
             for(const person of row.achievers)names.append(element('li','mastery-achiever',person.name));
             achievers.append(names);
           }else achievers.append(element('p','mastery-achievers-empty','まだいません'));
@@ -566,7 +573,7 @@
     } catch(error) {
       if(!currentSetup())return;
       if(error.status===401){bonus.reset();clearMastery();member=null;lifetimeCorrect=0;resetWallet();sessionKnown=true;sessionEpoch++;renderIdentity();}
-      setError('setupError',error.code==='REVIEW_EMPTY'?'選択したSectionに解き直す単語はありません。':error.message);
+      setError('setupError',error.code==='REVIEW_EMPTY'?'選択した'+unitLabel(selectedBook)+'に解き直す単語はありません。':error.message);
     } finally {starting=false;$('testStart').disabled=false;renderIdentity();}
   }
   function renderQuestion() {

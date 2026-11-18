@@ -2,7 +2,9 @@
 const crypto = require('node:crypto');
 const path = require('node:path');
 const {HttpError} = require('./errors.cjs');
-const BOOKS = {target1900: {size: 1900, prefix: 'v1900'}, target1000: {size: 1000, prefix: 'i1000'}, kobun400: {size: 400, prefix: 'k400'}};
+const materials = require('../public/materials.js');
+const BOOKS = Object.fromEntries(Object.entries(materials.books).map(([id, book]) =>
+  [id, {size: book.total, prefix: book.prefix}]));
 const cache = new Map();
 
 function normalize(value) {
@@ -21,7 +23,8 @@ function loadBook(book) {
   if (!Array.isArray(rows) || rows.length !== expected.size || rows.some((row, i) =>
     row.number !== i + 1 || row.id !== expected.prefix + '-' + String(i + 1).padStart(4, '0') ||
     typeof row.english !== 'string' || !row.english.trim() || row.english.length > 2000 ||
-    typeof row.japanese !== 'string' || !row.japanese.trim() || row.japanese.length > 2000)) {
+    typeof row.japanese !== 'string' || !row.japanese.trim() || row.japanese.length > 2000 ||
+    (row.section !== undefined && row.section !== materials.sectionForWord(book, row.number)?.section))) {
     throw new HttpError(503, '教材データを確認できませんでした。', 'MATERIALS_UNAVAILABLE');
   }
   cache.set(book, rows);

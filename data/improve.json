@@ -1,0 +1,296 @@
+[
+  {
+    "id": "improve-0001",
+    "number": 1,
+    "english": "global",
+    "japanese": "（形）世界的な、地球規模の",
+    "section": 8
+  },
+  {
+    "id": "improve-0002",
+    "number": 2,
+    "english": "issue",
+    "japanese": "（名）問題、課題",
+    "section": 8
+  },
+  {
+    "id": "improve-0003",
+    "number": 3,
+    "english": "solution",
+    "japanese": "（名）解決策",
+    "section": 8
+  },
+  {
+    "id": "improve-0004",
+    "number": 4,
+    "english": "environment",
+    "japanese": "（名）環境",
+    "section": 8
+  },
+  {
+    "id": "improve-0005",
+    "number": 5,
+    "english": "protect",
+    "japanese": "（動）〜を保護する、守る",
+    "section": 8
+  },
+  {
+    "id": "improve-0006",
+    "number": 6,
+    "english": "reduce",
+    "japanese": "（動）〜を減らす、縮小する",
+    "section": 8
+  },
+  {
+    "id": "improve-0007",
+    "number": 7,
+    "english": "resource",
+    "japanese": "（名）資源",
+    "section": 8
+  },
+  {
+    "id": "improve-0008",
+    "number": 8,
+    "english": "recycle",
+    "japanese": "（動）〜を再利用する、リサイクルする",
+    "section": 8
+  },
+  {
+    "id": "improve-0009",
+    "number": 9,
+    "english": "affect",
+    "japanese": "（動）〜に影響を与える",
+    "section": 8
+  },
+  {
+    "id": "improve-0010",
+    "number": 10,
+    "english": "action",
+    "japanese": "（名）行動、対策",
+    "section": 8
+  },
+  {
+    "id": "improve-0011",
+    "number": 11,
+    "english": "influence",
+    "japanese": "（名・動）影響（力）、〜に影響を及ぼす",
+    "section": 9
+  },
+  {
+    "id": "improve-0012",
+    "number": 12,
+    "english": "society",
+    "japanese": "（名）社会",
+    "section": 9
+  },
+  {
+    "id": "improve-0013",
+    "number": 13,
+    "english": "value",
+    "japanese": "（名）価値、価値観",
+    "section": 9
+  },
+  {
+    "id": "improve-0014",
+    "number": 14,
+    "english": "individual",
+    "japanese": "（名・形）個人、個人の、個別の",
+    "section": 9
+  },
+  {
+    "id": "improve-0015",
+    "number": 15,
+    "english": "role",
+    "japanese": "（名）役割",
+    "section": 9
+  },
+  {
+    "id": "improve-0016",
+    "number": 16,
+    "english": "contribute",
+    "japanese": "（動）貢献する、寄与する",
+    "section": 9
+  },
+  {
+    "id": "improve-0017",
+    "number": 17,
+    "english": "community",
+    "japanese": "（名）地域社会、共同体",
+    "section": 9
+  },
+  {
+    "id": "improve-0018",
+    "number": 18,
+    "english": "support",
+    "japanese": "（動・名）〜を支える、支持、支援",
+    "section": 9
+  },
+  {
+    "id": "improve-0019",
+    "number": 19,
+    "english": "active",
+    "japanese": "（形）積極的な、活動的な",
+    "section": 9
+  },
+  {
+    "id": "improve-0020",
+    "number": 20,
+    "english": "participate",
+    "japanese": "（動）参加する",
+    "section": 9
+  },
+  {
+    "id": "improve-0021",
+    "number": 21,
+    "english": "future",
+    "japanese": "（名・形）未来、将来の",
+    "section": 10
+  },
+  {
+    "id": "improve-0022",
+    "number": 22,
+    "english": "goal",
+    "japanese": "（名）目標、ゴール",
+    "section": 10
+  },
+  {
+    "id": "improve-0023",
+    "number": 23,
+    "english": "achieve",
+    "japanese": "（動）〜を達成する、成し遂げる",
+    "section": 10
+  },
+  {
+    "id": "improve-0024",
+    "number": 24,
+    "english": "success",
+    "japanese": "（名）成功",
+    "section": 10
+  },
+  {
+    "id": "improve-0025",
+    "number": 25,
+    "english": "challenge",
+    "japanese": "（名・動）難題、挑戦、〜に挑む",
+    "section": 10
+  },
+  {
+    "id": "improve-0026",
+    "number": 26,
+    "english": "overcome",
+    "japanese": "（動）〜を克服する、乗り越える",
+    "section": 10
+  },
+  {
+    "id": "improve-0027",
+    "number": 27,
+    "english": "effort",
+    "japanese": "（名）努力",
+    "section": 10
+  },
+  {
+    "id": "improve-0028",
+    "number": 28,
+    "english": "improve",
+    "japanese": "（動）〜を改善する、向上させる",
+    "section": 10
+  },
+  {
+    "id": "improve-0029",
+    "number": 29,
+    "english": "opportunity",
+    "japanese": "（名）機会、チャンス",
+    "section": 10
+  },
+  {
+    "id": "improve-0030",
+    "number": 30,
+    "english": "confidence",
+    "japanese": "（名）自信、信頼",
+    "section": 10
+  },
+  {
+    "id": "improve-0031",
+    "number": 31,
+    "english": "culture / cultural",
+    "japanese": "（名 / 形）文化 ／ 文化的な",
+    "section": 11
+  },
+  {
+    "id": "improve-0032",
+    "number": 32,
+    "english": "tradition / traditional",
+    "japanese": "（名 / 形）伝統 ／ 伝統的な",
+    "section": 11
+  },
+  {
+    "id": "improve-0033",
+    "number": 33,
+    "english": "custom",
+    "japanese": "（名）習慣、風習",
+    "section": 11
+  },
+  {
+    "id": "improve-0034",
+    "number": 34,
+    "english": "communicate / communication",
+    "japanese": "（動 / 名）意思を伝える、交流する ／ コミュニケーション",
+    "section": 11
+  },
+  {
+    "id": "improve-0035",
+    "number": 35,
+    "english": "express",
+    "japanese": "（動）〜を表現する、表す",
+    "section": 11
+  },
+  {
+    "id": "improve-0036",
+    "number": 36,
+    "english": "understand / understanding",
+    "japanese": "（動 / 名）〜を理解する ／ 理解",
+    "section": 11
+  },
+  {
+    "id": "improve-0037",
+    "number": 37,
+    "english": "respect",
+    "japanese": "（動・名）〜を尊重する、尊敬する ／ 尊敬、敬意",
+    "section": 11
+  },
+  {
+    "id": "improve-0038",
+    "number": 38,
+    "english": "difference",
+    "japanese": "（名）違い、相違点",
+    "section": 11
+  },
+  {
+    "id": "improve-0039",
+    "number": 39,
+    "english": "accept",
+    "japanese": "（動）〜を受け入れる、認める",
+    "section": 11
+  },
+  {
+    "id": "improve-0040",
+    "number": 40,
+    "english": "connect",
+    "japanese": "（動）〜をつなぐ、結びつける",
+    "section": 11
+  },
+  {
+    "id": "improve-0041",
+    "number": 41,
+    "english": "foreign",
+    "japanese": "（形）外国の、見知らぬ",
+    "section": 11
+  },
+  {
+    "id": "improve-0042",
+    "number": 42,
+    "english": "experience",
+    "japanese": "（名・動）経験、体験 ／ 〜を経験する",
+    "section": 11
+  }
+]
