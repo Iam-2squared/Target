@@ -209,7 +209,7 @@
     document.body.dataset.view=view;
     for(const id of views)$(id+'View').hidden=id!==view;
     if(scroll)window.scrollTo({top:0,behavior:'instant'});
-    document.title=view==='challenge'?'挑戦 | 暗記':view==='battle'?'リアタイバトル | 暗記':(['home','memorize'].includes(view)?'暗記':({memorySetup:'暗記の範囲選択',setup:setupMode==='review'?'解き直し':'テスト',quiz:'テスト',result:'テスト結果',ranking:'ランキング',mastery:'定着率'}[view]+' | 暗記'));
+    document.title=view==='challenge'?'挑戦 | 暗記':view==='battle'?'リアタイバトル | 暗記':(['home','memorize'].includes(view)?'暗記':({memorySetup:'暗記の範囲選択',setup:setupMode==='review'?'解き直し':'テスト',quiz:'テスト',result:'テスト結果',ranking:'暗記ランキング',mastery:'定着率'}[view]+' | 暗記'));
   }
   function home() {window.TargetBattleUI?.close();window.TargetChallengeUI?.close();memoryTicket++;clearMastery();show('home');renderIdentity();renderSectionControls();void loadRanking('homeRanking');}
   function goHome() {if(activeView==='quiz'&&quiz&&!quiz.finished){openQuit();return;}if(activeView==='challenge'){window.TargetChallengeUI?.leaveHome();return;}home();}
@@ -266,7 +266,7 @@
   }
   function renderIdentity() {
     $('accountBadge').textContent=member?(member.name.trim()||'KGSアカウント'):(sessionKnown?'ゲスト':'接続未確認');
-    $('homeScore').textContent=member?gou(lifetimePoints):'';
+    $('homeScore').textContent='暗記獲得';
     $('loggedInSettings').hidden=!member;$('loginForm').hidden=!!member;
     $('identityName').textContent=member?.name||'';$('identityInitial').textContent=member?.name?.trim()?.slice(0,1)||'K';
     $('settingsBalance').textContent=walletKnown?gou(walletBalance):'—';$('settingsScore').textContent=walletKnown?gou(lifetimePoints):'—';$('soundSetting').value=soundEnabled?'on':'off';

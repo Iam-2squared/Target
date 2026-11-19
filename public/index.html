@@ -23,7 +23,7 @@
   <script src="/challenge-art.js?v=levels-20261115" defer></script>
   <script src="/challenge.js?v=reward-cap-20261115" defer></script>
   <script src="/materials.js?v=crown-improve-20261118" defer></script>
-  <script src="/app.js?v=crown-improve-20261118" defer></script>
+  <script src="/app.js?v=study-ranking-20261119" defer></script>
 </head>
 <body data-view="home">
 
@@ -51,10 +51,10 @@
         <button id="challengeOpen" class="challenge-home-button" type="button"><span aria-hidden="true">♜</span> 挑戦</button>
       </div>
       <div hidden aria-hidden="true"><span id="homeReviewCount"></span><span id="homeReviewStatus"></span><button id="homeReviewRetry" type="button"></button></div>
-      <button id="rankingOpen" class="ranking-link" type="button"><strong>ランキングTop10</strong><span id="homeScore" class="muted"></span></button>
+      <button id="rankingOpen" class="ranking-link" type="button"><strong>ランキングTop10</strong><span id="homeScore" class="muted">暗記獲得</span></button>
       <p id="homeRankingStatus" class="muted ranking-status" role="status"></p>
       <p id="homeRankingError" class="error-message" role="alert" hidden></p>
-      <ol id="homeRankingList" class="ranking-list home-ranking-list" aria-label="合計点数ランキング 上位10人"></ol>
+      <ol id="homeRankingList" class="ranking-list home-ranking-list" aria-label="暗記で獲得した轟ランキング 上位10人"></ol>
     </section>
 
     <section id="memorySetupView" class="view" aria-labelledby="memorySetupTitle" hidden>
@@ -120,8 +120,8 @@
 
     <section id="rankingView" class="view" aria-labelledby="rankingTitle" hidden>
       <div class="view-toolbar"><button class="back-button" data-home type="button">ホーム</button><button type="button" id="rankingRefresh" class="text-button">更新</button></div>
-      <div class="section-heading"><h1 id="rankingTitle">ランキング</h1></div>
-      <p id="rankingStatus" class="muted" role="status"></p><p id="rankingError" class="error-message" role="alert" hidden></p><ol id="rankingList" class="ranking-list" aria-label="合計点数ランキング"></ol>
+      <div class="section-heading"><h1 id="rankingTitle">暗記ランキング</h1></div>
+      <p id="rankingStatus" class="muted" role="status"></p><p id="rankingError" class="error-message" role="alert" hidden></p><ol id="rankingList" class="ranking-list" aria-label="暗記で獲得した轟ランキング"></ol>
     </section>
 
     <section id="masteryView" class="view" aria-labelledby="masteryTitle" hidden>
@@ -149,7 +149,7 @@
   <footer class="app-footer"><a href="#sources" id="sourcesOpen">出典</a></footer>
 </div>
 
-<dialog id="settingsDialog" aria-labelledby="settingsTitle"><div class="dialog-heading"><h2 id="settingsTitle">個人設定</h2><button type="button" class="icon-button" id="settingsClose" aria-label="個人設定を閉じる">閉じる</button></div><div class="dialog-body"><label class="sound-setting" for="soundSetting"><span>効果音</span><select id="soundSetting"><option value="on">音あり</option><option value="off">音なし</option></select></label><div id="loggedInSettings" hidden><div class="identity-row"><span id="identityInitial" hidden></span><div><span class="eyebrow">KGS 11th</span><strong id="identityName"></strong></div></div><dl class="settings-wallet" aria-label="保有金額と総所得"><div><dt>保有金額</dt><dd id="settingsBalance">—</dd></div><div><dt>総所得</dt><dd id="settingsScore">—</dd></div></dl><button id="logoutButton" class="secondary-button wide" type="button">ログアウト</button></div><form id="loginForm"><p class="settings-description">KGS 11thの出席番号と個人用PINでログイン</p><label>出席番号<input id="attendanceNumber" type="text" inputmode="numeric" autocomplete="off" pattern="(?:0?[1-9]|[1-3][0-9]|40|99)" maxlength="2" placeholder="出席番号" required></label><label for="accountPin">個人用PIN（4桁）</label><div class="pin-field"><input id="accountPin" type="password" inputmode="numeric" autocomplete="off" pattern="[0-9]{4}" minlength="4" maxlength="4" placeholder="••••" required><button id="pinVisibility" class="icon-button" type="button" aria-label="PINを表示" aria-controls="accountPin" aria-pressed="false">表示</button></div><p class="settings-help">ログインしてテストすると、ユーザー名と合計点数がランキングに表示されます。</p><p class="settings-help">アカウントがなくても、暗記とゲスト練習は使えます。</p><button id="loginButton" class="primary-button wide" type="submit">ログイン</button></form><p id="settingsError" class="error-message" role="alert" hidden></p><p id="settingsStatus" class="muted" role="status"></p></div></dialog>
+<dialog id="settingsDialog" aria-labelledby="settingsTitle"><div class="dialog-heading"><h2 id="settingsTitle">個人設定</h2><button type="button" class="icon-button" id="settingsClose" aria-label="個人設定を閉じる">閉じる</button></div><div class="dialog-body"><label class="sound-setting" for="soundSetting"><span>効果音</span><select id="soundSetting"><option value="on">音あり</option><option value="off">音なし</option></select></label><div id="loggedInSettings" hidden><div class="identity-row"><span id="identityInitial" hidden></span><div><span class="eyebrow">KGS 11th</span><strong id="identityName"></strong></div></div><dl class="settings-wallet" aria-label="保有金額と総所得"><div><dt>保有金額</dt><dd id="settingsBalance">—</dd></div><div><dt>総所得</dt><dd id="settingsScore">—</dd></div></dl><button id="logoutButton" class="secondary-button wide" type="button">ログアウト</button></div><form id="loginForm"><p class="settings-description">KGS 11thの出席番号と個人用PINでログイン</p><label>出席番号<input id="attendanceNumber" type="text" inputmode="numeric" autocomplete="off" pattern="(?:0?[1-9]|[1-3][0-9]|40|99)" maxlength="2" placeholder="出席番号" required></label><label for="accountPin">個人用PIN（4桁）</label><div class="pin-field"><input id="accountPin" type="password" inputmode="numeric" autocomplete="off" pattern="[0-9]{4}" minlength="4" maxlength="4" placeholder="••••" required><button id="pinVisibility" class="icon-button" type="button" aria-label="PINを表示" aria-controls="accountPin" aria-pressed="false">表示</button></div><p class="settings-help">ログインしてテストすると、ユーザー名と暗記で獲得した轟がランキングに表示されます。</p><p class="settings-help">アカウントがなくても、暗記とゲスト練習は使えます。</p><button id="loginButton" class="primary-button wide" type="submit">ログイン</button></form><p id="settingsError" class="error-message" role="alert" hidden></p><p id="settingsStatus" class="muted" role="status"></p></div></dialog>
 <dialog id="sourcesDialog" aria-labelledby="sourcesTitle"><div class="dialog-heading"><h2 id="sourcesTitle">教材の出典</h2><button type="button" class="icon-button" id="sourcesClose" aria-label="出典を閉じる">閉じる</button></div><div class="dialog-body source-details"><p><strong>Target 1900</strong><br>提供された「English Vocabulary Target 1900」のPDFから取得。</p><p><strong>英熟語Target 1000</strong><br><a href="https://ukaru-eigo.com/jukugo-target-1000-list/" target="_blank" rel="noopener noreferrer">英熟語ターゲット1000 一覧</a>から取得。</p><p><strong>古文単語</strong><br><a href="https://logicalmemory.jp/707/" target="_blank" rel="noopener noreferrer">古文単語400一覧</a>の掲載資料と提供画像に基づく。</p><p><strong>Crown</strong><br>提供されたLesson 6・7の単語・表現一覧に基づく。</p><p><strong>Improve</strong><br>提供されたSection 8〜11の単語・表現一覧に基づく。</p><p><strong>CNN</strong><br>提供された単語・表現一覧に基づく。</p><p>正解・不正解音：<a href="https://otologic.jp/" target="_blank" rel="noopener noreferrer">OtoLogic</a>（<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>）</p><p>10万轟音：提供音源</p><p class="muted">原資料の表記に基づきます。書籍の公式アプリではありません。</p></div></dialog>
 <dialog id="quitDialog" aria-labelledby="quitTitle"><div class="dialog-body quit-body"><h2 id="quitTitle">テストを終了しますか？</h2><p class="muted" id="quitDescription">回答済みの得点は記録されています。</p><div class="quit-actions"><button type="button" class="text-button" id="quitCancel">続ける</button><button type="button" class="primary-button" id="quitConfirm">終了する</button></div></div></dialog>
 <div id="toast" class="toast" role="status" hidden></div>

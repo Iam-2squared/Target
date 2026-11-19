@@ -41,7 +41,10 @@ const server=http.createServer(async(req,res)=>{
   }catch(error){res.writeHead(500,{'Content-Type':'text/plain'});res.end('Fixture error');console.error(error.message);}
 });
 const eq=(value,expected,label)=>{checks++;assert.equal(value,expected,label);};
-async function score(page,expected){await page.waitForFunction(value=>document.getElementById('homeScore').textContent===value,expected.toLocaleString('ja-JP')+'轟');checks++;}
+// The home ranking now labels its study-only metric. Global wallet snapshots
+// remain observable in Settings, including while its dialog is closed.
+async function score(page,expected){await page.waitForFunction(value=>document.getElementById('settingsScore').textContent===value,expected.toLocaleString('ja-JP')+'轟');checks++;}
+async function unknownScore(page){await page.waitForFunction(()=>document.getElementById('settingsScore').textContent==='—');checks++;}
 async function settings(page){await page.evaluate(()=>document.getElementById('settingsOpen').click());}
 async function closeSettings(page){await page.locator('#settingsClose').click();}
 async function startQuiz(page){await page.locator('#testOpen').click();await page.locator('#testStart').click();await page.locator('#questionChoices button').first().waitFor();}
@@ -64,11 +67,13 @@ async function fresh(browser,base,snapshot){
       await settings(page);await page.waitForFunction(()=>document.getElementById('settingsBalance').textContent==='30轟');
       for(const snapshot of[identity(50000,12),identity(1000,13),identity(900000,12),{...identity(900000,14),walletRevision:undefined}]){
         state=snapshot;await closeSettings(page);await settings(page);await page.waitForTimeout(100);
-        await score(page,snapshot.walletRevision===12&&snapshot.totalPoints===50000?50000:1000);
+        if(snapshot.walletRevision===12&&snapshot.totalPoints===50000)await score(page,50000);
+        else if(snapshot.walletRevision===13)await score(page,1000);
+        else await unknownScore(page);
       }
       for(const invalid of[identity(125,14),{...identity(150,14),balance:100,spent:50},{...identity(130,14),balance:100,spent:30}]){
         state=invalid;await closeSettings(page);await settings(page);await page.locator('#settingsError').waitFor({state:'visible'});
-        await score(page,1000);checks++;
+        await unknownScore(page);checks++;
       }
       await closeSettings(page);
       const first=deferred();sessionPlans.push({value:identity(500,15),wait:first.wait},{value:identity(2000,14),wait:Promise.resolve()});
@@ -88,7 +93,8 @@ async function fresh(browser,base,snapshot){
       const expiredAnswer=deferred();answerPlan={wait:expiredAnswer.wait,total:9000,revision:21};await page.locator('#questionChoices button').first().click();
       sessionPlans.push({wait:Promise.resolve(),status:401,value:{error:{code:'SESSION_EXPIRED',message:'ログインし直してください。'}}});
       await settings(page);await page.locator('#loginForm').waitFor({state:'visible'});expiredAnswer.release();await page.waitForTimeout(100);
-      eq(await page.locator('#homeScore').textContent(),'','an answer delayed past session expiry cannot restore account income');
+      eq(await page.locator('#settingsScore').textContent(),'—','an answer delayed past session expiry cannot restore private account income');
+      eq(await page.locator('#homeScore').textContent(),'暗記獲得','session expiry keeps the public study ranking metric');
       eq(await page.locator('#rewardCelebration').isVisible(),false,'expired session cannot restore a delayed reward');await context.close();
 
       ({page,context}=await fresh(browser,base,identity(300000,100)));state=identity(150,1,B);await settings(page);await score(page,150);
