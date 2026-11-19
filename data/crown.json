@@ -1,0 +1,226 @@
+[
+  {
+    "id": "crown-0001",
+    "number": 1,
+    "english": "follow",
+    "japanese": "（動）〜に従う、〜についていく",
+    "section": 6
+  },
+  {
+    "id": "crown-0002",
+    "number": 2,
+    "english": "sculptor",
+    "japanese": "（名）彫刻家",
+    "section": 6
+  },
+  {
+    "id": "crown-0003",
+    "number": 3,
+    "english": "pile",
+    "japanese": "（名）積み重ね、山 ／（動）〜を積み重ねる",
+    "section": 6
+  },
+  {
+    "id": "crown-0004",
+    "number": 4,
+    "english": "construction",
+    "japanese": "（名）建設、建築",
+    "section": 6
+  },
+  {
+    "id": "crown-0005",
+    "number": 5,
+    "english": "quit",
+    "japanese": "（動）〜をやめる、辞職する",
+    "section": 6
+  },
+  {
+    "id": "crown-0006",
+    "number": 6,
+    "english": "decide",
+    "japanese": "（動）〜を決める、決心する",
+    "section": 6
+  },
+  {
+    "id": "crown-0007",
+    "number": 7,
+    "english": "stroll",
+    "japanese": "（動）ぶらつく、散歩する",
+    "section": 6
+  },
+  {
+    "id": "crown-0008",
+    "number": 8,
+    "english": "architect",
+    "japanese": "（名）建築家、設計者",
+    "section": 6
+  },
+  {
+    "id": "crown-0009",
+    "number": 9,
+    "english": "outsider",
+    "japanese": "（名）よそ者、部外者",
+    "section": 6
+  },
+  {
+    "id": "crown-0010",
+    "number": 10,
+    "english": "refusal",
+    "japanese": "（名）拒絶、拒否、辞退",
+    "section": 6
+  },
+  {
+    "id": "crown-0011",
+    "number": 11,
+    "english": "discourage",
+    "japanese": "（動）〜の勇気を失わせる、落胆させる",
+    "section": 6
+  },
+  {
+    "id": "crown-0012",
+    "number": 12,
+    "english": "overjoyed",
+    "japanese": "（形）大喜びして、狂喜して",
+    "section": 6
+  },
+  {
+    "id": "crown-0013",
+    "number": 13,
+    "english": "ordeal",
+    "japanese": "（名）厳しい試練、苦しい体験",
+    "section": 6
+  },
+  {
+    "id": "crown-0014",
+    "number": 14,
+    "english": "acceptance",
+    "japanese": "（名）受け入れ、受諾、容認",
+    "section": 6
+  },
+  {
+    "id": "crown-0015",
+    "number": 15,
+    "english": "prove",
+    "japanese": "（動）〜を証明する",
+    "section": 6
+  },
+  {
+    "id": "crown-0016",
+    "number": 16,
+    "english": "chance upon 〜",
+    "japanese": "（動）〜を偶然見つける",
+    "section": 6
+  },
+  {
+    "id": "crown-0017",
+    "number": 17,
+    "english": "turn away 〜",
+    "japanese": "（動）〜を追い払う、追い返す",
+    "section": 6
+  },
+  {
+    "id": "crown-0018",
+    "number": 18,
+    "english": "biomimicry",
+    "japanese": "（名）バイオミミクリー、生物模倣",
+    "section": 7
+  },
+  {
+    "id": "crown-0019",
+    "number": 19,
+    "english": "mimicry",
+    "japanese": "（名）模倣、擬態",
+    "section": 7
+  },
+  {
+    "id": "crown-0020",
+    "number": 20,
+    "english": "environment",
+    "japanese": "（名）環境",
+    "section": 7
+  },
+  {
+    "id": "crown-0021",
+    "number": 21,
+    "english": "survive / survival",
+    "japanese": "（動 / 名）生き残る、生存する",
+    "section": 7
+  },
+  {
+    "id": "crown-0022",
+    "number": 22,
+    "english": "destruction / destroy",
+    "japanese": "（名 / 動）破壊する、破壊",
+    "section": 7
+  },
+  {
+    "id": "crown-0023",
+    "number": 23,
+    "english": "technology / technological",
+    "japanese": "（名 / 形）科学技術、テクノロジーの",
+    "section": 7
+  },
+  {
+    "id": "crown-0024",
+    "number": 24,
+    "english": "innovation",
+    "japanese": "（名）革新、技術革新",
+    "section": 7
+  },
+  {
+    "id": "crown-0025",
+    "number": 25,
+    "english": "inspire",
+    "japanese": "（動）〜にひらめきを与える、奮い立たせる",
+    "section": 7
+  },
+  {
+    "id": "crown-0026",
+    "number": 26,
+    "english": "architect",
+    "japanese": "（名）建築家、設計者",
+    "section": 7
+  },
+  {
+    "id": "crown-0027",
+    "number": 27,
+    "english": "efficient / efficiency",
+    "japanese": "（形 / 名）効率的な、能率的な",
+    "section": 7
+  },
+  {
+    "id": "crown-0028",
+    "number": 28,
+    "english": "challenge",
+    "japanese": "（名 / 動）難題、挑戦、〜に挑む",
+    "section": 7
+  },
+  {
+    "id": "crown-0029",
+    "number": 29,
+    "english": "solution",
+    "japanese": "（名）解決策",
+    "section": 7
+  },
+  {
+    "id": "crown-0030",
+    "number": 30,
+    "english": "adapt",
+    "japanese": "（動）適応する、合わせる",
+    "section": 7
+  },
+  {
+    "id": "crown-0031",
+    "number": 31,
+    "english": "creature",
+    "japanese": "（名）生き物、生物",
+    "section": 7
+  },
+  {
+    "id": "crown-0032",
+    "number": 32,
+    "english": "feature",
+    "japanese": "（名）特徴、機能",
+    "section": 7
+  }
+]

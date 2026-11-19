@@ -1,0 +1,170 @@
+[
+  {
+    "id": "cnn-0001",
+    "number": 1,
+    "english": "right",
+    "japanese": "（名）権利",
+    "section": 1
+  },
+  {
+    "id": "cnn-0002",
+    "number": 2,
+    "english": "disconnect",
+    "japanese": "（動）接続を切る、離れる",
+    "section": 1
+  },
+  {
+    "id": "cnn-0003",
+    "number": 3,
+    "english": "employ / employee / employer",
+    "japanese": "（動 / 名 / 名）雇う ／ 従業員 ／ 雇用主",
+    "section": 1
+  },
+  {
+    "id": "cnn-0004",
+    "number": 4,
+    "english": "after-hours",
+    "japanese": "（形）時間外の、終業後の",
+    "section": 1
+  },
+  {
+    "id": "cnn-0005",
+    "number": 5,
+    "english": "contact",
+    "japanese": "（動・名）連絡する、接触 ／ 連絡",
+    "section": 1
+  },
+  {
+    "id": "cnn-0006",
+    "number": 6,
+    "english": "ban",
+    "japanese": "（動・名）禁止する ／ 禁止令",
+    "section": 1
+  },
+  {
+    "id": "cnn-0007",
+    "number": 7,
+    "english": "penalty",
+    "japanese": "（名）罰則、罰金",
+    "section": 1
+  },
+  {
+    "id": "cnn-0008",
+    "number": 8,
+    "english": "balance",
+    "japanese": "（名・動）バランス、均衡 ／ 〜の均衡を保つ",
+    "section": 1
+  },
+  {
+    "id": "cnn-0009",
+    "number": 9,
+    "english": "greenhouse gas",
+    "japanese": "（名）温室効果ガス",
+    "section": 1
+  },
+  {
+    "id": "cnn-0010",
+    "number": 10,
+    "english": "emission",
+    "japanese": "（名）排出（量）",
+    "section": 1
+  },
+  {
+    "id": "cnn-0011",
+    "number": 11,
+    "english": "increase / surge",
+    "japanese": "（動・名）増加する ／ 急増",
+    "section": 1
+  },
+  {
+    "id": "cnn-0012",
+    "number": 12,
+    "english": "artificial intelligence (AI)",
+    "japanese": "（名）人工知能",
+    "section": 1
+  },
+  {
+    "id": "cnn-0013",
+    "number": 13,
+    "english": "data center",
+    "japanese": "（名）データセンター",
+    "section": 1
+  },
+  {
+    "id": "cnn-0014",
+    "number": 14,
+    "english": "consume / consumption",
+    "japanese": "（動 / 名）消費する ／ 消費",
+    "section": 1
+  },
+  {
+    "id": "cnn-0015",
+    "number": 15,
+    "english": "electricity",
+    "japanese": "（名）電気、電力",
+    "section": 1
+  },
+  {
+    "id": "cnn-0016",
+    "number": 16,
+    "english": "goal / target",
+    "japanese": "（名）目標",
+    "section": 1
+  },
+  {
+    "id": "cnn-0017",
+    "number": 17,
+    "english": "cancer",
+    "japanese": "（名）がん",
+    "section": 1
+  },
+  {
+    "id": "cnn-0018",
+    "number": 18,
+    "english": "increase / rise",
+    "japanese": "（動・名）増加する、上昇する",
+    "section": 1
+  },
+  {
+    "id": "cnn-0019",
+    "number": 19,
+    "english": "generation",
+    "japanese": "（名）世代",
+    "section": 1
+  },
+  {
+    "id": "cnn-0020",
+    "number": 20,
+    "english": "young adult",
+    "japanese": "（名）若年成人、若い世代",
+    "section": 1
+  },
+  {
+    "id": "cnn-0021",
+    "number": 21,
+    "english": "factor",
+    "japanese": "（名）要因、要素",
+    "section": 1
+  },
+  {
+    "id": "cnn-0022",
+    "number": 22,
+    "english": "lifestyle",
+    "japanese": "（名）ライフスタイル、生活様式",
+    "section": 1
+  },
+  {
+    "id": "cnn-0023",
+    "number": 23,
+    "english": "researcher / study",
+    "japanese": "（名 / 名・動）研究者 ／ 研究、調査",
+    "section": 1
+  },
+  {
+    "id": "cnn-0024",
+    "number": 24,
+    "english": "concern",
+    "japanese": "（名・動）懸念、心配 ／ 〜に関係する、心配させる",
+    "section": 1
+  }
+]

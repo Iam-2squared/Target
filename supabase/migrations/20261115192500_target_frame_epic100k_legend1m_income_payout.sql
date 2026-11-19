@@ -1,0 +1,84 @@
+-- KGS/Target 2026-11-15. Common1k, Rare10k, Epic100k, Legendary1m. Stickers10k.
+-- New frame proceeds are a recorded game-income bonus; never subtract an amount
+-- greater than a draw's cost from spent_points. Earlier refunds stay unchanged.
+SELECT pg_advisory_xact_lock(991101);
+DO $preflight$ BEGIN
+ IF (SELECT md5(prosrc) FROM pg_proc WHERE oid='target_private.guard_duplicate_rebate_insert()'::regprocedure) <> 'd3090092b1d064253c4b7d4b4db61392' THEN RAISE EXCEPTION 'Live function changed: target_private.guard_duplicate_rebate_insert()'; END IF;
+ IF (SELECT md5(prosrc) FROM pg_proc WHERE oid='target_private.guard_item_sale_insert()'::regprocedure) <> '7413ceb8f82cddf094701d458296f533' THEN RAISE EXCEPTION 'Live function changed: target_private.guard_item_sale_insert()'; END IF;
+ IF (SELECT md5(prosrc) FROM pg_proc WHERE oid='target_private.receipt_financial_refund_amount(uuid,uuid)'::regprocedure) <> 'b0ec9161c7a01d8bb84a984afb7bdfa3' THEN RAISE EXCEPTION 'Live function changed: target_private.receipt_financial_refund_amount(uuid,uuid)'; END IF;
+ IF (SELECT md5(prosrc) FROM pg_proc WHERE oid='target_private.assert_receipt_refund_coverage(uuid)'::regprocedure) <> 'cd753e411360f4b601418eab379e000b' THEN RAISE EXCEPTION 'Live function changed: target_private.assert_receipt_refund_coverage(uuid)'; END IF;
+ IF (SELECT md5(prosrc) FROM pg_proc WHERE oid='target_private.wallet_snapshot(uuid)'::regprocedure) <> '19c62fb4dba3aed2fd2c2c86f37d96e1' THEN RAISE EXCEPTION 'Live function changed: target_private.wallet_snapshot(uuid)'; END IF;
+ IF (SELECT md5(prosrc) FROM pg_proc WHERE oid='target_private.wallet_finance_projection(timestamptz)'::regprocedure) <> 'eafe8da70cbd3912d5310c083bdc303f' THEN RAISE EXCEPTION 'Live function changed: target_private.wallet_finance_projection(timestamptz)'; END IF;
+ IF (SELECT md5(prosrc) FROM pg_proc WHERE oid='public.target_shop_rpc(text,text,jsonb)'::regprocedure) <> 'e44e4d67dc4161132714248557e02003' THEN RAISE EXCEPTION 'Live function changed: public.target_shop_rpc(text,text,jsonb)'; END IF;
+ IF (SELECT md5(prosrc) FROM pg_proc WHERE oid='public.target_sell_rpc(text,text,jsonb)'::regprocedure) <> '0ad332509a1b851eb057e293cc59d7e7' THEN RAISE EXCEPTION 'Live function changed: public.target_sell_rpc(text,text,jsonb)'; END IF;
+ IF target_private.item_payout_amount('frame','c01')<>1000 OR target_private.item_payout_amount('frame','r11')<>10000 OR target_private.item_payout_amount('frame','e06')<>10000 OR target_private.item_payout_amount('frame','l08')<>100000 THEN RAISE EXCEPTION 'Previous frame payout policy changed'; END IF;
+END $preflight$;
+-- Preserve the exact projection rather than demanding an unrelated existing
+-- account-reconciliation issue be fixed by this scoped rate update.
+CREATE TEMP TABLE _frame_finance_before ON COMMIT DROP AS
+ SELECT * FROM target_private.wallet_finance_projection(NULL);
+CREATE TEMP TABLE _frame_profiles_before ON COMMIT DROP AS
+ SELECT member_id,total_points,spent_points,casino_net,wallet_revision FROM target_private.profiles;
+ALTER TABLE target_private.duplicate_rebates ADD COLUMN credit_mode text NOT NULL DEFAULT 'spent_refund';
+ALTER TABLE target_private.item_sales ADD COLUMN credit_mode text NOT NULL DEFAULT 'spent_refund';
+ALTER TABLE target_private.duplicate_rebates ADD CONSTRAINT duplicate_rebates_credit_mode_check CHECK (credit_mode IN('spent_refund','income_bonus'));
+ALTER TABLE target_private.item_sales ADD CONSTRAINT item_sales_credit_mode_check CHECK (credit_mode IN('spent_refund','income_bonus'));
+ALTER TABLE target_private.duplicate_rebates DROP CONSTRAINT duplicate_rebates_amount_check;
+ALTER TABLE target_private.duplicate_rebates ADD CONSTRAINT duplicate_rebates_amount_check CHECK
+ ((item_type='sticker' AND amount=10000) OR (item_type='frame' AND amount IN(1000,10000,100000,1000000)));
+ALTER TABLE target_private.item_sales DROP CONSTRAINT item_sales_amount_check;
+ALTER TABLE target_private.item_sales ADD CONSTRAINT item_sales_amount_check CHECK
+ ((item_type='sticker' AND amount=10000) OR (item_type='frame' AND amount IN(1000,10000,100000,1000000)));
+CREATE OR REPLACE FUNCTION target_private.item_payout_amount(p_item_type text,p_item_id text)
+ RETURNS bigint LANGUAGE sql STABLE SET search_path TO 'pg_catalog' AS $payout$
+ SELECT CASE WHEN p_item_type='sticker' THEN
+ (SELECT 10000::bigint WHERE EXISTS(SELECT 1 FROM target_private.sticker_catalog c WHERE c.id=p_item_id AND c.generation=5))
+ WHEN p_item_type='frame' THEN
+ (SELECT CASE c.rarity WHEN 'common' THEN 1000::bigint WHEN 'rare' THEN 10000::bigint
+ WHEN 'epic' THEN 100000::bigint WHEN 'legendary' THEN 1000000::bigint ELSE NULL END
+ FROM target_private.frame_catalog c WHERE c.id=p_item_id)
+ ELSE NULL END;
+$payout$;
+REVOKE ALL ON FUNCTION target_private.item_payout_amount(text,text) FROM PUBLIC,anon,authenticated;
+CREATE OR REPLACE FUNCTION target_private.receipt_spend_rebate_amount(p_member uuid,p_request uuid)
+ RETURNS bigint LANGUAGE sql STABLE SET search_path TO 'pg_catalog' AS $refund$
+ SELECT coalesce((SELECT amount FROM target_private.duplicate_rebates WHERE member_id=p_member
+ AND request_id=p_request AND credit_mode='spent_refund'),0)::bigint;
+$refund$;
+REVOKE ALL ON FUNCTION target_private.receipt_spend_rebate_amount(uuid,uuid) FROM PUBLIC,anon,authenticated;
+DO $patch_functions$
+DECLARE p jsonb; fn record; statement text; old_text text; occurrences int; all_patches jsonb:='[{"sig":"target_private.guard_duplicate_rebate_insert()","old":"OR r.cost-target_private.receipt_financial_refund_amount(NEW.member_id,NEW.request_id)<NEW.amount","new":"OR (NEW.credit_mode=''spent_refund'' AND r.cost-target_private.receipt_financial_refund_amount(NEW.member_id,NEW.request_id)<NEW.amount)","count":1},{"sig":"target_private.guard_item_sale_insert()","old":"OR d.cost::bigint-target_private.receipt_financial_refund_amount(NEW.member_id,NEW.purchase_request_id)-target_private.receipt_duplicate_rebate_amount(NEW.member_id,NEW.purchase_request_id)<NEW.amount","new":"OR (NEW.credit_mode=''spent_refund'' AND d.cost::bigint-target_private.receipt_financial_refund_amount(NEW.member_id,NEW.purchase_request_id)-target_private.receipt_spend_rebate_amount(NEW.member_id,NEW.purchase_request_id)<NEW.amount)","count":1},{"sig":"target_private.receipt_financial_refund_amount(uuid,uuid)","old":"d.cost::bigint-target_private.receipt_duplicate_rebate_amount(p_member,p_request)","new":"d.cost::bigint-target_private.receipt_spend_rebate_amount(p_member,p_request)","count":1},{"sig":"target_private.assert_receipt_refund_coverage(uuid)","old":"target_private.receipt_duplicate_rebate_amount(w.member_id,w.request_id)","new":"target_private.receipt_spend_rebate_amount(w.member_id,w.request_id)","count":1},{"sig":"target_private.wallet_snapshot(uuid)","old":"(SELECT sum(amount) FROM target_private.duplicate_rebates WHERE member_id=p_member)","new":"(SELECT sum(amount) FROM target_private.duplicate_rebates WHERE member_id=p_member AND credit_mode=''spent_refund'')","count":1},{"sig":"target_private.wallet_snapshot(uuid)","old":"(SELECT sum(amount) FROM target_private.item_sales WHERE member_id=p_member)","new":"(SELECT sum(amount) FROM target_private.item_sales WHERE member_id=p_member AND credit_mode=''spent_refund'')","count":1},{"sig":"target_private.wallet_finance_projection(timestamptz)","old":"UNION ALL SELECT member_id,amount AS delta,created_at FROM target_private.challenge_reward_events) a","new":"UNION ALL SELECT member_id,amount AS delta,created_at FROM target_private.challenge_reward_events\n UNION ALL SELECT member_id,amount AS delta,credited_at AS created_at FROM target_private.duplicate_rebates WHERE credit_mode=''income_bonus''\n UNION ALL SELECT member_id,amount AS delta,created_at FROM target_private.item_sales WHERE credit_mode=''income_bonus'') a","count":1},{"sig":"target_private.wallet_finance_projection(timestamptz)","old":"FROM target_private.duplicate_rebates b WHERE b.member_id=p.member_id AND (p_cutoff IS NULL OR b.credited_at<p_cutoff)","new":"FROM target_private.duplicate_rebates b WHERE b.member_id=p.member_id AND b.credit_mode=''spent_refund'' AND (p_cutoff IS NULL OR b.credited_at<p_cutoff)","count":1},{"sig":"target_private.wallet_finance_projection(timestamptz)","old":"FROM target_private.item_sales a WHERE a.member_id=p.member_id AND (p_cutoff IS NULL OR a.created_at<p_cutoff)","new":"FROM target_private.item_sales a WHERE a.member_id=p.member_id AND a.credit_mode=''spent_refund'' AND (p_cutoff IS NULL OR a.created_at<p_cutoff)","count":1},{"sig":"public.target_shop_rpc(text,text,jsonb)","old":"INSERT INTO target_private.duplicate_rebates(member_id,request_id,item_type,item_id,source,amount)","new":"INSERT INTO target_private.duplicate_rebates(member_id,request_id,item_type,item_id,source,amount,credit_mode)","count":1},{"sig":"public.target_shop_rpc(text,text,jsonb)","old":"VALUES(member_uuid,request_uuid,pool_kind,chosen_id,''draw'',target_private.item_payout_amount(pool_kind,chosen_id));","new":"VALUES(member_uuid,request_uuid,pool_kind,chosen_id,''draw'',target_private.item_payout_amount(pool_kind,chosen_id),CASE WHEN pool_kind=''frame'' THEN ''income_bonus'' ELSE ''spent_refund'' END);","count":1},{"sig":"public.target_shop_rpc(text,text,jsonb)","old":"UPDATE target_private.profiles SET spent_points=spent_points+100000-CASE WHEN duplicate_draw THEN target_private.item_payout_amount(pool_kind,chosen_id) ELSE 0 END WHERE member_id=member_uuid;","new":"UPDATE target_private.profiles SET spent_points=spent_points+100000-CASE WHEN duplicate_draw AND pool_kind=''sticker'' THEN target_private.item_payout_amount(pool_kind,chosen_id) ELSE 0 END,\n total_points=total_points+CASE WHEN duplicate_draw AND pool_kind=''frame'' THEN target_private.item_payout_amount(pool_kind,chosen_id) ELSE 0 END,\n casino_net=casino_net+CASE WHEN duplicate_draw AND pool_kind=''frame'' THEN target_private.item_payout_amount(pool_kind,chosen_id) ELSE 0 END\n WHERE member_id=member_uuid;","count":1},{"sig":"public.target_shop_rpc(text,text,jsonb)","old":"IF (SELECT logical_bytes+new_bytes>104857600 FROM target_private.system_state WHERE singleton FOR UPDATE)","new":"IF duplicate_draw AND pool_kind=''frame'' AND (profile.total_points>10000000000000-target_private.item_payout_amount(pool_kind,chosen_id) OR profile.casino_net>10000000000000-target_private.item_payout_amount(pool_kind,chosen_id)) THEN\n RETURN target_private.error_result(409,''POINTS_LIMIT'',''轟の上限を超えるため還元できません。''); END IF;\n IF (SELECT logical_bytes+new_bytes>104857600 FROM target_private.system_state WHERE singleton FOR UPDATE)","count":1},{"sig":"public.target_sell_rpc(text,text,jsonb)","old":"AND target_private.receipt_financial_refund_amount(d.member_id,d.request_id) IS NOT NULL\n     AND d.cost::bigint-target_private.receipt_financial_refund_amount(d.member_id,d.request_id)\n       -target_private.receipt_duplicate_rebate_amount(d.member_id,d.request_id)>=sale_amount","new":"AND (pool_kind=''frame'' OR (target_private.receipt_financial_refund_amount(d.member_id,d.request_id) IS NOT NULL\n AND d.cost::bigint-target_private.receipt_financial_refund_amount(d.member_id,d.request_id)\n -target_private.receipt_spend_rebate_amount(d.member_id,d.request_id)>=sale_amount))","count":1},{"sig":"public.target_sell_rpc(text,text,jsonb)","old":"IF member_row.spent_points<sale_amount THEN","new":"IF pool_kind=''sticker'' AND member_row.spent_points<sale_amount THEN","count":1},{"sig":"public.target_sell_rpc(text,text,jsonb)","old":"IF refunded+sale_amount>total_purchase THEN","new":"IF pool_kind=''sticker'' AND refunded+sale_amount>total_purchase THEN","count":1},{"sig":"public.target_sell_rpc(text,text,jsonb)","old":"INSERT INTO target_private.item_sales(member_id,operation_id,purchase_request_id,item_type,item_id,amount)","new":"INSERT INTO target_private.item_sales(member_id,operation_id,purchase_request_id,item_type,item_id,amount,credit_mode)","count":1},{"sig":"public.target_sell_rpc(text,text,jsonb)","old":"VALUES(member_uuid,sale_uuid,chosen.request_id,pool_kind,chosen_id,sale_amount);","new":"VALUES(member_uuid,sale_uuid,chosen.request_id,pool_kind,chosen_id,sale_amount,CASE WHEN pool_kind=''frame'' THEN ''income_bonus'' ELSE ''spent_refund'' END);","count":1},{"sig":"public.target_sell_rpc(text,text,jsonb)","old":"UPDATE target_private.profiles SET spent_points=spent_points-sale_amount WHERE member_id=member_uuid;","new":"UPDATE target_private.profiles SET\n spent_points=spent_points-CASE WHEN pool_kind=''sticker'' THEN sale_amount ELSE 0 END,\n total_points=total_points+CASE WHEN pool_kind=''frame'' THEN sale_amount ELSE 0 END,\n casino_net=casino_net+CASE WHEN pool_kind=''frame'' THEN sale_amount ELSE 0 END WHERE member_id=member_uuid;","count":1},{"sig":"public.target_sell_rpc(text,text,jsonb)","old":"bytes_needed:=pg_column_size(jsonb_build_object(''member'',member_uuid,''op'',sale_uuid,''purchase'',chosen.request_id,''type'',pool_kind,''item'',chosen_id))+256;","new":"IF pool_kind=''frame'' AND (member_row.total_points>10000000000000-sale_amount OR member_row.casino_net>10000000000000-sale_amount) THEN\n RETURN target_private.error_result(409,''POINTS_LIMIT'',''轟の上限を超えるため売却できません。''); END IF;\n bytes_needed:=pg_column_size(jsonb_build_object(''member'',member_uuid,''op'',sale_uuid,''purchase'',chosen.request_id,''type'',pool_kind,''item'',chosen_id))+256;","count":1}]'::jsonb;
+BEGIN
+ FOR fn IN SELECT DISTINCT item->>'sig' AS signature FROM jsonb_array_elements(all_patches) AS item LOOP
+   SELECT pg_get_functiondef(fn.signature::regprocedure) INTO statement;
+   IF statement IS NULL THEN RAISE EXCEPTION 'Missing function %',fn.signature; END IF;
+   FOR p IN SELECT item FROM jsonb_array_elements(all_patches) AS item WHERE item->>'sig'=fn.signature LOOP
+      old_text:=p->>'old';
+      occurrences:=(length(statement)-length(replace(statement,old_text,'')))/length(old_text);
+      IF occurrences<>(p->>'count')::integer THEN RAISE EXCEPTION 'Patch mismatch in %: expected %, got % for %',fn.signature,p->>'count',occurrences,left(old_text,60); END IF;
+      statement:=replace(statement,old_text,p->>'new');
+   END LOOP;
+   EXECUTE statement;
+ END LOOP;
+END $patch_functions$;
+DO $verify$
+BEGIN
+ IF target_private.item_payout_amount('frame','c01')<>1000 OR target_private.item_payout_amount('frame','r11')<>10000 OR
+    target_private.item_payout_amount('frame','e06')<>100000 OR target_private.item_payout_amount('frame','l08')<>1000000 OR
+    target_private.item_payout_amount('sticker','photo-boss')<>10000 THEN RAISE EXCEPTION 'Incorrect payout policy after migration'; END IF;
+ IF EXISTS(SELECT 1 FROM target_private.duplicate_rebates WHERE credit_mode<>'spent_refund') OR
+    EXISTS(SELECT 1 FROM target_private.item_sales WHERE credit_mode<>'spent_refund') THEN
+    RAISE EXCEPTION 'Existing financial records modified'; END IF;
+ IF EXISTS(SELECT 1 FROM _frame_finance_before previous
+    FULL JOIN target_private.wallet_finance_projection(NULL) current USING(member_id)
+    WHERE to_jsonb(previous) IS DISTINCT FROM to_jsonb(current)) THEN
+    RAISE EXCEPTION 'Existing financial projection changed unexpectedly'; END IF;
+ IF EXISTS(SELECT 1 FROM _frame_profiles_before previous
+    FULL JOIN (SELECT member_id,total_points,spent_points,casino_net,wallet_revision FROM target_private.profiles) current USING(member_id)
+    WHERE to_jsonb(previous) IS DISTINCT FROM to_jsonb(current)) THEN
+    RAISE EXCEPTION 'Existing user balance changed unexpectedly'; END IF;
+ IF has_function_privilege('anon','target_private.receipt_spend_rebate_amount(uuid,uuid)','EXECUTE') OR
+    has_function_privilege('authenticated','target_private.item_payout_amount(text,text)','EXECUTE') THEN
+    RAISE EXCEPTION 'Private ledger helper execution leaked'; END IF;
+END $verify$;
+NOTIFY pgrst,'reload schema';

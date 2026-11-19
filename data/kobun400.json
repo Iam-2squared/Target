@@ -1,0 +1,2402 @@
+[
+  {
+    "id": "k400-0001",
+    "number": 1,
+    "english": "いみじ",
+    "japanese": "甚だしい。たいへんだ。"
+  },
+  {
+    "id": "k400-0002",
+    "number": 2,
+    "english": "めでたし",
+    "japanese": "すばらしい。喜ばしい。"
+  },
+  {
+    "id": "k400-0003",
+    "number": 3,
+    "english": "をかし",
+    "japanese": "趣がある。かわいい。おもしろい。"
+  },
+  {
+    "id": "k400-0004",
+    "number": 4,
+    "english": "うつくし",
+    "japanese": "いとしい。かわいい。"
+  },
+  {
+    "id": "k400-0005",
+    "number": 5,
+    "english": "おどろく",
+    "japanese": "はっとする。目覚める。"
+  },
+  {
+    "id": "k400-0006",
+    "number": 6,
+    "english": "あまた",
+    "japanese": "たくさん。"
+  },
+  {
+    "id": "k400-0007",
+    "number": 7,
+    "english": "かたち",
+    "japanese": "姿。顔つき。子。"
+  },
+  {
+    "id": "k400-0008",
+    "number": 8,
+    "english": "しるし",
+    "japanese": "はっきり分かる。"
+  },
+  {
+    "id": "k400-0009",
+    "number": 9,
+    "english": "むつかし",
+    "japanese": "不快だ。うっとうしい。"
+  },
+  {
+    "id": "k400-0010",
+    "number": 10,
+    "english": "あさまし",
+    "japanese": "意外だ。"
+  },
+  {
+    "id": "k400-0011",
+    "number": 11,
+    "english": "さがなし",
+    "japanese": "性格が悪い。"
+  },
+  {
+    "id": "k400-0012",
+    "number": 12,
+    "english": "ひねもす",
+    "japanese": "終日。一日中。"
+  },
+  {
+    "id": "k400-0013",
+    "number": 13,
+    "english": "ものす",
+    "japanese": "ある。いる。"
+  },
+  {
+    "id": "k400-0014",
+    "number": 14,
+    "english": "いらふ",
+    "japanese": "答える。返事をする。"
+  },
+  {
+    "id": "k400-0015",
+    "number": 15,
+    "english": "かたみに",
+    "japanese": "互いに。"
+  },
+  {
+    "id": "k400-0016",
+    "number": 16,
+    "english": "ののしる",
+    "japanese": "大声で騒ぐ。"
+  },
+  {
+    "id": "k400-0017",
+    "number": 17,
+    "english": "さうざうし",
+    "japanese": "物足りない。物寂しい。"
+  },
+  {
+    "id": "k400-0018",
+    "number": 18,
+    "english": "ものぐるほし",
+    "japanese": "気が変になりそうだ。"
+  },
+  {
+    "id": "k400-0019",
+    "number": 19,
+    "english": "ゆかし",
+    "japanese": "見たい。聞きたい。知りたい。"
+  },
+  {
+    "id": "k400-0020",
+    "number": 20,
+    "english": "わびし",
+    "japanese": "がっかりする。つらい。"
+  },
+  {
+    "id": "k400-0021",
+    "number": 21,
+    "english": "あらまほし",
+    "japanese": "理想的だ。好ましい。"
+  },
+  {
+    "id": "k400-0022",
+    "number": 22,
+    "english": "ゆゆし",
+    "japanese": "不吉だ。"
+  },
+  {
+    "id": "k400-0023",
+    "number": 23,
+    "english": "うしろめたし",
+    "japanese": "気がかりだ。不安だ。"
+  },
+  {
+    "id": "k400-0024",
+    "number": 24,
+    "english": "いとほし",
+    "japanese": "気の毒だ。かわいそうだ。"
+  },
+  {
+    "id": "k400-0025",
+    "number": 25,
+    "english": "かたはらいたし",
+    "japanese": "きまりが悪い。みっともない。"
+  },
+  {
+    "id": "k400-0026",
+    "number": 26,
+    "english": "あぢきなし",
+    "japanese": "無意味だ。つまらない。"
+  },
+  {
+    "id": "k400-0027",
+    "number": 27,
+    "english": "かしづく",
+    "japanese": "大切に育てる。"
+  },
+  {
+    "id": "k400-0028",
+    "number": 28,
+    "english": "はづかし",
+    "japanese": "立派だ。気がひける。"
+  },
+  {
+    "id": "k400-0029",
+    "number": 29,
+    "english": "おこたる",
+    "japanese": "過失を犯す。病気が治る。"
+  },
+  {
+    "id": "k400-0030",
+    "number": 30,
+    "english": "やがて",
+    "japanese": "すぐに。"
+  },
+  {
+    "id": "k400-0031",
+    "number": 31,
+    "english": "やうやう",
+    "japanese": "だんだん。"
+  },
+  {
+    "id": "k400-0032",
+    "number": 32,
+    "english": "はしたなし",
+    "japanese": "決まりが悪い。中途半端だ。"
+  },
+  {
+    "id": "k400-0033",
+    "number": 33,
+    "english": "いつしか",
+    "japanese": "いつの間にか。"
+  },
+  {
+    "id": "k400-0034",
+    "number": 34,
+    "english": "よしなし",
+    "japanese": "仕方がない。"
+  },
+  {
+    "id": "k400-0035",
+    "number": 35,
+    "english": "おのづから",
+    "japanese": "自然に。ひとりでに。"
+  },
+  {
+    "id": "k400-0036",
+    "number": 36,
+    "english": "げに",
+    "japanese": "本当に。なるほど。"
+  },
+  {
+    "id": "k400-0037",
+    "number": 37,
+    "english": "なかなか",
+    "japanese": "むしろ。かえって。"
+  },
+  {
+    "id": "k400-0038",
+    "number": 38,
+    "english": "つきづきし",
+    "japanese": "ふさわしい。似つかわしい。理想的だ。"
+  },
+  {
+    "id": "k400-0039",
+    "number": 39,
+    "english": "すさまじ",
+    "japanese": "興ざめだ。面白くない。"
+  },
+  {
+    "id": "k400-0040",
+    "number": 40,
+    "english": "やむごとなし",
+    "japanese": "大切である。尊い。高貴だ。"
+  },
+  {
+    "id": "k400-0041",
+    "number": 41,
+    "english": "つとめて",
+    "japanese": "早朝。"
+  },
+  {
+    "id": "k400-0042",
+    "number": 42,
+    "english": "あいなし",
+    "japanese": "おもしろくない。不快だ。"
+  },
+  {
+    "id": "k400-0043",
+    "number": 43,
+    "english": "ありがたし",
+    "japanese": "珍しい。めったにない。"
+  },
+  {
+    "id": "k400-0044",
+    "number": 44,
+    "english": "あやなし",
+    "japanese": "筋が通らない。不当だ。"
+  },
+  {
+    "id": "k400-0045",
+    "number": 45,
+    "english": "ゆくりなし",
+    "japanese": "思いがけない。不意だ。"
+  },
+  {
+    "id": "k400-0046",
+    "number": 46,
+    "english": "さらなり",
+    "japanese": "言うまでもない。"
+  },
+  {
+    "id": "k400-0047",
+    "number": 47,
+    "english": "あらまし",
+    "japanese": "予定。計画。"
+  },
+  {
+    "id": "k400-0048",
+    "number": 48,
+    "english": "いぶせし",
+    "japanese": "気が晴れない。鬱陶しい。"
+  },
+  {
+    "id": "k400-0049",
+    "number": 49,
+    "english": "あたらし",
+    "japanese": "惜しい。もったいない。"
+  },
+  {
+    "id": "k400-0050",
+    "number": 50,
+    "english": "ゐる",
+    "japanese": "座る。引き連れる。"
+  },
+  {
+    "id": "k400-0051",
+    "number": 51,
+    "english": "けう",
+    "japanese": "珍しい。"
+  },
+  {
+    "id": "k400-0052",
+    "number": 52,
+    "english": "よろづ",
+    "japanese": "すべて。たくさん。"
+  },
+  {
+    "id": "k400-0053",
+    "number": 53,
+    "english": "なやむ",
+    "japanese": "病気になる。"
+  },
+  {
+    "id": "k400-0054",
+    "number": 54,
+    "english": "あからさまなり",
+    "japanese": "ほんのちょっとの。ついちょっと。"
+  },
+  {
+    "id": "k400-0055",
+    "number": 55,
+    "english": "いたづら",
+    "japanese": "役に立たない。むなしい。"
+  },
+  {
+    "id": "k400-0056",
+    "number": 56,
+    "english": "ものうし",
+    "japanese": "気がすすまない。なんとなく気が晴れない。"
+  },
+  {
+    "id": "k400-0057",
+    "number": 57,
+    "english": "あそぶ",
+    "japanese": "詩歌・音楽などで楽しむ。"
+  },
+  {
+    "id": "k400-0058",
+    "number": 58,
+    "english": "ねんず",
+    "japanese": "耐え忍ぶ。我慢する。"
+  },
+  {
+    "id": "k400-0059",
+    "number": 59,
+    "english": "なほざり",
+    "japanese": "いい加減だ。疎かだ。"
+  },
+  {
+    "id": "k400-0060",
+    "number": 60,
+    "english": "ぐす",
+    "japanese": "連れて行く。"
+  },
+  {
+    "id": "k400-0061",
+    "number": 61,
+    "english": "めづらし",
+    "japanese": "素晴らしい。珍しい。"
+  },
+  {
+    "id": "k400-0062",
+    "number": 62,
+    "english": "ふるさと",
+    "japanese": "旧都。生まれ故郷。"
+  },
+  {
+    "id": "k400-0063",
+    "number": 63,
+    "english": "たのむ",
+    "japanese": "あてにする。頼りにする。"
+  },
+  {
+    "id": "k400-0064",
+    "number": 64,
+    "english": "いはけなし",
+    "japanese": "幼い。あどけない。"
+  },
+  {
+    "id": "k400-0065",
+    "number": 65,
+    "english": "かしこし",
+    "japanese": "恐れ多い。尊い。"
+  },
+  {
+    "id": "k400-0066",
+    "number": 66,
+    "english": "めざまし",
+    "japanese": "気にくわない。心外だ。"
+  },
+  {
+    "id": "k400-0067",
+    "number": 67,
+    "english": "たいだいし",
+    "japanese": "面倒だ。困った。とんでもない。"
+  },
+  {
+    "id": "k400-0068",
+    "number": 68,
+    "english": "めやすし",
+    "japanese": "感じが良い。見苦しくない。見た目がよい。"
+  },
+  {
+    "id": "k400-0069",
+    "number": 69,
+    "english": "としごろ",
+    "japanese": "長年。何年も。"
+  },
+  {
+    "id": "k400-0070",
+    "number": 70,
+    "english": "うし",
+    "japanese": "辛い。憂鬱だ。"
+  },
+  {
+    "id": "k400-0071",
+    "number": 71,
+    "english": "すなはち",
+    "japanese": "すぐに。ただちに。"
+  },
+  {
+    "id": "k400-0072",
+    "number": 72,
+    "english": "こちたし",
+    "japanese": "大げさだ。仰々しい。"
+  },
+  {
+    "id": "k400-0073",
+    "number": 73,
+    "english": "いとど",
+    "japanese": "いよいよ。ますます。"
+  },
+  {
+    "id": "k400-0074",
+    "number": 74,
+    "english": "わりなし",
+    "japanese": "道理に合わない。"
+  },
+  {
+    "id": "k400-0075",
+    "number": 75,
+    "english": "こころうし",
+    "japanese": "つらい。情けない。"
+  },
+  {
+    "id": "k400-0076",
+    "number": 76,
+    "english": "まうく",
+    "japanese": "準備する。作る。"
+  },
+  {
+    "id": "k400-0077",
+    "number": 77,
+    "english": "おほけなし",
+    "japanese": "身の程知らずだ。"
+  },
+  {
+    "id": "k400-0078",
+    "number": 78,
+    "english": "つれなし",
+    "japanese": "平気だ。"
+  },
+  {
+    "id": "k400-0079",
+    "number": 79,
+    "english": "たがふ",
+    "japanese": "違う。反する。"
+  },
+  {
+    "id": "k400-0080",
+    "number": 80,
+    "english": "うたて",
+    "japanese": "嫌だ。情けなく。"
+  },
+  {
+    "id": "k400-0081",
+    "number": 81,
+    "english": "なめし",
+    "japanese": "無礼だ。"
+  },
+  {
+    "id": "k400-0082",
+    "number": 82,
+    "english": "つらし",
+    "japanese": "薄情だ。"
+  },
+  {
+    "id": "k400-0083",
+    "number": 83,
+    "english": "ことわり",
+    "japanese": "道理。筋道。"
+  },
+  {
+    "id": "k400-0084",
+    "number": 84,
+    "english": "つつむ",
+    "japanese": "遠慮する。"
+  },
+  {
+    "id": "k400-0085",
+    "number": 85,
+    "english": "ひがひがし",
+    "japanese": "ひねくれている。"
+  },
+  {
+    "id": "k400-0086",
+    "number": 86,
+    "english": "さながら",
+    "japanese": "そっくり。そのまま。"
+  },
+  {
+    "id": "k400-0087",
+    "number": 87,
+    "english": "こちなし",
+    "japanese": "無作法だ。気が利かない。"
+  },
+  {
+    "id": "k400-0088",
+    "number": 88,
+    "english": "かたへ",
+    "japanese": "一部。片方。仲間。"
+  },
+  {
+    "id": "k400-0089",
+    "number": 89,
+    "english": "はかなし",
+    "japanese": "頼りない。ちょっとした。取るに足りない。"
+  },
+  {
+    "id": "k400-0090",
+    "number": 90,
+    "english": "まらうど",
+    "japanese": "客。"
+  },
+  {
+    "id": "k400-0091",
+    "number": 91,
+    "english": "すきずきし",
+    "japanese": "風流だ。色好みだ。"
+  },
+  {
+    "id": "k400-0092",
+    "number": 92,
+    "english": "あはれ",
+    "japanese": "趣がある。感動する。"
+  },
+  {
+    "id": "k400-0093",
+    "number": 93,
+    "english": "なまめく",
+    "japanese": "みずみずしい。可憐だ。"
+  },
+  {
+    "id": "k400-0094",
+    "number": 94,
+    "english": "ふみ",
+    "japanese": "書物。手紙。"
+  },
+  {
+    "id": "k400-0095",
+    "number": 95,
+    "english": "まもる",
+    "japanese": "見守る。様子をうかがう。"
+  },
+  {
+    "id": "k400-0096",
+    "number": 96,
+    "english": "ほだし",
+    "japanese": "馬の足綱。束縛。障害。"
+  },
+  {
+    "id": "k400-0097",
+    "number": 97,
+    "english": "とし",
+    "japanese": "はやい。"
+  },
+  {
+    "id": "k400-0098",
+    "number": 98,
+    "english": "いつく",
+    "japanese": "大切にする。世話する。"
+  },
+  {
+    "id": "k400-0099",
+    "number": 99,
+    "english": "らうたし",
+    "japanese": "かわいい。いとしい。"
+  },
+  {
+    "id": "k400-0100",
+    "number": 100,
+    "english": "いと",
+    "japanese": "非常に。とても。"
+  },
+  {
+    "id": "k400-0101",
+    "number": 101,
+    "english": "かづく",
+    "japanese": "ほうびを頂く。"
+  },
+  {
+    "id": "k400-0102",
+    "number": 102,
+    "english": "せうそこ",
+    "japanese": "手紙。手紙を書くこと。伝言。"
+  },
+  {
+    "id": "k400-0103",
+    "number": 103,
+    "english": "うつつ",
+    "japanese": "現実。正気。"
+  },
+  {
+    "id": "k400-0104",
+    "number": 104,
+    "english": "あやし",
+    "japanese": "不思議だ。"
+  },
+  {
+    "id": "k400-0105",
+    "number": 105,
+    "english": "ながむ",
+    "japanese": "ぼんやり物思いにふける。"
+  },
+  {
+    "id": "k400-0106",
+    "number": 106,
+    "english": "かげ",
+    "japanese": "光。姿。"
+  },
+  {
+    "id": "k400-0107",
+    "number": 107,
+    "english": "なつかし",
+    "japanese": "心惹かれる。親しみが持てる。"
+  },
+  {
+    "id": "k400-0108",
+    "number": 108,
+    "english": "すごし",
+    "japanese": "物寂しい。寒々しい。"
+  },
+  {
+    "id": "k400-0109",
+    "number": 109,
+    "english": "おこなふ",
+    "japanese": "仏道の修行をする。"
+  },
+  {
+    "id": "k400-0110",
+    "number": 110,
+    "english": "かしこまる",
+    "japanese": "恐縮する。"
+  },
+  {
+    "id": "k400-0111",
+    "number": 111,
+    "english": "うしろやすし",
+    "japanese": "安心だ。"
+  },
+  {
+    "id": "k400-0112",
+    "number": 112,
+    "english": "はた",
+    "japanese": "やはり。"
+  },
+  {
+    "id": "k400-0113",
+    "number": 113,
+    "english": "やをら",
+    "japanese": "静かに。そっと。"
+  },
+  {
+    "id": "k400-0114",
+    "number": 114,
+    "english": "おくる",
+    "japanese": "先立たれる。生き残る。"
+  },
+  {
+    "id": "k400-0115",
+    "number": 115,
+    "english": "かたし",
+    "japanese": "難しい。"
+  },
+  {
+    "id": "k400-0116",
+    "number": 116,
+    "english": "おぼゆ",
+    "japanese": "思われる。"
+  },
+  {
+    "id": "k400-0117",
+    "number": 117,
+    "english": "おぼつかなし",
+    "japanese": "はっきりしない。心配だ。"
+  },
+  {
+    "id": "k400-0118",
+    "number": 118,
+    "english": "こころなし",
+    "japanese": "思いやりがない。"
+  },
+  {
+    "id": "k400-0119",
+    "number": 119,
+    "english": "うす",
+    "japanese": "消える。なくなる。死ぬ。"
+  },
+  {
+    "id": "k400-0120",
+    "number": 120,
+    "english": "けしき",
+    "japanese": "様子。有様。"
+  },
+  {
+    "id": "k400-0121",
+    "number": 121,
+    "english": "にほふ",
+    "japanese": "輝く。"
+  },
+  {
+    "id": "k400-0122",
+    "number": 122,
+    "english": "まさなし",
+    "japanese": "良くない。みっともない。"
+  },
+  {
+    "id": "k400-0123",
+    "number": 123,
+    "english": "とみ",
+    "japanese": "急。緊急。"
+  },
+  {
+    "id": "k400-0124",
+    "number": 124,
+    "english": "おとなし",
+    "japanese": "大人びている。"
+  },
+  {
+    "id": "k400-0125",
+    "number": 125,
+    "english": "かなし",
+    "japanese": "かわいい。"
+  },
+  {
+    "id": "k400-0126",
+    "number": 126,
+    "english": "つれづれ",
+    "japanese": "退屈だ。"
+  },
+  {
+    "id": "k400-0127",
+    "number": 127,
+    "english": "なほ",
+    "japanese": "いっそう。依然として。"
+  },
+  {
+    "id": "k400-0128",
+    "number": 128,
+    "english": "あく",
+    "japanese": "満足する。"
+  },
+  {
+    "id": "k400-0129",
+    "number": 129,
+    "english": "なべて",
+    "japanese": "一般に。総じて。"
+  },
+  {
+    "id": "k400-0130",
+    "number": 130,
+    "english": "さうなし",
+    "japanese": "並び無い。この上ない。"
+  },
+  {
+    "id": "k400-0131",
+    "number": 131,
+    "english": "おほかた",
+    "japanese": "一般に。だいたい。"
+  },
+  {
+    "id": "k400-0132",
+    "number": 132,
+    "english": "かこつ",
+    "japanese": "愚痴・不平を言う。嘆く。"
+  },
+  {
+    "id": "k400-0133",
+    "number": 133,
+    "english": "やさし",
+    "japanese": "恥ずかしい。"
+  },
+  {
+    "id": "k400-0134",
+    "number": 134,
+    "english": "うるはし",
+    "japanese": "きちんと整っている。美しい。"
+  },
+  {
+    "id": "k400-0135",
+    "number": 135,
+    "english": "おもしろし",
+    "japanese": "風情がある。美しい。"
+  },
+  {
+    "id": "k400-0136",
+    "number": 136,
+    "english": "つゆ",
+    "japanese": "まったく。夢にも。"
+  },
+  {
+    "id": "k400-0137",
+    "number": 137,
+    "english": "あり",
+    "japanese": "存在する。"
+  },
+  {
+    "id": "k400-0138",
+    "number": 138,
+    "english": "つ",
+    "japanese": "〜た。"
+  },
+  {
+    "id": "k400-0139",
+    "number": 139,
+    "english": "をこ",
+    "japanese": "馬鹿げている。"
+  },
+  {
+    "id": "k400-0140",
+    "number": 140,
+    "english": "おぼろけ",
+    "japanese": "いい加減だ。普通だ。"
+  },
+  {
+    "id": "k400-0141",
+    "number": 141,
+    "english": "しる",
+    "japanese": "統治する。"
+  },
+  {
+    "id": "k400-0142",
+    "number": 142,
+    "english": "ごとし",
+    "japanese": "〜のようだ。"
+  },
+  {
+    "id": "k400-0143",
+    "number": 143,
+    "english": "まめ",
+    "japanese": "真面目だ。忠実だ。"
+  },
+  {
+    "id": "k400-0144",
+    "number": 144,
+    "english": "よし",
+    "japanese": "理由。"
+  },
+  {
+    "id": "k400-0145",
+    "number": 145,
+    "english": "わづらふ",
+    "japanese": "悩む。苦しむ。"
+  },
+  {
+    "id": "k400-0146",
+    "number": 146,
+    "english": "せち",
+    "japanese": "ひたすら。"
+  },
+  {
+    "id": "k400-0147",
+    "number": 147,
+    "english": "おろか",
+    "japanese": "いい加減だ。おろそかだ。"
+  },
+  {
+    "id": "k400-0148",
+    "number": 148,
+    "english": "しのぶ",
+    "japanese": "我慢する。"
+  },
+  {
+    "id": "k400-0149",
+    "number": 149,
+    "english": "みる",
+    "japanese": "妻とする。夫婦になる。"
+  },
+  {
+    "id": "k400-0150",
+    "number": 150,
+    "english": "うれふ",
+    "japanese": "心配する。"
+  },
+  {
+    "id": "k400-0151",
+    "number": 151,
+    "english": "かたほ",
+    "japanese": "不完全だ。未熟だ。"
+  },
+  {
+    "id": "k400-0152",
+    "number": 152,
+    "english": "かく",
+    "japanese": "このように。"
+  },
+  {
+    "id": "k400-0153",
+    "number": 153,
+    "english": "ば",
+    "japanese": "もし〜ならば。"
+  },
+  {
+    "id": "k400-0154",
+    "number": 154,
+    "english": "さが",
+    "japanese": "性質。慣習。"
+  },
+  {
+    "id": "k400-0155",
+    "number": 155,
+    "english": "むげ",
+    "japanese": "まったくひどい。身分が低い。"
+  },
+  {
+    "id": "k400-0156",
+    "number": 156,
+    "english": "じ",
+    "japanese": "〜しないつもりだ。"
+  },
+  {
+    "id": "k400-0157",
+    "number": 157,
+    "english": "まほ",
+    "japanese": "整っている。充分だ。"
+  },
+  {
+    "id": "k400-0158",
+    "number": 158,
+    "english": "ほど",
+    "japanese": "身分。"
+  },
+  {
+    "id": "k400-0159",
+    "number": 159,
+    "english": "り",
+    "japanese": "〜た。"
+  },
+  {
+    "id": "k400-0160",
+    "number": 160,
+    "english": "めづ",
+    "japanese": "心がひかれる。愛する。"
+  },
+  {
+    "id": "k400-0161",
+    "number": 161,
+    "english": "やすし",
+    "japanese": "容易だ。"
+  },
+  {
+    "id": "k400-0162",
+    "number": 162,
+    "english": "わたる",
+    "japanese": "過ぎる。過ごす。通る。"
+  },
+  {
+    "id": "k400-0163",
+    "number": 163,
+    "english": "あらは",
+    "japanese": "はっきりしている。明白だ。"
+  },
+  {
+    "id": "k400-0164",
+    "number": 164,
+    "english": "あし",
+    "japanese": "悪い。"
+  },
+  {
+    "id": "k400-0165",
+    "number": 165,
+    "english": "うち",
+    "japanese": "宮中。"
+  },
+  {
+    "id": "k400-0166",
+    "number": 166,
+    "english": "ほい",
+    "japanese": "本来の目的。本来の志。"
+  },
+  {
+    "id": "k400-0167",
+    "number": 167,
+    "english": "さ",
+    "japanese": "そう。そのように。"
+  },
+  {
+    "id": "k400-0168",
+    "number": 168,
+    "english": "いう",
+    "japanese": "優雅だ。風流だ。"
+  },
+  {
+    "id": "k400-0169",
+    "number": 169,
+    "english": "あきらむ",
+    "japanese": "はっきりさせる。"
+  },
+  {
+    "id": "k400-0170",
+    "number": 170,
+    "english": "むすぶ",
+    "japanese": "手ですくう。"
+  },
+  {
+    "id": "k400-0171",
+    "number": 171,
+    "english": "つぼ",
+    "japanese": "庭。中庭。"
+  },
+  {
+    "id": "k400-0172",
+    "number": 172,
+    "english": "まほし",
+    "japanese": "〜たい。"
+  },
+  {
+    "id": "k400-0173",
+    "number": 173,
+    "english": "いそぐ",
+    "japanese": "準備する。"
+  },
+  {
+    "id": "k400-0174",
+    "number": 174,
+    "english": "さかし",
+    "japanese": "賢い。"
+  },
+  {
+    "id": "k400-0175",
+    "number": 175,
+    "english": "ざえ",
+    "japanese": "学問。"
+  },
+  {
+    "id": "k400-0176",
+    "number": 176,
+    "english": "いづ",
+    "japanese": "出る。"
+  },
+  {
+    "id": "k400-0177",
+    "number": 177,
+    "english": "こととふ",
+    "japanese": "尋ねる。質問する。"
+  },
+  {
+    "id": "k400-0178",
+    "number": 178,
+    "english": "の",
+    "japanese": "〜が"
+  },
+  {
+    "id": "k400-0179",
+    "number": 179,
+    "english": "かた",
+    "japanese": "方向。方法。"
+  },
+  {
+    "id": "k400-0180",
+    "number": 180,
+    "english": "なさけ",
+    "japanese": "思いやり。"
+  },
+  {
+    "id": "k400-0181",
+    "number": 181,
+    "english": "す",
+    "japanese": "する。"
+  },
+  {
+    "id": "k400-0182",
+    "number": 182,
+    "english": "あだ",
+    "japanese": "無意味だ。"
+  },
+  {
+    "id": "k400-0183",
+    "number": 183,
+    "english": "さる",
+    "japanese": "そのような。そういう。"
+  },
+  {
+    "id": "k400-0184",
+    "number": 184,
+    "english": "ふびん",
+    "japanese": "都合が悪い。不届きだ。"
+  },
+  {
+    "id": "k400-0185",
+    "number": 185,
+    "english": "まし",
+    "japanese": "〜だろうに。"
+  },
+  {
+    "id": "k400-0186",
+    "number": 186,
+    "english": "みゆ",
+    "japanese": "見える。"
+  },
+  {
+    "id": "k400-0187",
+    "number": 187,
+    "english": "さうぞく",
+    "japanese": "衣装。服装。"
+  },
+  {
+    "id": "k400-0188",
+    "number": 188,
+    "english": "こと",
+    "japanese": "言葉。"
+  },
+  {
+    "id": "k400-0189",
+    "number": 189,
+    "english": "なのめ",
+    "japanese": "平凡だ。普通だ。"
+  },
+  {
+    "id": "k400-0190",
+    "number": 190,
+    "english": "こ",
+    "japanese": "これ。"
+  },
+  {
+    "id": "k400-0191",
+    "number": 191,
+    "english": "すずろ",
+    "japanese": "当てがない。"
+  },
+  {
+    "id": "k400-0192",
+    "number": 192,
+    "english": "ず",
+    "japanese": "〜ない。"
+  },
+  {
+    "id": "k400-0193",
+    "number": 193,
+    "english": "かどかどし",
+    "japanese": "才気がある。賢い。"
+  },
+  {
+    "id": "k400-0194",
+    "number": 194,
+    "english": "ありく",
+    "japanese": "動き回る。出歩く。"
+  },
+  {
+    "id": "k400-0195",
+    "number": 195,
+    "english": "あな",
+    "japanese": "ああ。あら。"
+  },
+  {
+    "id": "k400-0196",
+    "number": 196,
+    "english": "えん",
+    "japanese": "優雅だ。"
+  },
+  {
+    "id": "k400-0197",
+    "number": 197,
+    "english": "ここら",
+    "japanese": "たくさん。"
+  },
+  {
+    "id": "k400-0198",
+    "number": 198,
+    "english": "にくし",
+    "japanese": "憎らしい。"
+  },
+  {
+    "id": "k400-0199",
+    "number": 199,
+    "english": "なめげ",
+    "japanese": "失礼だ。不作法だ。"
+  },
+  {
+    "id": "k400-0200",
+    "number": 200,
+    "english": "ときめく",
+    "japanese": "時流に乗って栄える。"
+  },
+  {
+    "id": "k400-0201",
+    "number": 201,
+    "english": "ぬ",
+    "japanese": "〜た。"
+  },
+  {
+    "id": "k400-0202",
+    "number": 202,
+    "english": "さま",
+    "japanese": "様子。"
+  },
+  {
+    "id": "k400-0203",
+    "number": 203,
+    "english": "みそか",
+    "japanese": "ひそかだ。内緒だ。"
+  },
+  {
+    "id": "k400-0204",
+    "number": 204,
+    "english": "かる",
+    "japanese": "離れる。"
+  },
+  {
+    "id": "k400-0205",
+    "number": 205,
+    "english": "はつか",
+    "japanese": "ほんの少しだ。わずかだ。"
+  },
+  {
+    "id": "k400-0206",
+    "number": 206,
+    "english": "ことわる",
+    "japanese": "判断する。説明する。"
+  },
+  {
+    "id": "k400-0207",
+    "number": 207,
+    "english": "あながち",
+    "japanese": "強引だ。無茶だ。"
+  },
+  {
+    "id": "k400-0208",
+    "number": 208,
+    "english": "をし",
+    "japanese": "かわいい。いとしい。"
+  },
+  {
+    "id": "k400-0209",
+    "number": 209,
+    "english": "はな",
+    "japanese": "梅、桜の花。"
+  },
+  {
+    "id": "k400-0210",
+    "number": 210,
+    "english": "たまふ",
+    "japanese": "お与えになる。"
+  },
+  {
+    "id": "k400-0211",
+    "number": 211,
+    "english": "やつす",
+    "japanese": "目立たないようにする。"
+  },
+  {
+    "id": "k400-0212",
+    "number": 212,
+    "english": "そこら",
+    "japanese": "たくさん。"
+  },
+  {
+    "id": "k400-0213",
+    "number": 213,
+    "english": "あて",
+    "japanese": "身分が高い。"
+  },
+  {
+    "id": "k400-0214",
+    "number": 214,
+    "english": "いたし",
+    "japanese": "甚だしい。ひどい。"
+  },
+  {
+    "id": "k400-0215",
+    "number": 215,
+    "english": "まじ",
+    "japanese": "〜しないつもりだ。"
+  },
+  {
+    "id": "k400-0216",
+    "number": 216,
+    "english": "けし",
+    "japanese": "異常だ。変だ。"
+  },
+  {
+    "id": "k400-0217",
+    "number": 217,
+    "english": "うとし",
+    "japanese": "よく知らない。"
+  },
+  {
+    "id": "k400-0218",
+    "number": 218,
+    "english": "すくせ",
+    "japanese": "宿命。"
+  },
+  {
+    "id": "k400-0219",
+    "number": 219,
+    "english": "よすが",
+    "japanese": "手段。方法。"
+  },
+  {
+    "id": "k400-0220",
+    "number": 220,
+    "english": "きは",
+    "japanese": "端。境。"
+  },
+  {
+    "id": "k400-0221",
+    "number": 221,
+    "english": "なり",
+    "japanese": "〜だ。"
+  },
+  {
+    "id": "k400-0222",
+    "number": 222,
+    "english": "きよら",
+    "japanese": "汚れなく美しい。最高の美しさ。"
+  },
+  {
+    "id": "k400-0223",
+    "number": 223,
+    "english": "かど",
+    "japanese": "才能。"
+  },
+  {
+    "id": "k400-0224",
+    "number": 224,
+    "english": "ねんごろなり",
+    "japanese": "親切である。"
+  },
+  {
+    "id": "k400-0225",
+    "number": 225,
+    "english": "くもゐ",
+    "japanese": "遠く離れた所。"
+  },
+  {
+    "id": "k400-0226",
+    "number": 226,
+    "english": "けむ",
+    "japanese": "〜ただろう。"
+  },
+  {
+    "id": "k400-0227",
+    "number": 227,
+    "english": "くちおし",
+    "japanese": "惜しい。残念だ。"
+  },
+  {
+    "id": "k400-0228",
+    "number": 228,
+    "english": "かたくな",
+    "japanese": "頑固だ。屈強だ。強情だ。"
+  },
+  {
+    "id": "k400-0229",
+    "number": 229,
+    "english": "のたまふ",
+    "japanese": "おっしゃる。"
+  },
+  {
+    "id": "k400-0230",
+    "number": 230,
+    "english": "てうず",
+    "japanese": "整える。準備する。"
+  },
+  {
+    "id": "k400-0231",
+    "number": 231,
+    "english": "ほどなし",
+    "japanese": "間もない。早い。"
+  },
+  {
+    "id": "k400-0232",
+    "number": 232,
+    "english": "れい",
+    "japanese": "いつも。ふだん。"
+  },
+  {
+    "id": "k400-0233",
+    "number": 233,
+    "english": "しほたる",
+    "japanese": "涙を流す。悲嘆にくれる。"
+  },
+  {
+    "id": "k400-0234",
+    "number": 234,
+    "english": "なまめかし",
+    "japanese": "若々しい。"
+  },
+  {
+    "id": "k400-0235",
+    "number": 235,
+    "english": "あからめ",
+    "japanese": "よそ見。脇目。浮気。"
+  },
+  {
+    "id": "k400-0236",
+    "number": 236,
+    "english": "あへなし",
+    "japanese": "張りあいがない。がっかりだ。あっけない。"
+  },
+  {
+    "id": "k400-0237",
+    "number": 237,
+    "english": "ひじり",
+    "japanese": "聖人。高僧。"
+  },
+  {
+    "id": "k400-0238",
+    "number": 238,
+    "english": "をこなり",
+    "japanese": "愚かだ。"
+  },
+  {
+    "id": "k400-0239",
+    "number": 239,
+    "english": "ひがごと",
+    "japanese": "間違い。過ち。"
+  },
+  {
+    "id": "k400-0240",
+    "number": 240,
+    "english": "いざ",
+    "japanese": "さあ。"
+  },
+  {
+    "id": "k400-0241",
+    "number": 241,
+    "english": "そらごと",
+    "japanese": "うそ。偽り。"
+  },
+  {
+    "id": "k400-0242",
+    "number": 242,
+    "english": "おぼえ",
+    "japanese": "評判。世評。"
+  },
+  {
+    "id": "k400-0243",
+    "number": 243,
+    "english": "いはく",
+    "japanese": "言うことには。"
+  },
+  {
+    "id": "k400-0244",
+    "number": 244,
+    "english": "いかなる",
+    "japanese": "どういう。どのような。"
+  },
+  {
+    "id": "k400-0245",
+    "number": 245,
+    "english": "すべ",
+    "japanese": "方法。手段。"
+  },
+  {
+    "id": "k400-0246",
+    "number": 246,
+    "english": "こうず",
+    "japanese": "困る。値やむ。苦しむ。"
+  },
+  {
+    "id": "k400-0247",
+    "number": 247,
+    "english": "とかく",
+    "japanese": "とにかく。"
+  },
+  {
+    "id": "k400-0248",
+    "number": 248,
+    "english": "らうがはし",
+    "japanese": "乱雑だ。むさくるしい。"
+  },
+  {
+    "id": "k400-0249",
+    "number": 249,
+    "english": "まめまめし",
+    "japanese": "実用的だ。"
+  },
+  {
+    "id": "k400-0250",
+    "number": 250,
+    "english": "けうとし",
+    "japanese": "よそよそしい。疎遠だ。"
+  },
+  {
+    "id": "k400-0251",
+    "number": 251,
+    "english": "らうらうじ",
+    "japanese": "洗練されている。才気がある。気が利いている。"
+  },
+  {
+    "id": "k400-0252",
+    "number": 252,
+    "english": "こころづきなし",
+    "japanese": "気に入らない。不快だ。"
+  },
+  {
+    "id": "k400-0253",
+    "number": 253,
+    "english": "まうづ",
+    "japanese": "お参りする。"
+  },
+  {
+    "id": "k400-0254",
+    "number": 254,
+    "english": "くだる",
+    "japanese": "都から地方へ行く。"
+  },
+  {
+    "id": "k400-0255",
+    "number": 255,
+    "english": "せうと",
+    "japanese": "兄弟"
+  },
+  {
+    "id": "k400-0256",
+    "number": 256,
+    "english": "あくがる",
+    "japanese": "さまよう。うかれ歩く。"
+  },
+  {
+    "id": "k400-0257",
+    "number": 257,
+    "english": "おほやけ",
+    "japanese": "朝廷。政府。宮中。"
+  },
+  {
+    "id": "k400-0258",
+    "number": 258,
+    "english": "かまへて",
+    "japanese": "心がけて。気をつけて。"
+  },
+  {
+    "id": "k400-0259",
+    "number": 259,
+    "english": "すだく",
+    "japanese": "群がる。集さわぐ。"
+  },
+  {
+    "id": "k400-0260",
+    "number": 260,
+    "english": "よすがら",
+    "japanese": "一晩中。夜通し。"
+  },
+  {
+    "id": "k400-0261",
+    "number": 261,
+    "english": "きと",
+    "japanese": "さっと。急に。"
+  },
+  {
+    "id": "k400-0262",
+    "number": 262,
+    "english": "やまがつ",
+    "japanese": "（身分の低い）山里の人。木こりなど。"
+  },
+  {
+    "id": "k400-0263",
+    "number": 263,
+    "english": "ためし",
+    "japanese": "例。"
+  },
+  {
+    "id": "k400-0264",
+    "number": 264,
+    "english": "きこゆ",
+    "japanese": "申し上げる。"
+  },
+  {
+    "id": "k400-0265",
+    "number": 265,
+    "english": "むねと",
+    "japanese": "主に。第一に。主体となって。"
+  },
+  {
+    "id": "k400-0266",
+    "number": 266,
+    "english": "くまなし",
+    "japanese": "影がない。暗いところがない。"
+  },
+  {
+    "id": "k400-0267",
+    "number": 267,
+    "english": "こころやすし",
+    "japanese": "安心だ。"
+  },
+  {
+    "id": "k400-0268",
+    "number": 268,
+    "english": "けり",
+    "japanese": "〜た。（過去）"
+  },
+  {
+    "id": "k400-0269",
+    "number": 269,
+    "english": "ごせ",
+    "japanese": "来世。あの世。"
+  },
+  {
+    "id": "k400-0270",
+    "number": 270,
+    "english": "ひとやり",
+    "japanese": "自分の意志ではない他人からの強制。"
+  },
+  {
+    "id": "k400-0271",
+    "number": 271,
+    "english": "さすが",
+    "japanese": "やはり。"
+  },
+  {
+    "id": "k400-0272",
+    "number": 272,
+    "english": "きよげなり",
+    "japanese": "美しい"
+  },
+  {
+    "id": "k400-0273",
+    "number": 273,
+    "english": "をさをさし",
+    "japanese": "大人びている。しっかりしている。立派だ。"
+  },
+  {
+    "id": "k400-0274",
+    "number": 274,
+    "english": "いかめし",
+    "japanese": "厳かだ。威厳がある。重々しい。"
+  },
+  {
+    "id": "k400-0275",
+    "number": 275,
+    "english": "せめて",
+    "japanese": "強いて。無理に。なお。"
+  },
+  {
+    "id": "k400-0276",
+    "number": 276,
+    "english": "こころぐるし",
+    "japanese": "つらい。切ない。"
+  },
+  {
+    "id": "k400-0277",
+    "number": 277,
+    "english": "かかる",
+    "japanese": "このような。"
+  },
+  {
+    "id": "k400-0278",
+    "number": 278,
+    "english": "うちつけ",
+    "japanese": "突然だ。唐突だ。"
+  },
+  {
+    "id": "k400-0279",
+    "number": 279,
+    "english": "つごもり",
+    "japanese": "月末。"
+  },
+  {
+    "id": "k400-0280",
+    "number": 280,
+    "english": "しばし",
+    "japanese": "しばらく。"
+  },
+  {
+    "id": "k400-0281",
+    "number": 281,
+    "english": "むくつけし",
+    "japanese": "不気味だ。そら恐ろしい。"
+  },
+  {
+    "id": "k400-0282",
+    "number": 282,
+    "english": "かひなし",
+    "japanese": "効果がない。仕方がない。"
+  },
+  {
+    "id": "k400-0283",
+    "number": 283,
+    "english": "いかで",
+    "japanese": "どうして。"
+  },
+  {
+    "id": "k400-0284",
+    "number": 284,
+    "english": "かねて",
+    "japanese": "前もって。予め。"
+  },
+  {
+    "id": "k400-0285",
+    "number": 285,
+    "english": "をりふし",
+    "japanese": "季節。"
+  },
+  {
+    "id": "k400-0286",
+    "number": 286,
+    "english": "きこしめす",
+    "japanese": "お聞きになる。"
+  },
+  {
+    "id": "k400-0287",
+    "number": 287,
+    "english": "おとど",
+    "japanese": "大臣などの敬称。"
+  },
+  {
+    "id": "k400-0288",
+    "number": 288,
+    "english": "こぞ",
+    "japanese": "去年。昨年。"
+  },
+  {
+    "id": "k400-0289",
+    "number": 289,
+    "english": "さかしら",
+    "japanese": "こざかしい。利口ぶっている。"
+  },
+  {
+    "id": "k400-0290",
+    "number": 290,
+    "english": "おもておこし",
+    "japanese": "面目を施すこと。名誉を回復すること。"
+  },
+  {
+    "id": "k400-0291",
+    "number": 291,
+    "english": "けさう",
+    "japanese": "思いをかけること。恋い慕うこと。"
+  },
+  {
+    "id": "k400-0292",
+    "number": 292,
+    "english": "まめやかなり",
+    "japanese": "まじめだ。"
+  },
+  {
+    "id": "k400-0293",
+    "number": 293,
+    "english": "はかる",
+    "japanese": "推測する。予測する。"
+  },
+  {
+    "id": "k400-0294",
+    "number": 294,
+    "english": "おとなふ",
+    "japanese": "音をたてる。"
+  },
+  {
+    "id": "k400-0295",
+    "number": 295,
+    "english": "べし",
+    "japanese": "〜にちがいない。"
+  },
+  {
+    "id": "k400-0296",
+    "number": 296,
+    "english": "ちご",
+    "japanese": "幼児。"
+  },
+  {
+    "id": "k400-0297",
+    "number": 297,
+    "english": "けはひ",
+    "japanese": "雰囲気。"
+  },
+  {
+    "id": "k400-0298",
+    "number": 298,
+    "english": "なやみ",
+    "japanese": "病気。"
+  },
+  {
+    "id": "k400-0299",
+    "number": 299,
+    "english": "おのれ",
+    "japanese": "自分。私。"
+  },
+  {
+    "id": "k400-0300",
+    "number": 300,
+    "english": "わざ",
+    "japanese": "行為。おこない。"
+  },
+  {
+    "id": "k400-0301",
+    "number": 301,
+    "english": "かひがひし",
+    "japanese": "効果がある。やりがいがある。張り合いがある。"
+  },
+  {
+    "id": "k400-0302",
+    "number": 302,
+    "english": "かしかまし",
+    "japanese": "やかましい。うるさい。"
+  },
+  {
+    "id": "k400-0303",
+    "number": 303,
+    "english": "なにがし",
+    "japanese": "どこそこ。だれそれ。"
+  },
+  {
+    "id": "k400-0304",
+    "number": 304,
+    "english": "なでふ",
+    "japanese": "どういう。どんな。何という。"
+  },
+  {
+    "id": "k400-0305",
+    "number": 305,
+    "english": "ちぎり",
+    "japanese": "約束。"
+  },
+  {
+    "id": "k400-0306",
+    "number": 306,
+    "english": "よむ",
+    "japanese": "詩歌を作る。"
+  },
+  {
+    "id": "k400-0307",
+    "number": 307,
+    "english": "ことごとし",
+    "japanese": "ものものしい。大げさだ。"
+  },
+  {
+    "id": "k400-0308",
+    "number": 308,
+    "english": "みやび",
+    "japanese": "上品。優雅。"
+  },
+  {
+    "id": "k400-0309",
+    "number": 309,
+    "english": "あやにく",
+    "japanese": "意地が悪い。ひどい。過酷だ。厳格だ。"
+  },
+  {
+    "id": "k400-0310",
+    "number": 310,
+    "english": "たひらか",
+    "japanese": "無事だ。異常がない。"
+  },
+  {
+    "id": "k400-0311",
+    "number": 311,
+    "english": "たまのを",
+    "japanese": "命。"
+  },
+  {
+    "id": "k400-0312",
+    "number": 312,
+    "english": "すぐる",
+    "japanese": "選び出す。選り抜く。"
+  },
+  {
+    "id": "k400-0313",
+    "number": 313,
+    "english": "まゐる",
+    "japanese": "参上する。"
+  },
+  {
+    "id": "k400-0314",
+    "number": 314,
+    "english": "ここち",
+    "japanese": "気持ち。"
+  },
+  {
+    "id": "k400-0315",
+    "number": 315,
+    "english": "さやか",
+    "japanese": "はっきりしている。"
+  },
+  {
+    "id": "k400-0316",
+    "number": 316,
+    "english": "おぼしめす",
+    "japanese": "お思いになる。"
+  },
+  {
+    "id": "k400-0317",
+    "number": 317,
+    "english": "ねたし",
+    "japanese": "憎らしい。いまいましい。"
+  },
+  {
+    "id": "k400-0318",
+    "number": 318,
+    "english": "おまへ",
+    "japanese": "貴人や神仏の前。御前。"
+  },
+  {
+    "id": "k400-0319",
+    "number": 319,
+    "english": "あいぎゃう",
+    "japanese": "かわいらしさ。かわいげ。"
+  },
+  {
+    "id": "k400-0320",
+    "number": 320,
+    "english": "ひつ",
+    "japanese": "水に浸かる。濡れる。ひたる。"
+  },
+  {
+    "id": "k400-0321",
+    "number": 321,
+    "english": "そぞろ",
+    "japanese": "何となしだ。訳もない。いい加減だ。"
+  },
+  {
+    "id": "k400-0322",
+    "number": 322,
+    "english": "さぶらふ",
+    "japanese": "あります。おります。"
+  },
+  {
+    "id": "k400-0323",
+    "number": 323,
+    "english": "おこなひ",
+    "japanese": "仏道の修行"
+  },
+  {
+    "id": "k400-0324",
+    "number": 324,
+    "english": "いぬ",
+    "japanese": "行ってしまう。去る。"
+  },
+  {
+    "id": "k400-0325",
+    "number": 325,
+    "english": "いづこ",
+    "japanese": "どこ。"
+  },
+  {
+    "id": "k400-0326",
+    "number": 326,
+    "english": "よそふ",
+    "japanese": "比べる。たとえる。"
+  },
+  {
+    "id": "k400-0327",
+    "number": 327,
+    "english": "さがし",
+    "japanese": "険しい。"
+  },
+  {
+    "id": "k400-0328",
+    "number": 328,
+    "english": "さらば",
+    "japanese": "それならば。"
+  },
+  {
+    "id": "k400-0329",
+    "number": 329,
+    "english": "めのと",
+    "japanese": "母親の代わり。うば。"
+  },
+  {
+    "id": "k400-0330",
+    "number": 330,
+    "english": "いまはむかし",
+    "japanese": "今となっては、もう昔のことだが。"
+  },
+  {
+    "id": "k400-0331",
+    "number": 331,
+    "english": "いづれ",
+    "japanese": "どっち。どちら。"
+  },
+  {
+    "id": "k400-0332",
+    "number": 332,
+    "english": "こまやか",
+    "japanese": "繊細で美しい。きめ細やかだ。"
+  },
+  {
+    "id": "k400-0333",
+    "number": 333,
+    "english": "ものし",
+    "japanese": "気に入らない。目障りだ。不快だ。"
+  },
+  {
+    "id": "k400-0334",
+    "number": 334,
+    "english": "さうらふ",
+    "japanese": "お仕え申し上げる。"
+  },
+  {
+    "id": "k400-0335",
+    "number": 335,
+    "english": "およすく",
+    "japanese": "成長する。大人になる。"
+  },
+  {
+    "id": "k400-0336",
+    "number": 336,
+    "english": "つかさ",
+    "japanese": "官位。官職。"
+  },
+  {
+    "id": "k400-0337",
+    "number": 337,
+    "english": "たまはる",
+    "japanese": "いただく。"
+  },
+  {
+    "id": "k400-0338",
+    "number": 338,
+    "english": "せむかたなし",
+    "japanese": "方法がない。どうしようもない。"
+  },
+  {
+    "id": "k400-0339",
+    "number": 339,
+    "english": "かごと",
+    "japanese": "恨み言。愚痴。"
+  },
+  {
+    "id": "k400-0340",
+    "number": 340,
+    "english": "むべ",
+    "japanese": "なるほど。いかにも。道理で。"
+  },
+  {
+    "id": "k400-0341",
+    "number": 341,
+    "english": "ながらふ",
+    "japanese": "生きながらえる。長生きする。"
+  },
+  {
+    "id": "k400-0342",
+    "number": 342,
+    "english": "ひがこと",
+    "japanese": "間違い。"
+  },
+  {
+    "id": "k400-0343",
+    "number": 343,
+    "english": "おはす",
+    "japanese": "いらっしゃる。"
+  },
+  {
+    "id": "k400-0344",
+    "number": 344,
+    "english": "こころもとなし",
+    "japanese": "待ち遠しい。じれったい。"
+  },
+  {
+    "id": "k400-0345",
+    "number": 345,
+    "english": "ところせし",
+    "japanese": "窮屈だ。煩わしい。"
+  },
+  {
+    "id": "k400-0346",
+    "number": 346,
+    "english": "ども",
+    "japanese": "けれども。"
+  },
+  {
+    "id": "k400-0347",
+    "number": 347,
+    "english": "うるさし",
+    "japanese": "面倒だ。回りくどい。わざとらしい。"
+  },
+  {
+    "id": "k400-0348",
+    "number": 348,
+    "english": "おきつ",
+    "japanese": "命令する。"
+  },
+  {
+    "id": "k400-0349",
+    "number": 349,
+    "english": "むつまし",
+    "japanese": "親しい。親密だ。"
+  },
+  {
+    "id": "k400-0350",
+    "number": 350,
+    "english": "なさけなし",
+    "japanese": "思いやりが無い。薄情だ。"
+  },
+  {
+    "id": "k400-0351",
+    "number": 351,
+    "english": "くちをし",
+    "japanese": "残念だ。"
+  },
+  {
+    "id": "k400-0352",
+    "number": 352,
+    "english": "ゆかり",
+    "japanese": "縁。縁故。関係。つながり。"
+  },
+  {
+    "id": "k400-0353",
+    "number": 353,
+    "english": "つきなし",
+    "japanese": "ふさわしくない。不適切だ。不相応だ。"
+  },
+  {
+    "id": "k400-0354",
+    "number": 354,
+    "english": "あざる",
+    "japanese": "ふざける。戯れる。"
+  },
+  {
+    "id": "k400-0355",
+    "number": 355,
+    "english": "たり",
+    "japanese": "〜た。（完了）"
+  },
+  {
+    "id": "k400-0356",
+    "number": 356,
+    "english": "まばゆし",
+    "japanese": "恥ずかしい。気後れする。"
+  },
+  {
+    "id": "k400-0357",
+    "number": 357,
+    "english": "なやまし",
+    "japanese": "具合が悪い。"
+  },
+  {
+    "id": "k400-0358",
+    "number": 358,
+    "english": "かぎりなし",
+    "japanese": "この上ない。最高だ。"
+  },
+  {
+    "id": "k400-0359",
+    "number": 359,
+    "english": "あした",
+    "japanese": "朝。"
+  },
+  {
+    "id": "k400-0360",
+    "number": 360,
+    "english": "やまぎは",
+    "japanese": "空の、山に接する部分。"
+  },
+  {
+    "id": "k400-0361",
+    "number": 361,
+    "english": "たてまつる",
+    "japanese": "さしあげる。（動詞）"
+  },
+  {
+    "id": "k400-0362",
+    "number": 362,
+    "english": "ほいなし",
+    "japanese": "不本意だ。残念だ。"
+  },
+  {
+    "id": "k400-0363",
+    "number": 363,
+    "english": "ついで",
+    "japanese": "折。機会。巡り合わせ。"
+  },
+  {
+    "id": "k400-0364",
+    "number": 364,
+    "english": "やる",
+    "japanese": "行かせる。"
+  },
+  {
+    "id": "k400-0365",
+    "number": 365,
+    "english": "くんず",
+    "japanese": "気が塞ぐ。がっかりする。"
+  },
+  {
+    "id": "k400-0366",
+    "number": 366,
+    "english": "など",
+    "japanese": "どうして。なぜ。"
+  },
+  {
+    "id": "k400-0367",
+    "number": 367,
+    "english": "なんぢ",
+    "japanese": "おまえ。"
+  },
+  {
+    "id": "k400-0368",
+    "number": 368,
+    "english": "いにしへ",
+    "japanese": "昔。"
+  },
+  {
+    "id": "k400-0369",
+    "number": 369,
+    "english": "いぶかし",
+    "japanese": "気がかりだ。知りたい。"
+  },
+  {
+    "id": "k400-0370",
+    "number": 370,
+    "english": "おほす",
+    "japanese": "おっしゃる。"
+  },
+  {
+    "id": "k400-0371",
+    "number": 371,
+    "english": "ひとわろし",
+    "japanese": "体裁が悪い。みっともない。"
+  },
+  {
+    "id": "k400-0372",
+    "number": 372,
+    "english": "にはか",
+    "japanese": "急に。"
+  },
+  {
+    "id": "k400-0373",
+    "number": 373,
+    "english": "ばかり",
+    "japanese": "ぐらい。"
+  },
+  {
+    "id": "k400-0374",
+    "number": 374,
+    "english": "おきな",
+    "japanese": "老人。"
+  },
+  {
+    "id": "k400-0375",
+    "number": 375,
+    "english": "たづき",
+    "japanese": "手段。方法。手掛かり。"
+  },
+  {
+    "id": "k400-0376",
+    "number": 376,
+    "english": "うらなし",
+    "japanese": "安心だ。うっかりする。"
+  },
+  {
+    "id": "k400-0377",
+    "number": 377,
+    "english": "いぎたなし",
+    "japanese": "寝坊だ。寝起きが悪い。"
+  },
+  {
+    "id": "k400-0378",
+    "number": 378,
+    "english": "ひたぶる",
+    "japanese": "一途だ。ひたすらだ。すっかり。"
+  },
+  {
+    "id": "k400-0379",
+    "number": 379,
+    "english": "つぼね",
+    "japanese": "（女官などの）部屋。"
+  },
+  {
+    "id": "k400-0380",
+    "number": 380,
+    "english": "ねぶ",
+    "japanese": "年をとる。老ける。"
+  },
+  {
+    "id": "k400-0381",
+    "number": 381,
+    "english": "さとし",
+    "japanese": "賢い。"
+  },
+  {
+    "id": "k400-0382",
+    "number": 382,
+    "english": "みながら",
+    "japanese": "すべて。残らず。"
+  },
+  {
+    "id": "k400-0383",
+    "number": 383,
+    "english": "びんなし",
+    "japanese": "都合が悪い。具合が悪い。"
+  },
+  {
+    "id": "k400-0384",
+    "number": 384,
+    "english": "あふ",
+    "japanese": "結婚する。交際する。"
+  },
+  {
+    "id": "k400-0385",
+    "number": 385,
+    "english": "むねむねし",
+    "japanese": "しっかりしている。"
+  },
+  {
+    "id": "k400-0386",
+    "number": 386,
+    "english": "えうなし",
+    "japanese": "役に立たない。つまらない。"
+  },
+  {
+    "id": "k400-0387",
+    "number": 387,
+    "english": "うそぶく",
+    "japanese": "詩歌を口ずさむ。吟ずる。"
+  },
+  {
+    "id": "k400-0388",
+    "number": 388,
+    "english": "あるじ",
+    "japanese": "もてなし。ごちそう。"
+  },
+  {
+    "id": "k400-0389",
+    "number": 389,
+    "english": "あかつき",
+    "japanese": "夜明け前。未明。"
+  },
+  {
+    "id": "k400-0390",
+    "number": 390,
+    "english": "あそび",
+    "japanese": "詩歌・音楽などで楽しむこと。"
+  },
+  {
+    "id": "k400-0391",
+    "number": 391,
+    "english": "まだし",
+    "japanese": "まだ早い。早々だ。"
+  },
+  {
+    "id": "k400-0392",
+    "number": 392,
+    "english": "からし",
+    "japanese": "辛い。切ない。"
+  },
+  {
+    "id": "k400-0393",
+    "number": 393,
+    "english": "こころにくし",
+    "japanese": "奥ゆかしい。心惹かれる。上品だ。"
+  },
+  {
+    "id": "k400-0394",
+    "number": 394,
+    "english": "はべり",
+    "japanese": "〜です。〜ます。"
+  },
+  {
+    "id": "k400-0395",
+    "number": 395,
+    "english": "もどく",
+    "japanese": "非難する。反発する。"
+  },
+  {
+    "id": "k400-0396",
+    "number": 396,
+    "english": "ゆゑ",
+    "japanese": "原因。理由。"
+  },
+  {
+    "id": "k400-0397",
+    "number": 397,
+    "english": "たけし",
+    "japanese": "つよい。勇ましい。優秀だ。"
+  },
+  {
+    "id": "k400-0398",
+    "number": 398,
+    "english": "むなし",
+    "japanese": "無駄だ。効果がない。"
+  },
+  {
+    "id": "k400-0399",
+    "number": 399,
+    "english": "いも",
+    "japanese": "妻・恋人・姉・妹"
+  },
+  {
+    "id": "k400-0400",
+    "number": 400,
+    "english": "をこがまし",
+    "japanese": "ばからしい。見苦しい。"
+  }
+]
